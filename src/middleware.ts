@@ -47,9 +47,6 @@ export async function middleware(request: NextRequest) {
       .single()
 
     const role = profile?.role as UserRole | undefined
-    if (role === 'student' && !profile?.onboarding_completed) {
-      return NextResponse.redirect(new URL('/student/onboarding', request.url))
-    }
     const home = role ? ROLE_HOME[role] : '/login'
     return NextResponse.redirect(new URL(home, request.url))
   }
@@ -84,11 +81,6 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL(correctHome, request.url))
     }
 
-    // Student onboarding gate — skip if already on onboarding page or dashboard
-    if (userRole === 'student' && !profile?.onboarding_completed && !isOnboarding && pathname !== '/student/dashboard') {
-      return NextResponse.redirect(new URL('/student/onboarding', request.url))
-    }
-
     // If onboarding already completed, don't allow re-entry
     if (userRole === 'student' && profile?.onboarding_completed && isOnboarding) {
       return NextResponse.redirect(new URL('/student/dashboard', request.url))
@@ -98,14 +90,11 @@ export async function middleware(request: NextRequest) {
   if (pathname === '/') {
     const { data: profile } = await supabase
       .from('users')
-      .select('role, onboarding_completed')
+      .select('role')
       .eq('id', user.id)
       .single()
 
     const role = profile?.role as UserRole | undefined
-    if (role === 'student' && !profile?.onboarding_completed) {
-      return NextResponse.redirect(new URL('/student/onboarding', request.url))
-    }
     const home = role ? ROLE_HOME[role] : '/login'
     return NextResponse.redirect(new URL(home, request.url))
   }

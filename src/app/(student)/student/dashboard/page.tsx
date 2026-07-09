@@ -22,28 +22,19 @@ import {
   FileUp,
   CheckCircle2,
   AlertTriangle,
-  AlertOctagon,
-  XCircle,
   Briefcase,
   ClipboardList,
+  Code2,
 } from 'lucide-react'
 import {
   calculateAcademicSummary,
   groupGradesBySemester,
-  ACADEMIC_STATUS_CONFIG,
 } from '@/lib/utils/academic'
 import { formatGPA } from '@/lib/utils'
 import type { AcademicRule, StudentGrade } from '@/types'
-import { StudentIPSChart } from '@/components/student/student-ips-chart'
+import { StudentIPKChart } from '@/components/student/student-ipk-chart'
 import { StudentSKSChart } from '@/components/student/student-sks-chart'
-
-const STATUS_ICONS = {
-  TrendingUp,
-  CheckCircle2,
-  AlertTriangle,
-  AlertOctagon,
-  XCircle,
-} as const
+import { StudentTargetChart } from '@/components/student/student-target-chart'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -114,8 +105,6 @@ export default async function StudentDashboardPage() {
   const targetSemester = target?.target_semester ?? effectiveRule.normal_semester
   const summary = calculateAcademicSummary(grades, currentSemester, targetSemester, effectiveRule)
   const semesterSummaries = groupGradesBySemester(grades)
-  const statusConfig = ACADEMIC_STATUS_CONFIG[summary.academic_status]
-  const StatusIcon = STATUS_ICONS[statusConfig.icon as keyof typeof STATUS_ICONS]
 
   const retakeCourses = grades.filter((g) => g.is_retake)
   const studyProgramName =
@@ -123,11 +112,61 @@ export default async function StudentDashboardPage() {
       ? (profile.study_programs as { name: string; short_name: string | null }).name
       : null
 
-  const chartData = semesterSummaries.map((s) => ({
-    semester: `Sem ${s.semester_number}`,
-    ips: s.gpa,
-    sks: s.total_sks,
-  }))
+  const chartData = semesterSummaries.map((s, idx) => {
+    const gradesUpToNow = semesterSummaries
+      .slice(0, idx + 1)
+      .flatMap((x) => x.grades)
+    const ipk = gradesUpToNow.length > 0
+      ? Math.round(
+          (gradesUpToNow.reduce((sum, g) => sum + g.grade_points * g.credits, 0) /
+            gradesUpToNow.reduce((sum, g) => sum + g.credits, 0)) * 100
+        ) / 100
+      : 0
+    return {
+      semester: `Sem ${s.semester_number}`,
+      ips: s.gpa,
+      ipk,
+    }
+  })
+
+  // Build target chart data: actual semesters + projected future semesters toward target
+  const sksPerSemRemaining = targetSemester > currentSemester
+    ? Math.ceil((summary.total_sks_required - summary.total_sks_earned) / (targetSemester - currentSemester))
+    : 0
+  const targetIPSPerSem = target?.target_ipk
+    ? Math.min(target.target_ipk + 0.1, 4.0)
+    : null
+
+  const targetChartData = (() => {
+    const points = semesterSummaries.map((s, idx) => {
+      const gradesUpTo = semesterSummaries.slice(0, idx + 1).flatMap((x) => x.grades)
+      const ipk = gradesUpTo.length > 0
+        ? Math.round((gradesUpTo.reduce((a, g) => a + g.grade_points * g.credits, 0) / gradesUpTo.reduce((a, g) => a + g.credits, 0)) * 100) / 100
+        : 0
+      return { semester: `Sem ${s.semester_number}`, ips: s.gpa, ipk, is_actual: true }
+    })
+    // Add projected semesters
+    if (targetSemester > currentSemester) {
+      const totalSksNow = summary.total_sks_earned
+      const totalWtNow = grades.reduce((a, g) => a + g.grade_points * g.credits, 0)
+      let runningWt = totalWtNow
+      let runningCredits = totalSksNow
+      for (let sem = currentSemester + 1; sem <= targetSemester; sem++) {
+        const projIPS = targetIPSPerSem ?? (summary.last_gpa > 0 ? summary.last_gpa : 2.75)
+        const projSKS = sksPerSemRemaining > 0 ? sksPerSemRemaining : (effectiveRule.total_sks_graduation / effectiveRule.normal_semester)
+        runningWt += projIPS * projSKS
+        runningCredits += projSKS
+        const projIPK = Math.round((runningWt / runningCredits) * 100) / 100
+        points.push({
+          semester: `Sem ${sem}`,
+          ips: projIPS,
+          ipk: Math.min(projIPK, 4.0),
+          is_actual: false,
+        })
+      }
+    }
+    return points
+  })()
 
   const quickActions = [
     {
@@ -184,41 +223,6 @@ export default async function StudentDashboardPage() {
         <p className="text-sm text-muted-foreground">
           {studyProgramName ?? 'Program Studi'} · NIM {profile?.nim ?? '-'} · Semester {currentSemester}
         </p>
-      </div>
-
-      {/* Onboarding incomplete banner */}
-      {!profile?.onboarding_completed && (
-        <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800 px-4 py-3 flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-400">
-            <AlertTriangle className="h-5 w-5" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Onboarding belum selesai</p>
-            <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">Lengkapi profil dan pilih minat kariermu agar pengalaman Gradely lebih personal.</p>
-          </div>
-          <Button size="sm" variant="outline" className="shrink-0 border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-700 dark:text-yellow-300 dark:hover:bg-yellow-900/40" asChild>
-            <Link href="/student/onboarding">Lanjutkan</Link>
-          </Button>
-        </div>
-      )}
-
-      {/* Status Akademik Banner */}
-      <div className={`rounded-xl px-4 py-3 flex items-center gap-3 ${statusConfig.bgColor}`}>
-        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/60 dark:bg-black/20 ${statusConfig.iconColor}`}>
-          <StatusIcon className="h-5 w-5" />
-        </div>
-        <div>
-          <p className={`font-semibold text-sm ${statusConfig.color}`}>
-            Status Akademik: {statusConfig.label}
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {summary.academic_status === 'ahead' && 'Progres SKS kamu melebihi target. Pertahankan!'}
-            {summary.academic_status === 'on_track' && 'Progres kamu sesuai target. Terus semangat!'}
-            {summary.academic_status === 'need_attention' && 'Progres sedikit di bawah target. Perlu ditingkatkan.'}
-            {summary.academic_status === 'recovery_mode' && 'Progres jauh di bawah target. Segera konsultasi dosen wali.'}
-            {summary.academic_status === 'critical' && 'Nilai & SKS kamu berisiko gagal tepat waktu. Segera hubungi dosen wali sekarang.'}
-          </p>
-        </div>
       </div>
 
       {/* Stat Cards */}
@@ -278,16 +282,110 @@ export default async function StudentDashboardPage() {
                 <AlertTriangle className="inline ml-1 h-3 w-3 text-yellow-500" />
               )}
             </p>
+            {target?.target_ipk && (
+              <p className="text-xs text-muted-foreground mt-0.5">Target IPK: {target.target_ipk.toFixed(2)}</p>
+            )}
+            {target?.target_years && (
+              <p className="text-xs text-muted-foreground mt-0.5">Target: {target.target_years} tahun</p>
+            )}
           </CardContent>
         </Card>
       </div>
+
+      {/* Target Progress Chart — shown when target is set */}
+      {target && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Progress & Target Kelulusan</CardTitle>
+                <CardDescription>
+                  Target lulus Semester {target.target_semester}
+                  {target.target_ipk && ` dengan IPK ${target.target_ipk.toFixed(2)}`}
+                  {target.target_years && ` (${target.target_years} tahun)`}
+                </CardDescription>
+              </div>
+              <Button variant="ghost" size="sm" asChild>
+                <Link href="/student/target">
+                  <Target className="h-3.5 w-3.5 mr-1.5" />
+                  Ubah Target
+                </Link>
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {targetChartData.length > 0 ? (
+              <StudentTargetChart data={targetChartData} targetIPK={target.target_ipk} minGpa={effectiveRule.min_gpa} />
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+                <Target className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Belum ada data untuk visualisasi target</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Prompt to set target when not set */}
+      {!target && (
+        <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4 flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Target className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold">Atur Target Kelulusanmu</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Dapatkan analisis AI, rekomendasi personal, dan visualisasi progress menuju target kelulusan kamu.
+            </p>
+          </div>
+          <Button size="sm" asChild>
+            <Link href="/student/target">Atur Target</Link>
+          </Button>
+        </div>
+      )}
+
+      {/* Target info: skill & industri */}
+      {target && (target.achievement_skills?.length || target.achievement_internship) && (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {target.achievement_skills && target.achievement_skills.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Code2 className="h-4 w-4 text-primary" />
+                  Skill Target
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-1.5">
+                  {target.achievement_skills.map((s: string) => (
+                    <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {target.achievement_internship && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Briefcase className="h-4 w-4 text-primary" />
+                  Target Pengalaman
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <p className="text-sm text-muted-foreground">{target.achievement_internship}</p>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Chart IPS + Progress SKS */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Grafik IPS per Semester</CardTitle>
-            <CardDescription>Perkembangan Indeks Prestasi Semester</CardDescription>
+            <CardTitle className="text-base">Grafik IPS & IPK</CardTitle>
+            <CardDescription>IPS per semester (bar) dan IPK kumulatif (line)</CardDescription>
           </CardHeader>
           <CardContent>
             {chartData.length === 0 ? (
@@ -299,7 +397,7 @@ export default async function StudentDashboardPage() {
                 </Button>
               </div>
             ) : (
-              <StudentIPSChart data={chartData} />
+              <StudentIPKChart data={chartData} minGpa={effectiveRule.min_gpa} />
             )}
           </CardContent>
         </Card>

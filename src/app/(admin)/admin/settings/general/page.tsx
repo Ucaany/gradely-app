@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Settings, Globe, Shield, Bell, Bot } from 'lucide-react'
 import Link from 'next/link'
+import { GeminiSettingsForm } from '@/components/admin/gemini-settings-form'
 
 export default async function GeneralSettingsPage() {
   const supabase = await createClient()
@@ -29,10 +30,10 @@ export default async function GeneralSettingsPage() {
   const { data: aiSettings } = await supabase
     .from('settings')
     .select('key, value')
-    .eq('key', 'openai_api_key')
+    .eq('key', 'gemini_api_key')
     .limit(1)
 
-  const openaiApiKey = aiSettings?.[0]?.value ?? ''
+  const geminiApiKey = aiSettings?.[0]?.value ?? ''
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -123,29 +124,14 @@ export default async function GeneralSettingsPage() {
               </div>
               <div>
                 <CardTitle className="text-base">AI & Pembacaan Dokumen</CardTitle>
-                <CardDescription>API key untuk fitur import KHS otomatis via AI</CardDescription>
+                <CardDescription>API key Gemini untuk fitur import KHS otomatis</CardDescription>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="openai_api_key">OpenAI API Key</Label>
-                <Input
-                  id="openai_api_key"
-                  type="password"
-                  defaultValue={openaiApiKey}
-                  placeholder="sk-..."
-                  disabled
-                />
-                <p className="text-xs text-muted-foreground">
-                  Digunakan untuk membaca dan mengekstrak data dari dokumen KHS yang diunggah mahasiswa.
-                  Atur melalui tabel <code className="bg-muted px-1 py-0.5 rounded text-xs">settings</code> dengan key <code className="bg-muted px-1 py-0.5 rounded text-xs">openai_api_key</code>.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Badge variant="outline" className={openaiApiKey ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'text-muted-foreground'}>
-                  {openaiApiKey ? 'Terkonfigurasi' : 'Belum dikonfigurasi'}
-                </Badge>
-              </div>
+            <CardContent>
+              <GeminiSettingsForm
+                universityId={university?.id ?? ''}
+                defaultValue={geminiApiKey}
+              />
             </CardContent>
           </Card>
 

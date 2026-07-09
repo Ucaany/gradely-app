@@ -147,9 +147,25 @@ export const updateGradeSchema = z.object({
 // ============================================================
 export const studentTargetSchema = z.object({
   target_semester: z.number().int().min(7).max(14),
+  target_ipk: z.number().min(0).max(4).optional().nullable(),
+  target_years: z.number().int().min(1).max(7).optional().nullable(),
   career_goal: z.string().max(200).optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
 })
+
+export const studentAchievementSchema = z.object({
+  achievement_title: z.string().max(150).optional().nullable(),
+  achievement_description: z.string().max(500).optional().nullable(),
+  achievement_ipk_target: z.number().min(0).max(4).optional().nullable(),
+  achievement_sks_target: z.number().int().min(0).max(200).optional().nullable(),
+  achievement_semester_target: z.number().int().min(1).max(14).optional().nullable(),
+  achievement_skills: z.array(z.string().max(50)).max(10).optional().nullable(),
+  achievement_certificates: z.array(z.string().max(150)).max(10).optional().nullable(),
+  achievement_internship: z.string().max(200).optional().nullable(),
+  achievement_thesis_topic: z.string().max(300).optional().nullable(),
+})
+
+export type StudentAchievementInput = z.infer<typeof studentAchievementSchema>
 
 // ============================================================
 // Portfolio

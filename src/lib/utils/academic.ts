@@ -99,12 +99,18 @@ export function predictGraduationSemester(
   const remainingSks = rule.total_sks_graduation - sksLulus
   if (remainingSks <= 0) return currentSemester
 
-  const avgSksPerSemester =
-    currentSemester > 0 ? sksLulus / currentSemester : rule.total_sks_graduation / rule.normal_semester
-  if (avgSksPerSemester <= 0) return rule.max_semester
+  const normalAvg = rule.total_sks_graduation / rule.normal_semester
+  const actualAvg = currentSemester > 0 && sksLulus > 0 ? sksLulus / currentSemester : 0
+
+  // Gunakan rata-rata tertinggi antara actual vs normal agar prediksi realistis
+  // Jika actual terlalu kecil (< 25% normal), fallback ke normal avg
+  const avgSksPerSemester = actualAvg >= normalAvg * 0.25 ? actualAvg : normalAvg
 
   const semestersNeeded = Math.ceil(remainingSks / avgSksPerSemester)
-  return currentSemester + semestersNeeded
+  const predicted = currentSemester + semestersNeeded
+
+  // Cap di max_semester
+  return Math.min(predicted, rule.max_semester)
 }
 
 /**

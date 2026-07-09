@@ -13,23 +13,22 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, university_id')
       .eq('id', user.id)
       .single()
     if (!profile || profile.role !== 'student') {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
-    // Ambil API key dari settings
     const { data: settingRows } = await supabase
       .from('settings')
       .select('value')
-      .eq('key', 'openai_api_key')
+      .eq('key', 'gemini_api_key')
       .limit(1)
     const apiKey = settingRows?.[0]?.value ?? ''
     if (!apiKey) {
       return NextResponse.json<ApiResponse>(
-        { data: null, error: 'API key AI belum dikonfigurasi. Hubungi admin.', success: false },
+        { data: null, error: 'Gemini API key belum dikonfigurasi. Hubungi admin.', success: false },
         { status: 503 }
       )
     }
@@ -38,7 +37,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json<ApiResponse>({ data: null, error: 'File tidak ditemukan', success: false }, { status: 400 })
     if (!SUPPORTED_TYPES.includes(file.type)) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Format file tidak didukung', success: false }, { status: 400 })
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Format file tidak didukung. Gunakan PDF, PNG, JPG, atau WebP.', success: false }, { status: 400 })
     }
     if (file.size > MAX_SIZE) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Ukuran file melebihi 10 MB', success: false }, { status: 400 })
@@ -46,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     const bytes = await file.arrayBuffer()
     const base64 = Buffer.from(bytes).toString('base64')
-    const mimeType = file.type === 'application/pdf' ? 'application/pdf' : file.type
+    const mimeType = file.type
 
     const prompt = `Kamu adalah parser dokumen KHS (Kartu Hasil Studi) mahasiswa Indonesia.
 Ekstrak semua mata kuliah dari dokumen ini dan kembalikan HANYA JSON array dengan format berikut:
@@ -69,60 +68,44 @@ Aturan:
 - Jika informasi tahun ajaran tidak ada, gunakan "2024/2025"
 - Kembalikan HANYA JSON array, tidak ada teks lain sama sekali`
 
-    let messages: object[]
-    if (file.type === 'application/pdf') {
-      messages = [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'file',
-              file: { filename: file.name, file_data: `data:application/pdf;base64,${base64}` },
-            },
-          ],
-        },
-      ]
-    } else {
-      messages = [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: prompt },
-            {
-              type: 'image_url',
-              image_url: { url: `data:${mimeType};base64,${base64}` },
-            },
-          ],
-        },
-      ]
-    }
+    const geminiModel = 'gemini-2.0-flash'
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`
 
-    const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
+    const geminiRes = await fetch(geminiUrl, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gpt-4o',
-        messages,
-        max_tokens: 4096,
-        temperature: 0,
+        contents: [
+          {
+            parts: [
+              { text: prompt },
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: base64,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0,
+          maxOutputTokens: 4096,
+        },
       }),
     })
 
-    if (!openaiRes.ok) {
-      const errBody = await openaiRes.text()
-      console.error('OpenAI error:', errBody)
+    if (!geminiRes.ok) {
+      const errBody = await geminiRes.text()
+      console.error('Gemini error:', errBody)
       return NextResponse.json<ApiResponse>(
         { data: null, error: 'Gagal menghubungi layanan AI. Periksa konfigurasi API key.', success: false },
         { status: 502 }
       )
     }
 
-    const openaiData = await openaiRes.json()
-    const content: string = openaiData.choices?.[0]?.message?.content ?? ''
+    const geminiData = await geminiRes.json()
+    const content: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
     const jsonMatch = content.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {

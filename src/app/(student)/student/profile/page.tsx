@@ -123,6 +123,7 @@ export default function StudentProfilePage() {
     }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { fetchProfile() }, [])
 
   async function onSubmit(data: UpdateStudentProfileInput) {

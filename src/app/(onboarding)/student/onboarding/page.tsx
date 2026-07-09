@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
-  GraduationCap,
   Sparkles,
   Building2,
   User,
@@ -214,28 +213,26 @@ export default function OnboardingPage() {
     <div className="min-h-screen flex flex-col bg-background">
 
       {/* Top bar */}
-      <div className="w-full flex justify-end px-4 pt-4">
+      <div className="fixed top-0 right-0 z-10 px-4 pt-4">
         <DarkModeToggle />
       </div>
 
       {/* Center content */}
-      <div className="flex-1 w-full flex flex-col items-center justify-center px-4 py-6">
+      <div className="flex-1 w-full flex flex-col items-center justify-center px-4 py-12">
 
-        {/* Step 0 — Skills: 2-col on desktop */}
+        {/* Step 0 — Skills: 2-col layout */}
         {step === 0 ? (
-          <div className="w-full max-w-4xl">
-            {/* Header + progress (centered, mobile style) */}
-            <div className="flex flex-col items-center gap-5 mb-8">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                <GraduationCap className="h-5 w-5" />
-              </div>
+          <div className="w-full max-w-5xl">
+
+            {/* Step indicator — centered */}
+            <div className="flex flex-col items-center gap-4 mb-10">
               <div className="flex items-center gap-2">
                 {STEPS.map((s, i) => {
                   const isDone = i < step
                   const isActive = i === step
                   return (
                     <div key={i} className="flex items-center gap-2">
-                      <div className={`flex items-center gap-1.5 text-xs font-medium transition-all ${
+                      <div className={`flex items-center gap-2 text-xs font-medium transition-all ${
                         isActive ? 'text-primary' : isDone ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
                       }`}>
                         <div className={`flex h-6 w-6 items-center justify-center rounded-full transition-all ${
@@ -245,66 +242,80 @@ export default function OnboardingPage() {
                         }`}>
                           {isDone ? <Check className="h-3 w-3" /> : <span className="text-[10px] font-bold">{i + 1}</span>}
                         </div>
-                        <span className="hidden sm:block text-xs">{s.label}</span>
+                        <span className="hidden sm:block">{s.label}</span>
                       </div>
                       {i < STEPS.length - 1 && (
-                        <div className={`w-8 h-px transition-colors ${i < step ? 'bg-emerald-300 dark:bg-emerald-700' : 'bg-border'}`} />
+                        <div className={`w-10 h-px transition-colors ${i < step ? 'bg-emerald-300 dark:bg-emerald-700' : 'bg-border'}`} />
                       )}
                     </div>
                   )
                 })}
               </div>
-              <Progress value={((step + 1) / STEPS.length) * 100} className="h-1 w-40" />
+              <Progress value={((step + 1) / STEPS.length) * 100} className="h-1 w-44" />
             </div>
 
-            {/* 2-col desktop layout */}
-            <div className="flex flex-col lg:flex-row lg:gap-10 lg:items-start">
+            {/* 2-col layout: left info + right skill grid */}
+            <div className="flex flex-col lg:flex-row lg:gap-12 lg:items-start">
 
-              {/* Left: info panel — desktop only */}
-              <div className="hidden lg:flex flex-col gap-6 w-72 shrink-0 sticky top-8">
-                <div>
-                  <h1 className="text-2xl font-semibold tracking-tight">Apa skill & minat kamu?</h1>
-                  <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
+              {/* LEFT PANEL */}
+              <div className="hidden lg:flex flex-col gap-8 w-80 shrink-0 sticky top-10">
+                <div className="space-y-3">
+                  <h1 className="text-3xl font-semibold tracking-tight leading-snug">
+                    Apa skill &<br />minat kamu?
+                  </h1>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
                     Pilih skill yang kamu miliki atau ingin kembangkan. Ini membantu kami menampilkan perusahaan dan peluang karir yang relevan untukmu.
                   </p>
                 </div>
 
+                {selectedSkills.length === 0 && !skillNotFound && (
+                  <div className="rounded-xl border border-dashed border-border bg-muted/30 px-5 py-6 text-center">
+                    <Sparkles className="h-6 w-6 text-muted-foreground/40 mx-auto mb-2" />
+                    <p className="text-xs text-muted-foreground">Pilih skill di sebelah kanan untuk mulai</p>
+                  </div>
+                )}
+
                 {selectedSkills.length > 0 && !skillNotFound && (
-                  <Card className="border-primary/20 bg-primary/5">
-                    <CardContent className="py-3 px-4">
-                      <p className="text-xs font-medium text-primary mb-2">{selectedSkills.length} skill dipilih</p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedSkills.map(s => (
-                          <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  <div className="rounded-xl border border-primary/20 bg-primary/5 px-5 py-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold text-primary uppercase tracking-wide">Dipilih</p>
+                      <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                        {selectedSkills.length}
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {selectedSkills.map(s => (
+                        <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {skillNotFound && (
-                  <Card className="border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30">
-                    <CardContent className="py-3 px-4">
-                      <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Skill tidak ditemukan</p>
-                      <p className="text-xs text-amber-600/70 dark:text-amber-500/70 mt-1">Kamu bisa lanjut ke langkah berikutnya.</p>
-                    </CardContent>
-                  </Card>
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/30 px-5 py-4 space-y-1">
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">Skill tidak ditemukan</p>
+                    <p className="text-xs text-amber-600/70 dark:text-amber-500/70 leading-relaxed">
+                      Tidak masalah, kamu tetap bisa lanjut ke langkah berikutnya.
+                    </p>
+                  </div>
                 )}
 
                 <NavButtons />
               </div>
 
-              {/* Right: skill grid */}
-              <div className="flex-1 space-y-4">
+              {/* RIGHT PANEL — skill grid */}
+              <div className="flex-1 min-w-0 space-y-5">
+
                 {/* Mobile title */}
-                <div className="lg:hidden text-center">
+                <div className="lg:hidden text-center space-y-2">
                   <h1 className="text-2xl font-semibold tracking-tight">Apa skill & minat kamu?</h1>
-                  <p className="text-sm text-muted-foreground mt-1.5 max-w-md mx-auto">
+                  <p className="text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
                     Pilih skill yang kamu miliki atau ingin kembangkan.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 gap-2.5">
+                {/* Skill grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                   {availableSkills.map((skill) => {
                     const selected = selectedSkills.includes(skill)
                     return (
@@ -313,9 +324,9 @@ export default function OnboardingPage() {
                         type="button"
                         onClick={() => toggleSkill(skill)}
                         disabled={skillNotFound}
-                        className={`relative flex items-center gap-2.5 rounded-xl border px-3.5 py-3 text-sm font-medium text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        className={`relative flex items-center gap-3 rounded-xl border px-4 py-3.5 text-sm font-medium text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                           skillNotFound
-                            ? 'border-border bg-muted/20 text-muted-foreground/40 cursor-not-allowed opacity-50'
+                            ? 'border-border bg-muted/20 text-muted-foreground/30 cursor-not-allowed opacity-40'
                             : selected
                             ? 'border-primary bg-primary/8 text-primary shadow-sm ring-1 ring-primary/20 cursor-pointer'
                             : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent/50 cursor-pointer'
@@ -335,30 +346,32 @@ export default function OnboardingPage() {
                 </div>
 
                 {/* Tidak menemukan skill */}
-                <button
-                  type="button"
-                  onClick={toggleSkillNotFound}
-                  className={`w-full flex items-center gap-3 rounded-xl border px-4 py-3 text-sm font-medium text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${
-                    skillNotFound
-                      ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-300/50 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-400'
-                      : 'border-dashed border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:bg-accent/40'
-                  }`}
-                >
-                  <div className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 ${
-                    skillNotFound
-                      ? 'border-amber-500 bg-amber-500 dark:border-amber-400 dark:bg-amber-400'
-                      : 'border-muted-foreground/25'
-                  }`}>
-                    {skillNotFound
-                      ? <Check className="h-3 w-3 text-white dark:text-amber-950" />
-                      : <SearchX className="h-3 w-3 text-muted-foreground/40" />
-                    }
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium">Saya tidak menemukan skill saya</p>
-                    <p className="text-xs opacity-60 mt-0.5">Lewati langkah ini dan lanjut ke tahap berikutnya</p>
-                  </div>
-                </button>
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={toggleSkillNotFound}
+                    className={`w-full flex items-center gap-4 rounded-xl border px-5 py-4 text-sm font-medium text-left transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${
+                      skillNotFound
+                        ? 'border-amber-400 bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-300/50 dark:border-amber-600 dark:bg-amber-950/30 dark:text-amber-400'
+                        : 'border-dashed border-border bg-card text-muted-foreground hover:border-muted-foreground/40 hover:bg-accent/40'
+                    }`}
+                  >
+                    <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-150 ${
+                      skillNotFound
+                        ? 'border-amber-500 bg-amber-500 dark:border-amber-400 dark:bg-amber-400'
+                        : 'border-muted-foreground/25'
+                    }`}>
+                      {skillNotFound
+                        ? <Check className="h-3.5 w-3.5 text-white dark:text-amber-950" />
+                        : <SearchX className="h-3.5 w-3.5 text-muted-foreground/40" />
+                      }
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-medium">Saya tidak menemukan skill saya</p>
+                      <p className="text-xs text-muted-foreground/70 mt-0.5">Lewati langkah ini dan lanjut ke tahap berikutnya</p>
+                    </div>
+                  </button>
+                </div>
 
                 {/* Mobile: selected skills summary */}
                 {selectedSkills.length > 0 && !skillNotFound && (
@@ -375,7 +388,7 @@ export default function OnboardingPage() {
                 )}
 
                 {/* Mobile nav */}
-                <div className="lg:hidden">
+                <div className="lg:hidden pt-2">
                   <NavButtons />
                 </div>
               </div>
@@ -385,10 +398,7 @@ export default function OnboardingPage() {
           /* Steps 1 & 2 — single column centered */
           <div className="w-full max-w-xl">
             {/* Header + progress */}
-            <div className="flex flex-col items-center gap-5 mb-8">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-                <GraduationCap className="h-5 w-5" />
-              </div>
+            <div className="flex flex-col items-center gap-4 mb-8">
               <div className="flex items-center gap-2">
                 {STEPS.map((s, i) => {
                   const isDone = i < step

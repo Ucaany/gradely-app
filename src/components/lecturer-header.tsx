@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { DarkModeToggle } from "@/components/dark-mode-toggle"
-import { NotificationBell } from "@/components/student/notification-bell"
 
 interface BreadcrumbItem {
   label: string
@@ -14,29 +13,37 @@ interface BreadcrumbItem {
 }
 
 const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
-  "/student/dashboard": [{ label: "Dashboard" }],
-  "/student/profile": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Pengaturan", href: "/student/settings" }, { label: "Profil Saya" }],
-  "/student/settings": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Pengaturan" }],
-  "/student/settings/invite": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Pengaturan", href: "/student/settings" }, { label: "Invite Token" }],
-  "/student/grades": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Nilai Akademik" }],
-  "/student/grades/import": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Nilai Akademik", href: "/student/grades" }, { label: "Import KHS" }],
-  "/student/target": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Target Kelulusan" }],
-  "/student/target/history": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Target Kelulusan", href: "/student/target" }, { label: "Riwayat & Hasil" }],
-  "/student/portfolio": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Portofolio" }],
-  "/student/career": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Minat Karier" }],
+  "/lecturer/dashboard": [{ label: "Dashboard" }],
+  "/lecturer/students": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Mahasiswa Bimbingan" }],
+  "/lecturer/risk": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Monitoring Risiko" }],
+  "/lecturer/join-code": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Kode Bergabung" }],
+  "/lecturer/profile": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Profil Saya" }],
 }
 
 const BACK_ROUTES: Record<string, string> = {
-  "/student/grades/import": "/student/grades",
-  "/student/settings/invite": "/student/settings",
-  "/student/profile": "/student/settings",
+  "/lecturer/profile": "/lecturer/dashboard",
 }
 
-export function StudentHeader() {
+function getStudentDetailBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
+  const match = pathname.match(/^\/lecturer\/students\/([^/]+)$/)
+  if (match) {
+    return [
+      { label: "Dashboard", href: "/lecturer/dashboard" },
+      { label: "Mahasiswa Bimbingan", href: "/lecturer/students" },
+      { label: "Detail Mahasiswa" },
+    ]
+  }
+  return null
+}
+
+export function LecturerHeader() {
   const pathname = usePathname()
   const router = useRouter()
-  const breadcrumbs = ROUTE_BREADCRUMBS[pathname] ?? [{ label: "Dashboard" }]
-  const backHref = BACK_ROUTES[pathname]
+
+  const dynamicBreadcrumbs = getStudentDetailBreadcrumbs(pathname)
+  const breadcrumbs = dynamicBreadcrumbs ?? ROUTE_BREADCRUMBS[pathname] ?? [{ label: "Dashboard" }]
+
+  const backHref = BACK_ROUTES[pathname] ?? (dynamicBreadcrumbs ? "/lecturer/students" : undefined)
 
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">
@@ -86,8 +93,7 @@ export function StudentHeader() {
         </nav>
       </div>
 
-      <div className="ml-auto flex items-center gap-1 shrink-0">
-        <NotificationBell />
+      <div className="ml-auto shrink-0">
         <DarkModeToggle />
       </div>
     </header>

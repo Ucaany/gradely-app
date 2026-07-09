@@ -30,7 +30,7 @@ export default async function LecturersPage({
   const { data: lecturers, count } = await query
 
   const lecturerIds = (lecturers ?? []).map((l) => l.id)
-  let advisorCounts: Record<string, number> = {}
+  const advisorCounts: Record<string, number> = {}
   if (lecturerIds.length > 0) {
     const { data: advisorRows } = await supabase
       .from('advisor_students')

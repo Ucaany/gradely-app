@@ -5,10 +5,9 @@ import Link from "next/link"
 import {
   GraduationCap,
   LayoutDashboard,
-  BookOpen,
-  Target,
-  Briefcase,
-  Heart,
+  Users,
+  AlertTriangle,
+  QrCode,
   Settings,
 } from "lucide-react"
 import {
@@ -23,61 +22,41 @@ import {
 import { NavMain } from "@/components/nav-main"
 import { NavUser } from "@/components/nav-user"
 
-const studentNavMain = [
+const lecturerNavMain = [
   {
     title: "Dashboard",
-    url: "/student/dashboard",
+    url: "/lecturer/dashboard",
     icon: LayoutDashboard,
   },
 ]
 
-const studentNavAkademik = [
+const lecturerNavBimbingan = [
   {
-    title: "Nilai Akademik",
-    url: "/student/grades",
-    icon: BookOpen,
-    items: [
-      { title: "Daftar Nilai", url: "/student/grades" },
-      { title: "Import KHS", url: "/student/grades/import" },
-    ],
+    title: "Mahasiswa Bimbingan",
+    url: "/lecturer/students",
+    icon: Users,
   },
   {
-    title: "Target Kelulusan",
-    url: "/student/target",
-    icon: Target,
-    items: [
-      { title: "Atur Target", url: "/student/target" },
-      { title: "Riwayat & Hasil", url: "/student/target/history" },
-    ],
+    title: "Monitoring Risiko",
+    url: "/lecturer/risk",
+    icon: AlertTriangle,
   },
 ]
 
-const studentNavKarier = [
+const lecturerNavLainnya = [
   {
-    title: "Portofolio",
-    url: "/student/portfolio",
-    icon: Briefcase,
+    title: "Kode Bergabung",
+    url: "/lecturer/join-code",
+    icon: QrCode,
   },
-  {
-    title: "Minat Karier",
-    url: "/student/career",
-    icon: Heart,
-  },
-]
-
-const studentNavPengaturan = [
   {
     title: "Pengaturan",
-    url: "/student/settings",
+    url: "/lecturer/profile",
     icon: Settings,
-    items: [
-      { title: "Profil Saya", url: "/student/profile" },
-      { title: "Invite Token", url: "/student/settings/invite" },
-    ],
   },
 ]
 
-interface StudentAppSidebarProps {
+interface LecturerAppSidebarProps {
   user: {
     name: string
     email: string
@@ -86,20 +65,20 @@ interface StudentAppSidebarProps {
   }
 }
 
-export function StudentAppSidebar({ user, ...props }: StudentAppSidebarProps & React.ComponentProps<typeof Sidebar>) {
+export function LecturerAppSidebar({ user, ...props }: LecturerAppSidebarProps & React.ComponentProps<typeof Sidebar>) {
   return (
     <Sidebar variant="inset" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
-              <Link href="/student/dashboard">
+              <Link href="/lecturer/dashboard">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
                   <GraduationCap className="size-4" />
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">Gradely</span>
-                  <span className="truncate text-xs">Portal Mahasiswa</span>
+                  <span className="truncate text-xs">Portal Dosen Wali</span>
                 </div>
               </Link>
             </SidebarMenuButton>
@@ -108,10 +87,9 @@ export function StudentAppSidebar({ user, ...props }: StudentAppSidebarProps & R
       </SidebarHeader>
 
       <SidebarContent>
-        <NavMain items={studentNavMain} label="Utama" />
-        <NavMain items={studentNavAkademik} label="Akademik" />
-        <NavMain items={studentNavKarier} label="Karier" />
-        <NavMain items={studentNavPengaturan} label="Pengaturan" />
+        <NavMain items={lecturerNavMain} label="Utama" />
+        <NavMain items={lecturerNavBimbingan} label="Bimbingan" />
+        <NavMain items={lecturerNavLainnya} label="Lainnya" />
       </SidebarContent>
 
       <SidebarFooter>

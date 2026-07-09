@@ -16,8 +16,8 @@ interface TooltipProps {
 function CustomTooltip({ active, payload }: TooltipProps) {
   if (!active || !payload?.length) return null
   return (
-    <div className="rounded-lg border bg-card px-3 py-2 text-xs shadow-md">
-      <p className="font-medium">{payload[0].name}</p>
+    <div className="rounded-xl border bg-card px-3 py-2 text-xs shadow-lg">
+      <p className="font-semibold mb-1">{payload[0].name}</p>
       <p className="text-muted-foreground">{payload[0].value} SKS</p>
     </div>
   )
@@ -33,14 +33,14 @@ export function StudentSKSChart({ earned, required, percentage }: StudentSKSChar
   return (
     <div className="flex items-center gap-6">
       <div className="relative shrink-0">
-        <ResponsiveContainer width={140} height={140}>
+        <ResponsiveContainer width={150} height={150}>
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={44}
-              outerRadius={64}
+              innerRadius={48}
+              outerRadius={68}
               startAngle={90}
               endAngle={-270}
               paddingAngle={2}
@@ -60,26 +60,26 @@ export function StudentSKSChart({ earned, required, percentage }: StudentSKSChar
       </div>
 
       <div className="flex-1 space-y-3">
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ background: "hsl(var(--primary))" }} />
-          <div className="flex-1 min-w-0">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ background: "hsl(var(--primary))" }} />
             <p className="text-xs text-muted-foreground">SKS Lulus</p>
-            <p className="text-base font-bold leading-tight">{earned} <span className="text-xs font-normal text-muted-foreground">SKS</span></p>
           </div>
+          <p className="text-xl font-bold leading-none pl-4">{earned} <span className="text-xs font-normal text-muted-foreground">SKS</span></p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0 bg-muted border border-border" />
-          <div className="flex-1 min-w-0">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0 bg-muted border border-border" />
             <p className="text-xs text-muted-foreground">SKS Tersisa</p>
-            <p className="text-base font-bold leading-tight">{remaining > 0 ? remaining : 0} <span className="text-xs font-normal text-muted-foreground">SKS</span></p>
           </div>
+          <p className="text-xl font-bold leading-none pl-4">{remaining > 0 ? remaining : 0} <span className="text-xs font-normal text-muted-foreground">SKS</span></p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0 bg-border" />
-          <div className="flex-1 min-w-0">
+        <div>
+          <div className="flex items-center gap-2 mb-1">
+            <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0 bg-border" />
             <p className="text-xs text-muted-foreground">Total Wajib</p>
-            <p className="text-base font-bold leading-tight">{required} <span className="text-xs font-normal text-muted-foreground">SKS</span></p>
           </div>
+          <p className="text-xl font-bold leading-none pl-4">{required} <span className="text-xs font-normal text-muted-foreground">SKS</span></p>
         </div>
       </div>
     </div>

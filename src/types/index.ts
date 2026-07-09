@@ -188,9 +188,21 @@ export interface UpdateGradePayload {
 export interface StudentTarget {
   id: string
   student_id: string
-  target_semester: number   // 7, 8, atau 9
+  target_semester: number
+  target_ipk: number | null
+  target_years: number | null
   career_goal: string | null
   notes: string | null
+  achievement_title: string | null
+  achievement_description: string | null
+  achievement_ipk_target: number | null
+  achievement_sks_target: number | null
+  achievement_semester_target: number | null
+  achievement_skills: string[] | null
+  achievement_certificates: string[] | null
+  achievement_internship: string | null
+  achievement_thesis_topic: string | null
+  achievement_updated_at: string | null
   created_at: string
   updated_at: string
 }
