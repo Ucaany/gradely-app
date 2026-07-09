@@ -38,6 +38,14 @@ export async function POST(request: NextRequest) {
     if (!profile || profile.role !== 'admin') return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
 
     const body = await request.json()
+
+    // Auto-resolve university_id if missing or invalid
+    if (!body.university_id || !/^[0-9a-fA-F-]{36}$/.test(body.university_id)) {
+      const { data: uni } = await supabase.from('universities').select('id').limit(1).single()
+      if (!uni) return NextResponse.json<ApiResponse>({ data: null, error: 'Data universitas belum ada. Jalankan migration seed terlebih dahulu.', success: false }, { status: 422 })
+      body.university_id = uni.id
+    }
+
     const parsed = createStudyProgramSchema.safeParse(body)
     if (!parsed.success) {
       return NextResponse.json<ApiResponse>({ data: null, error: parsed.error.issues.map(e => e.message).join(', '), success: false }, { status: 422 })

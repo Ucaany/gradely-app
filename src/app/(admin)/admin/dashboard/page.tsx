@@ -37,6 +37,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardChart } from '@/components/admin/dashboard-chart'
+import { StudentStatusChart } from '@/components/admin/student-status-chart'
 import { formatDate, getInitials } from '@/lib/utils'
 import type { WhatsappLog } from '@/types'
 
@@ -61,7 +62,16 @@ export default async function AdminDashboardPage({
       ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
       : null
 
-  const [studentsRes, lecturersRes, companiesRes, programsRes, recentStudentsRes, wahaLogsRes, advisorRes] =
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString()
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString()
+  const lastMonthEnd = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59).toISOString()
+
+  const [
+    studentsRes, lecturersRes, companiesRes, programsRes,
+    recentStudentsRes, wahaLogsRes, advisorRes,
+    studentsLastMonth, lecturersLastMonth, companiesLastMonth,
+    studentsThisMonth, lecturersThisMonth, companiesThisMonth,
+  ] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').eq('is_active', true),
@@ -72,20 +82,39 @@ export default async function AdminDashboardPage({
         ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).limit(50)
         : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(50),
       supabase.from('advisor_students').select('id, lecturer_id, users!advisor_students_lecturer_id_fkey(id, full_name, avatar_url)', { count: 'exact' }).limit(100),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', thisMonthStart),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', thisMonthStart),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', thisMonthStart),
     ])
 
+  function calcTrend(thisMonth: number, lastMonth: number): string {
+    if (lastMonth === 0 && thisMonth === 0) return '0 baru bulan ini'
+    if (lastMonth === 0) return `+${thisMonth} baru bulan ini`
+    const diff = thisMonth - lastMonth
+    const pct = Math.round((diff / lastMonth) * 100)
+    if (diff === 0) return '0% dari bulan lalu'
+    return `${diff > 0 ? '+' : ''}${pct}% dari bulan lalu`
+  }
+
+  const studentTrend = calcTrend(studentsThisMonth.count ?? 0, studentsLastMonth.count ?? 0)
+  const lecturerTrend = calcTrend(lecturersThisMonth.count ?? 0, lecturersLastMonth.count ?? 0)
+  const companyTrend = calcTrend(companiesThisMonth.count ?? 0, companiesLastMonth.count ?? 0)
+
   const stats = [
-    { title: 'Total Mahasiswa', value: studentsRes.count ?? 0, description: 'Mahasiswa aktif', icon: GraduationCap, trend: '+2.5%' },
-    { title: 'Dosen Wali', value: lecturersRes.count ?? 0, description: 'Dosen aktif', icon: Users, trend: '+0%' },
-    { title: 'Program Studi', value: programsRes.count ?? 0, description: 'Prodi aktif', icon: BookOpen, trend: '+0%' },
-    { title: 'Perusahaan Mitra', value: companiesRes.count ?? 0, description: 'Perusahaan terdaftar', icon: Building2, trend: '+1.2%' },
+    { title: 'Total Mahasiswa', value: studentsRes.count ?? 0, description: 'Mahasiswa aktif', icon: GraduationCap, trend: studentTrend, iconClass: 'text-blue-500' },
+    { title: 'Dosen Wali', value: lecturersRes.count ?? 0, description: 'Dosen aktif', icon: Users, trend: lecturerTrend, iconClass: 'text-violet-500' },
+    { title: 'Program Studi', value: programsRes.count ?? 0, description: 'Prodi aktif', icon: BookOpen, trend: null, iconClass: 'text-emerald-500' },
+    { title: 'Perusahaan Mitra', value: companiesRes.count ?? 0, description: 'Perusahaan terdaftar', icon: Building2, trend: companyTrend, iconClass: 'text-orange-500' },
   ]
 
   const quickActions = [
-    { label: 'Tambah Mahasiswa', href: '/admin/users/students/new', icon: UserPlus, description: 'Daftarkan mahasiswa baru' },
-    { label: 'Tambah Dosen Wali', href: '/admin/users/lecturers/new', icon: UserPlus, description: 'Daftarkan dosen wali baru' },
-    { label: 'Aturan Akademik', href: '/admin/academic-rules', icon: ClipboardList, description: 'Kelola aturan akademik' },
-    { label: 'Import CSV', href: '/admin/users/import', icon: FileUp, description: 'Import data dari file CSV' },
+    { label: 'Tambah Mahasiswa', href: '/admin/users/students/new', icon: UserPlus, description: 'Daftarkan mahasiswa baru', iconClass: 'text-blue-500' },
+    { label: 'Tambah Dosen Wali', href: '/admin/users/lecturers/new', icon: UserPlus, description: 'Daftarkan dosen wali baru', iconClass: 'text-violet-500' },
+    { label: 'Aturan Akademik', href: '/admin/academic-rules', icon: ClipboardList, description: 'Kelola aturan akademik', iconClass: 'text-emerald-500' },
+    { label: 'Import CSV', href: '/admin/users/import', icon: FileUp, description: 'Import data dari file CSV', iconClass: 'text-orange-500' },
   ]
 
   const systemStatus = [
@@ -100,22 +129,8 @@ export default async function AdminDashboardPage({
   // Advisor stats
   const advisorRows = advisorRes.data ?? []
   const totalAdvisorConnections = advisorRes.count ?? 0
-  // Count unique lecturers yang sudah punya mahasiswa
   const activeLecturerIds = new Set(advisorRows.map((a) => a.lecturer_id))
   const activeLecturersCount = activeLecturerIds.size
-  // Group: berapa mahasiswa per dosen (top 5)
-  const lecturerStudentCount: Record<string, { name: string; avatar: string | null; count: number }> = {}
-  for (const row of advisorRows) {
-    const lec = (row.users as unknown) as { id: string; full_name: string; avatar_url: string | null } | null
-    if (!lec) continue
-    if (!lecturerStudentCount[lec.id]) {
-      lecturerStudentCount[lec.id] = { name: lec.full_name, avatar: lec.avatar_url, count: 0 }
-    }
-    lecturerStudentCount[lec.id].count++
-  }
-  const topLecturers = Object.entries(lecturerStudentCount)
-    .sort(([, a], [, b]) => b.count - a.count)
-    .slice(0, 5)
 
   const periodLabels: Record<Period, string> = {
     '24h': '24 Jam Terakhir',
@@ -141,15 +156,17 @@ export default async function AdminDashboardPage({
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
-              <stat.icon className="h-4 w-4 text-muted-foreground" />
+              <stat.icon className={`h-4 w-4 ${stat.iconClass}`} />
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">{stat.value}</div>
               <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
-              <div className="mt-2 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
-                <TrendingUp className="h-3 w-3" />
-                <span>{stat.trend} dari bulan lalu</span>
-              </div>
+              {stat.trend !== null && (
+                <div className="mt-2 flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400">
+                  <TrendingUp className="h-3 w-3" />
+                  <span>{stat.trend}</span>
+                </div>
+              )}
             </CardContent>
           </Card>
         ))}
@@ -178,6 +195,39 @@ export default async function AdminDashboardPage({
                   </Badge>
                 </div>
                 {i < systemStatus.length - 1 && <Separator />}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Status Akademik Chart */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <StudentStatusChart />
+        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Keterangan Status</CardTitle>
+            <CardDescription>Kategori status akademik mahasiswa</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { color: '#16a34a', label: 'Unggul', desc: 'SKS melebihi target' },
+              { color: '#2563eb', label: 'Sesuai Target', desc: 'Progres sesuai rencana' },
+              { color: '#ca8a04', label: 'Perlu Perhatian', desc: 'SKS sedikit di bawah target' },
+              { color: '#ea580c', label: 'Butuh Pemulihan', desc: 'SKS jauh di bawah target' },
+              { color: '#dc2626', label: 'Darurat Akademik', desc: 'IPK/SKS kritis atau melebihi semester maks' },
+            ].map((item, i, arr) => (
+              <div key={item.label}>
+                <div className="flex items-start gap-2.5 py-1.5">
+                  <div className="mt-0.5 h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                  <div>
+                    <p className="text-sm font-medium leading-tight">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.desc}</p>
+                  </div>
+                </div>
+                {i < arr.length - 1 && <Separator />}
               </div>
             ))}
           </CardContent>
@@ -219,80 +269,36 @@ export default async function AdminDashboardPage({
         </Card>
       </div>
 
-      {/* Top Dosen + Aksi Cepat */}
+      {/* Aksi Cepat */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Aksi Cepat</CardTitle>
+          <CardDescription>Pintasan ke fitur yang sering digunakan</CardDescription>
+        </CardHeader>
+        <CardContent className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {quickActions.map((action) => (
+            <Link
+              key={action.href}
+              href={action.href}
+              className="group flex flex-col gap-2 rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted group-hover:bg-background">
+                  <action.icon className={`h-4 w-4 ${action.iconClass}`} />
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+              </div>
+              <div>
+                <p className="text-sm font-medium leading-tight">{action.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{action.description}</p>
+              </div>
+            </Link>
+          ))}
+        </CardContent>
+      </Card>
+
+      {/* Mahasiswa Terbaru + Riwayat WhatsApp */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
-            <div>
-              <CardTitle className="text-base">Dosen Wali Paling Aktif</CardTitle>
-              <CardDescription>Berdasarkan jumlah mahasiswa terhubung</CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
-              <Link href="/admin/users/lecturers">
-                Lihat semua
-                <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="pt-4">
-            {topLecturers.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-                <Users className="h-8 w-8 text-muted-foreground/30" />
-                <p className="text-sm text-muted-foreground">Belum ada koneksi dosen-mahasiswa</p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {topLecturers.map(([id, lec]) => (
-                  <div key={id} className="flex items-center gap-3">
-                    <Avatar className="h-8 w-8 shrink-0">
-                      <AvatarImage src={lec.avatar ?? ''} />
-                      <AvatarFallback className="text-xs">{getInitials(lec.name)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{lec.name}</p>
-                      <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.min(100, (lec.count / Math.max(...topLecturers.map(([,l]) => l.count))) * 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                    <span className="text-sm font-semibold shrink-0 w-6 text-right">{lec.count}</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Aksi Cepat</CardTitle>
-            <CardDescription>Pintasan ke fitur yang sering digunakan</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            {quickActions.map((action) => (
-              <Link
-                key={action.href}
-                href={action.href}
-                className="group flex flex-col gap-2 rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted group-hover:bg-background">
-                    <action.icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium leading-tight">{action.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{action.description}</p>
-                </div>
-              </Link>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
       {/* Mahasiswa Terbaru */}
       <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
@@ -357,7 +363,7 @@ export default async function AdminDashboardPage({
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-0">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <MessageCircle className="h-4 w-4 text-muted-foreground" />
+              <MessageCircle className="h-4 w-4 text-emerald-500" />
               Riwayat Pesan WhatsApp
             </CardTitle>
             <CardDescription className="mt-1">
@@ -371,7 +377,6 @@ export default async function AdminDashboardPage({
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            {/* Period filter buttons */}
             <div className="flex rounded-lg border p-0.5 gap-0.5">
               {(['24h', '1w', 'all'] as Period[]).map((p) => (
                 <Button
@@ -400,10 +405,10 @@ export default async function AdminDashboardPage({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="pl-4 sm:pl-6 min-w-[130px]">No. HP</TableHead>
-                  <TableHead className="min-w-[260px]">Pesan</TableHead>
-                  <TableHead className="min-w-[100px]">Status</TableHead>
-                  <TableHead className="pr-4 sm:pr-6 min-w-[140px]">Waktu</TableHead>
+                  <TableHead className="pl-4 sm:pl-6 min-w-[120px]">No. HP</TableHead>
+                  <TableHead className="min-w-[160px]">Pesan</TableHead>
+                  <TableHead className="min-w-[90px]">Status</TableHead>
+                  <TableHead className="pr-4 sm:pr-6 min-w-[120px]">Waktu</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -418,9 +423,9 @@ export default async function AdminDashboardPage({
                     <TableRow key={log.id}>
                       <TableCell className="pl-4 sm:pl-6 text-sm font-mono">{log.phone_number}</TableCell>
                       <TableCell className="text-sm">
-                        <p className="truncate max-w-[300px] text-muted-foreground">{log.message}</p>
+                        <p className="truncate max-w-[180px] text-muted-foreground">{log.message}</p>
                         {log.error_message && (
-                          <p className="text-xs text-destructive mt-0.5 truncate max-w-[300px]">{log.error_message}</p>
+                          <p className="text-xs text-destructive mt-0.5 truncate max-w-[180px]">{log.error_message}</p>
                         )}
                       </TableCell>
                       <TableCell>
@@ -449,6 +454,7 @@ export default async function AdminDashboardPage({
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   )
 }

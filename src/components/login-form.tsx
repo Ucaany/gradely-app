@@ -54,6 +54,12 @@ function LoginFormInner({ className }: { className?: string }) {
   const supabase = createClient()
 
   useEffect(() => {
+    if (errorParam === 'account_inactive') {
+      toast.error('Akun Anda tidak aktif. Hubungi Admin.')
+    }
+  }, [errorParam])
+
+  useEffect(() => {
     const interval = setInterval(() => {
       setFadeIn(false)
       setTimeout(() => {
@@ -109,7 +115,23 @@ function LoginFormInner({ className }: { className?: string }) {
         return
       }
 
-      toast.success('Login berhasil!')
+      if (profile.role !== selectedRole) {
+        const roleLabels: Record<string, string> = {
+          student: 'Mahasiswa',
+          lecturer: 'Dosen Wali',
+          admin: 'Admin',
+          company: 'Industri',
+        }
+        const selectedLabel = roleLabels[selectedRole] ?? selectedRole
+        const actualLabel = roleLabels[profile.role] ?? profile.role
+        toast.error(`Akun ini terdaftar sebagai ${actualLabel}, bukan ${selectedLabel}.`, {
+          description: `Kamu akan diarahkan ke dashboard ${actualLabel}.`,
+          duration: 4000,
+        })
+      } else {
+        toast.success('Login berhasil!')
+      }
+
       const destination = redirectTo || ROLE_HOME[profile.role as UserRole] || '/login'
       router.push(destination)
       router.refresh()
@@ -179,12 +201,6 @@ function LoginFormInner({ className }: { className?: string }) {
               Masuk ke akun Anda untuk melanjutkan
             </p>
           </div>
-
-          {errorParam === 'account_inactive' && (
-            <div className="rounded-md bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
-              Akun Anda tidak aktif. Hubungi Admin.
-            </div>
-          )}
 
           {/* Form fields */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>

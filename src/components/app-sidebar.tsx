@@ -10,6 +10,8 @@ import {
   Settings,
   Building2,
   MessageSquare,
+  UserCheck,
+  Sparkles,
 } from "lucide-react"
 import {
   Sidebar,
@@ -45,7 +47,7 @@ const adminNavPengguna = [
   {
     title: "Dosen Wali",
     url: "/admin/users/lecturers",
-    icon: Users,
+    icon: UserCheck,
     items: [
       { title: "Daftar Dosen", url: "/admin/users/lecturers" },
       { title: "Tambah Dosen", url: "/admin/users/lecturers/new" },
@@ -73,6 +75,11 @@ const adminNavAkademik = [
     url: "/admin/academic-rules",
     icon: BookOpen,
   },
+  {
+    title: "Skill & Karir",
+    url: "/admin/skills-career",
+    icon: Sparkles,
+  },
 ]
 
 const adminNavKonfigurasi = [
@@ -84,11 +91,6 @@ const adminNavKonfigurasi = [
   {
     title: "Pengaturan Umum",
     url: "/admin/settings/general",
-    icon: Settings,
-  },
-  {
-    title: "Akun Saya",
-    url: "/admin/account",
     icon: Settings,
   },
 ]

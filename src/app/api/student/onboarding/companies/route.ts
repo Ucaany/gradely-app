@@ -2,25 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
-const SKILL_INDUSTRY_MAP: Record<string, string[]> = {
-  'Desain Grafis': ['Kreatif & Desain', 'Periklanan', 'Media'],
-  'UI/UX Design': ['Teknologi', 'Kreatif & Desain', 'Startup'],
-  'Ilustrasi': ['Kreatif & Desain', 'Penerbitan', 'Media'],
-  'Fotografi': ['Media', 'Periklanan', 'Kreatif & Desain'],
-  'Videografi': ['Media', 'Periklanan', 'Entertainment'],
-  'Animasi': ['Media', 'Entertainment', 'Teknologi'],
-  'Musik': ['Entertainment', 'Media', 'Kreatif & Desain'],
-  'Seni Pertunjukan': ['Entertainment', 'Kreatif & Desain'],
-  'Kriya & Kerajinan': ['Kreatif & Desain', 'Ritel'],
-  'Arsitektur': ['Konstruksi', 'Properti', 'Kreatif & Desain'],
-  'Fashion Design': ['Fashion', 'Ritel', 'Kreatif & Desain'],
-  'Branding': ['Periklanan', 'Kreatif & Desain', 'Startup'],
-  'Social Media': ['Periklanan', 'Media', 'Startup'],
-  'Copywriting': ['Periklanan', 'Media', 'Startup'],
-  'Web Development': ['Teknologi', 'Startup'],
-  'Mobile Development': ['Teknologi', 'Startup'],
-}
-
 // GET /api/student/onboarding/companies?skills=A,B,C
 export async function GET(request: NextRequest) {
   try {
@@ -32,9 +13,28 @@ export async function GET(request: NextRequest) {
     const skills = skillsParam.split(',').map(s => s.trim()).filter(Boolean)
 
     const relevantIndustries = new Set<string>()
-    for (const skill of skills) {
-      const industries = SKILL_INDUSTRY_MAP[skill] ?? []
-      industries.forEach(i => relevantIndustries.add(i))
+
+    if (skills.length > 0) {
+      // Look up skill IDs from DB
+      const { data: skillRows } = await supabase
+        .from('skill_options')
+        .select('id, name')
+        .in('name', skills)
+        .eq('is_active', true)
+
+      if (skillRows && skillRows.length > 0) {
+        const skillIds = skillRows.map(s => s.id)
+        // Fetch mapped industries
+        const { data: mapRows } = await supabase
+          .from('skill_industry_map')
+          .select('industry_options(name)')
+          .in('skill_id', skillIds)
+
+        for (const row of mapRows ?? []) {
+          const ind = (Array.isArray(row.industry_options) ? row.industry_options[0] : row.industry_options) as { name: string } | null
+          if (ind?.name) relevantIndustries.add(ind.name)
+        }
+      }
     }
 
     let query = supabase
@@ -81,13 +81,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { skills, interested_company_ids } = body as { skills: string[]; interested_company_ids: string[] }
+    const { skills, interested_company_ids, skill_not_found } = body as {
+      skills: string[]
+      interested_company_ids: string[]
+      skill_not_found?: boolean
+    }
 
     // Save career interests (skills)
-    if (skills?.length) {
-      await supabase.from('career_interests').delete().eq('student_id', user.id)
+    await supabase.from('career_interests').delete().eq('student_id', user.id)
+    if (!skill_not_found && skills?.length) {
       const inserts = skills.map((s: string) => ({ student_id: user.id, interest: s }))
       await supabase.from('career_interests').insert(inserts)
+    }
+
+    // Save interested companies
+    await supabase.from('student_company_interests').delete().eq('student_id', user.id)
+    if (interested_company_ids?.length) {
+      const companyInserts = interested_company_ids.map((company_id: string) => ({
+        student_id: user.id,
+        company_id,
+      }))
+      await supabase.from('student_company_interests').insert(companyInserts)
     }
 
     // Mark onboarding complete

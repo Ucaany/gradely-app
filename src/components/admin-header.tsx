@@ -25,6 +25,7 @@ const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/admin/academic-rules": [{ label: "Akademik" }, { label: "Aturan Akademik" }],
   "/admin/settings": [{ label: "Konfigurasi" }, { label: "WAHA" }],
   "/admin/settings/general": [{ label: "Konfigurasi" }, { label: "Pengaturan Umum" }],
+  "/admin/skills-career": [{ label: "Akademik" }, { label: "Skill & Karir" }],
   "/admin/account": [{ label: "Konfigurasi" }, { label: "Akun Saya" }],
 }
 
