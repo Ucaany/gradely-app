@@ -10,12 +10,10 @@ import { Loader2, Pencil, Trash2 } from 'lucide-react'
 import { updateUserSchema, type UpdateUserInput } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -27,6 +25,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Separator } from '@/components/ui/separator'
 import type { StudyProgram, User } from '@/types'
 
 interface Props {
@@ -41,18 +48,17 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  const { register, handleSubmit, setValue, formState: { errors } } =
-    useForm<UpdateUserInput>({
-      resolver: zodResolver(updateUserSchema),
-      defaultValues: {
-        full_name: userData.full_name,
-        nim: userData.nim ?? '',
-        phone: userData.phone ?? '',
-        current_semester: userData.current_semester ?? undefined,
-        study_program_id: userData.study_program_id ?? undefined,
-        is_active: userData.is_active,
-      },
-    })
+  const form = useForm<UpdateUserInput>({
+    resolver: zodResolver(updateUserSchema),
+    defaultValues: {
+      full_name: userData.full_name,
+      nim: userData.nim ?? '',
+      phone: userData.phone ?? '',
+      current_semester: userData.current_semester ?? undefined,
+      study_program_id: userData.study_program_id ?? undefined,
+      is_active: userData.is_active,
+    },
+  })
 
   async function onSubmit(data: UpdateUserInput) {
     setIsLoading(true)
@@ -86,7 +92,6 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
       }
       toast.success('Akun berhasil dihapus')
       router.back()
-      router.refresh()
     } finally {
       setIsLoading(false)
     }
@@ -102,72 +107,149 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
             Edit
           </Button>
         </DialogTrigger>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="max-w-md p-0 gap-0 overflow-hidden">
+          <DialogHeader className="px-6 pt-6 pb-4">
             <DialogTitle>Edit Data Pengguna</DialogTitle>
             <DialogDescription>Perbarui data pengguna</DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nama Lengkap</Label>
-              <Input {...register('full_name')} disabled={isLoading} />
-              {errors.full_name && <p className="text-xs text-destructive">{errors.full_name.message}</p>}
-            </div>
-            {userData.role === 'student' && (
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>NIM</Label>
-                  <Input {...register('nim')} disabled={isLoading} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Semester</Label>
-                  <Input type="number" min={1} max={14} {...register('current_semester', { valueAsNumber: true })} disabled={isLoading} />
-                </div>
+          <Separator />
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
+              <div className="flex flex-col gap-4 px-6 py-4 max-h-[60vh] overflow-y-auto">
+                <FormField
+                  control={form.control}
+                  name="full_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nama Lengkap</FormLabel>
+                      <FormControl>
+                        <Input disabled={isLoading} {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {userData.role === 'student' && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="nim"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>NIM</FormLabel>
+                          <FormControl>
+                            <Input disabled={isLoading} {...field} value={field.value ?? ''} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="current_semester"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Semester</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min={1}
+                              max={14}
+                              disabled={isLoading}
+                              {...field}
+                              onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+                              value={field.value ?? ''}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>No. HP</FormLabel>
+                      <FormControl>
+                        <Input disabled={isLoading} {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="study_program_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Program Studi</FormLabel>
+                      <Select
+                        defaultValue={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih program studi" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {studyPrograms.map((sp) => (
+                            <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="is_active"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <Select
+                        defaultValue={field.value ? 'true' : 'false'}
+                        onValueChange={(v) => field.onChange(v === 'true')}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="true">Aktif</SelectItem>
+                          <SelectItem value="false">Nonaktif</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
-            )}
-            <div className="space-y-2">
-              <Label>No. HP</Label>
-              <Input {...register('phone')} disabled={isLoading} />
-            </div>
-            <div className="space-y-2">
-              <Label>Program Studi</Label>
-              <Select
-                defaultValue={userData.study_program_id ?? ''}
-                onValueChange={(v) => setValue('study_program_id', v)}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Pilih program studi" />
-                </SelectTrigger>
-                <SelectContent>
-                  {studyPrograms.map((sp) => (
-                    <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select
-                defaultValue={userData.is_active ? 'true' : 'false'}
-                onValueChange={(v) => setValue('is_active', v === 'true')}
-                disabled={isLoading}
-              >
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="true">Aktif</SelectItem>
-                  <SelectItem value="false">Nonaktif</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditOpen(false)}>Batal</Button>
-              <Button type="submit" disabled={isLoading}>
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Simpan
-              </Button>
-            </DialogFooter>
-          </form>
+
+              {/* Sticky footer */}
+              <Separator />
+              <div className="flex justify-end gap-2 px-6 py-4">
+                <Button type="button" variant="outline" onClick={() => setEditOpen(false)} disabled={isLoading}>
+                  Batal
+                </Button>
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Simpan
+                </Button>
+              </div>
+            </form>
+          </Form>
         </DialogContent>
       </Dialog>
 
@@ -179,20 +261,23 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
             Hapus
           </Button>
         </DialogTrigger>
-        <DialogContent>
+        <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>Hapus Akun</DialogTitle>
             <DialogDescription>
               Yakin ingin menghapus akun <strong>{userData.full_name}</strong>? Semua data terkait akan ikut terhapus. Tindakan ini tidak bisa dibatalkan.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteOpen(false)}>Batal</Button>
+          <Separator />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteOpen(false)} disabled={isLoading}>
+              Batal
+            </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Hapus Akun
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

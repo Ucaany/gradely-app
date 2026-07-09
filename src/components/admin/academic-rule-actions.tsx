@@ -10,12 +10,10 @@ import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 import { createAcademicRuleSchema, type CreateAcademicRuleInput } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -28,6 +26,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form'
+import { Separator } from '@/components/ui/separator'
 import type { AcademicRule, StudyProgram } from '@/types'
 
 interface Props {
@@ -55,37 +62,33 @@ function AcademicRuleForm({
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
 
-  const defaultValues: Partial<CreateAcademicRuleInput> = rule
-    ? {
-        university_id: rule.university_id,
-        study_program_id: rule.study_program_id ?? undefined,
-        total_sks_graduation: rule.total_sks_graduation,
-        normal_semester: rule.normal_semester,
-        max_semester: rule.max_semester,
-        min_gpa: rule.min_gpa,
-        max_sks_per_semester: rule.max_sks_per_semester,
-        min_sks_per_semester: rule.min_sks_per_semester,
-        passing_grade: rule.passing_grade,
-        grade_scale: rule.grade_scale,
-      }
-    : {
-        university_id: universityId,
-        total_sks_graduation: 144,
-        normal_semester: 8,
-        max_semester: 14,
-        min_gpa: 2.0,
-        max_sks_per_semester: 24,
-        min_sks_per_semester: 12,
-        passing_grade: 'D',
-        grade_scale: { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 },
-      }
-
-  const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<CreateAcademicRuleInput>({
+  const form = useForm<CreateAcademicRuleInput>({
     resolver: zodResolver(createAcademicRuleSchema),
-    defaultValues: defaultValues as CreateAcademicRuleInput,
+    defaultValues: rule
+      ? {
+          university_id: rule.university_id,
+          study_program_id: rule.study_program_id ?? undefined,
+          total_sks_graduation: rule.total_sks_graduation,
+          normal_semester: rule.normal_semester,
+          max_semester: rule.max_semester,
+          min_gpa: rule.min_gpa,
+          max_sks_per_semester: rule.max_sks_per_semester,
+          min_sks_per_semester: rule.min_sks_per_semester,
+          passing_grade: rule.passing_grade,
+          grade_scale: rule.grade_scale,
+        }
+      : {
+          university_id: universityId,
+          total_sks_graduation: 144,
+          normal_semester: 8,
+          max_semester: 14,
+          min_gpa: 2.0,
+          max_sks_per_semester: 24,
+          min_sks_per_semester: 12,
+          passing_grade: 'D',
+          grade_scale: { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 },
+        },
   })
-
-  const passingGrade = watch('passing_grade')
 
   async function onSubmit(data: CreateAcademicRuleInput) {
     setIsLoading(true)
@@ -104,87 +107,162 @@ function AcademicRuleForm({
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
-      {mode === 'create' && (
-        <div className="space-y-2">
-          <Label>Program Studi</Label>
-          <Select onValueChange={(v) => setValue('study_program_id', v === 'default' ? undefined : v as string)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Aturan default (semua prodi)" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="default">Aturan default (semua prodi)</SelectItem>
-              {studyPrograms.map((sp) => (
-                <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <p className="text-xs text-muted-foreground">Kosongkan untuk aturan default kampus</p>
-        </div>
-      )}
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
+        <div className="flex flex-col gap-4 px-6 py-4 max-h-[60vh] overflow-y-auto">
+          {mode === 'create' && (
+            <FormField
+              control={form.control}
+              name="study_program_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Program Studi</FormLabel>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === 'default' ? undefined : v)}
+                    defaultValue={field.value ?? 'default'}
+                  >
+                    <FormControl>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Aturan default (semua prodi)" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="default">Aturan default (semua prodi)</SelectItem>
+                      {studyPrograms.map((sp) => (
+                        <SelectItem key={sp.id} value={sp.id}>{sp.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="total_sks">Total SKS Kelulusan <span className="text-destructive">*</span></Label>
-          <Input id="total_sks" type="number" {...register('total_sks_graduation', { valueAsNumber: true })} disabled={isLoading} />
-          {errors.total_sks_graduation && <p className="text-xs text-destructive">{errors.total_sks_graduation.message}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="min_gpa">IPK Minimum <span className="text-destructive">*</span></Label>
-          <Input id="min_gpa" type="number" step="0.01" {...register('min_gpa', { valueAsNumber: true })} disabled={isLoading} />
-          {errors.min_gpa && <p className="text-xs text-destructive">{errors.min_gpa.message}</p>}
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="total_sks_graduation"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Total SKS Kelulusan <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="min_gpa"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>IPK Minimum <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input type="number" step="0.01" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="normal_semester">Semester Normal <span className="text-destructive">*</span></Label>
-          <Input id="normal_semester" type="number" {...register('normal_semester', { valueAsNumber: true })} disabled={isLoading} />
-          {errors.normal_semester && <p className="text-xs text-destructive">{errors.normal_semester.message}</p>}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="max_semester">Semester Maksimal <span className="text-destructive">*</span></Label>
-          <Input id="max_semester" type="number" {...register('max_semester', { valueAsNumber: true })} disabled={isLoading} />
-          {errors.max_semester && <p className="text-xs text-destructive">{errors.max_semester.message}</p>}
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="normal_semester"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Semester Normal <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="max_semester"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Semester Maksimal <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="min_sks">SKS Min/Semester <span className="text-destructive">*</span></Label>
-          <Input id="min_sks" type="number" {...register('min_sks_per_semester', { valueAsNumber: true })} disabled={isLoading} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="max_sks">SKS Maks/Semester <span className="text-destructive">*</span></Label>
-          <Input id="max_sks" type="number" {...register('max_sks_per_semester', { valueAsNumber: true })} disabled={isLoading} />
-        </div>
-      </div>
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="min_sks_per_semester"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKS Min/Semester <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="max_sks_per_semester"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>SKS Maks/Semester <span className="text-destructive">*</span></FormLabel>
+                  <FormControl>
+                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-      <div className="space-y-3">
-        <Label>Nilai Lulus Minimum <span className="text-destructive">*</span></Label>
-        <RadioGroup
-          value={passingGrade}
-          onValueChange={(v) => setValue('passing_grade', v as typeof PASSING_GRADES[number])}
-          className="flex flex-wrap gap-x-4 gap-y-2"
-          disabled={isLoading}
-        >
-          {PASSING_GRADES.map((g) => (
-            <div key={g} className="flex items-center gap-2">
-              <RadioGroupItem value={g} id={`grade-${g}`} />
-              <Label htmlFor={`grade-${g}`} className="cursor-pointer font-normal">{g}</Label>
-            </div>
-          ))}
-        </RadioGroup>
-      </div>
+          <FormField
+            control={form.control}
+            name="passing_grade"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Nilai Lulus Minimum <span className="text-destructive">*</span></FormLabel>
+                <FormControl>
+                  <RadioGroup
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    className="flex flex-wrap gap-x-4 gap-y-2"
+                    disabled={isLoading}
+                  >
+                    {PASSING_GRADES.map((g) => (
+                      <div key={g} className="flex items-center gap-2">
+                        <RadioGroupItem value={g} id={`grade-${g}`} />
+                        <FormLabel htmlFor={`grade-${g}`} className="cursor-pointer font-normal">{g}</FormLabel>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
 
-      <DialogFooter className="gap-2 sm:gap-0">
-        <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Batal</Button>
-        <Button type="submit" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          {mode === 'create' ? 'Tambah' : 'Simpan'}
-        </Button>
-      </DialogFooter>
-    </form>
+        <Separator />
+        <div className="flex justify-end gap-2 px-6 py-4">
+          <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Batal</Button>
+          <Button type="submit" disabled={isLoading}>
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {mode === 'create' ? 'Tambah' : 'Simpan'}
+          </Button>
+        </div>
+      </form>
+    </Form>
   )
 }
 
@@ -218,11 +296,12 @@ export function AcademicRuleActions({ mode, rule, studyPrograms, universityId }:
               <Pencil className="h-4 w-4" />
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+            <DialogHeader className="px-6 pt-6 pb-4">
               <DialogTitle>Edit Aturan Akademik</DialogTitle>
               <DialogDescription>Perbarui konfigurasi aturan akademik</DialogDescription>
             </DialogHeader>
+            <Separator />
             <AcademicRuleForm mode="edit" rule={rule} studyPrograms={studyPrograms} universityId={universityId} onClose={() => setOpen(false)} />
           </DialogContent>
         </Dialog>
@@ -239,13 +318,14 @@ export function AcademicRuleActions({ mode, rule, studyPrograms, universityId }:
                 <DialogTitle>Hapus Aturan Akademik</DialogTitle>
                 <DialogDescription>Yakin ingin menghapus aturan ini? Program studi akan menggunakan aturan default.</DialogDescription>
               </DialogHeader>
-              <DialogFooter className="gap-2 sm:gap-0">
-                <Button variant="outline" onClick={() => setDeleteConfirm(false)}>Batal</Button>
+              <Separator />
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setDeleteConfirm(false)} disabled={isLoading}>Batal</Button>
                 <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
                   {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Hapus
                 </Button>
-              </DialogFooter>
+              </div>
             </DialogContent>
           </Dialog>
         )}
@@ -261,11 +341,12 @@ export function AcademicRuleActions({ mode, rule, studyPrograms, universityId }:
           Tambah Aturan
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-lg p-0 gap-0 overflow-hidden">
+        <DialogHeader className="px-6 pt-6 pb-4">
           <DialogTitle>Tambah Aturan Akademik</DialogTitle>
           <DialogDescription>Tambahkan aturan akademik baru</DialogDescription>
         </DialogHeader>
+        <Separator />
         <AcademicRuleForm mode="create" studyPrograms={studyPrograms} universityId={universityId} onClose={() => setOpen(false)} />
       </DialogContent>
     </Dialog>

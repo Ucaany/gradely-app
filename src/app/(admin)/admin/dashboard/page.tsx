@@ -39,10 +39,26 @@ import { DashboardChart } from '@/components/admin/dashboard-chart'
 import { formatDate, getInitials } from '@/lib/utils'
 import type { WhatsappLog } from '@/types'
 
-export default async function AdminDashboardPage() {
+type Period = '24h' | '1w' | 'all'
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: { period?: string }
+}) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
+
+  const period = (searchParams.period ?? '24h') as Period
+
+  const now = new Date()
+  const periodStart =
+    period === '24h'
+      ? new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString()
+      : period === '1w'
+      ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      : null
 
   const [studentsRes, lecturersRes, companiesRes, programsRes, recentStudentsRes, wahaLogsRes] =
     await Promise.all([
@@ -51,7 +67,9 @@ export default async function AdminDashboardPage() {
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').eq('is_active', true),
       supabase.from('study_programs').select('id', { count: 'exact', head: true }).eq('is_active', true),
       supabase.from('users').select('id, full_name, email, nim, is_active, avatar_url, created_at').eq('role', 'student').order('created_at', { ascending: false }).limit(5),
-      supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(8),
+      periodStart
+        ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).limit(50)
+        : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(50),
     ])
 
   const stats = [
@@ -77,23 +95,14 @@ export default async function AdminDashboardPage() {
   const students = recentStudentsRes.data ?? []
   const wahaLogs = (wahaLogsRes.data ?? []) as WhatsappLog[]
 
-  function WahaStatusBadge({ status }: { status: WhatsappLog['status'] }) {
-    if (status === 'sent') return (
-      <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800">
-        <CheckCircle2 className="h-3 w-3 mr-1" />Terkirim
-      </Badge>
-    )
-    if (status === 'failed') return (
-      <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-destructive border-destructive/30 bg-destructive/5">
-        <XCircle className="h-3 w-3 mr-1" />Gagal
-      </Badge>
-    )
-    return (
-      <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
-        <Clock className="h-3 w-3 mr-1" />Pending
-      </Badge>
-    )
+  const periodLabels: Record<Period, string> = {
+    '24h': '24 Jam Terakhir',
+    '1w': '7 Hari Terakhir',
+    'all': 'Semua',
   }
+
+  const sentCount = wahaLogs.filter((l) => l.status === 'sent').length
+  const failedCount = wahaLogs.filter((l) => l.status === 'failed').length
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -104,7 +113,7 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
-      {/* Stat cards — full width */}
+      {/* Stat cards */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
@@ -124,7 +133,7 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
-      {/* Chart + Status Sistem — full width */}
+      {/* Chart + Status Sistem */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <DashboardChart />
@@ -153,7 +162,7 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Aksi Cepat + Mahasiswa Terbaru — full width */}
+      {/* Aksi Cepat + Mahasiswa Terbaru */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -186,7 +195,7 @@ export default async function AdminDashboardPage() {
             </div>
             <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
               <Link href="/admin/users/students">
-                Lihat semua
+                Lihat riwayat
                 <ArrowRight className="h-3.5 w-3.5 ml-1" />
               </Link>
             </Button>
@@ -237,39 +246,65 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
 
-      {/* Riwayat WhatsApp — full width */}
+      {/* Riwayat WhatsApp dengan filter periode */}
       <Card className="overflow-hidden">
-        <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between pb-0">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
               <MessageCircle className="h-4 w-4 text-muted-foreground" />
               Riwayat Pesan WhatsApp
             </CardTitle>
-            <CardDescription>8 pesan terakhir yang dikirim via WAHA</CardDescription>
+            <CardDescription className="mt-1">
+              {periodLabels[period]} · {wahaLogs.length} pesan
+              {wahaLogs.length > 0 && (
+                <span className="ml-2">
+                  <span className="text-emerald-600 dark:text-emerald-400">{sentCount} terkirim</span>
+                  {failedCount > 0 && <span className="text-destructive ml-2">{failedCount} gagal</span>}
+                </span>
+              )}
+            </CardDescription>
           </div>
-          <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
-            <Link href="/admin/settings">
-              Pengaturan WAHA
-              <ArrowRight className="h-3.5 w-3.5 ml-1" />
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {/* Period filter buttons */}
+            <div className="flex rounded-lg border p-0.5 gap-0.5">
+              {(['24h', '1w', 'all'] as Period[]).map((p) => (
+                <Button
+                  key={p}
+                  variant={period === p ? 'secondary' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-3 text-xs"
+                  asChild
+                >
+                  <Link href={`?period=${p}`}>
+                    {p === '24h' ? '24 Jam' : p === '1w' ? '1 Minggu' : 'Semua'}
+                  </Link>
+                </Button>
+              ))}
+            </div>
+            <Button variant="ghost" size="sm" className="shrink-0 text-xs" asChild>
+              <Link href="/admin/settings">
+                Pengaturan
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              </Link>
+            </Button>
+          </div>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-0 mt-3">
           <div className="w-full overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="pl-4 sm:pl-6 min-w-[130px]">No. HP</TableHead>
                   <TableHead className="min-w-[260px]">Pesan</TableHead>
-                  <TableHead className="min-w-[90px]">Status</TableHead>
-                  <TableHead className="pr-4 sm:pr-6 min-w-[130px]">Waktu</TableHead>
+                  <TableHead className="min-w-[100px]">Status</TableHead>
+                  <TableHead className="pr-4 sm:pr-6 min-w-[140px]">Waktu</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {wahaLogs.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-10">
-                      Belum ada riwayat pesan WhatsApp
+                      Tidak ada pesan pada periode {periodLabels[period].toLowerCase()}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -283,7 +318,19 @@ export default async function AdminDashboardPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <WahaStatusBadge status={log.status} />
+                        {log.status === 'sent' ? (
+                          <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />Terkirim
+                          </Badge>
+                        ) : log.status === 'failed' ? (
+                          <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-destructive border-destructive/30 bg-destructive/5">
+                            <XCircle className="h-3 w-3 mr-1" />Gagal
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3 mr-1" />Pending
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell className="pr-4 sm:pr-6 text-sm text-muted-foreground">
                         {formatDate(log.sent_at ?? log.created_at)}
