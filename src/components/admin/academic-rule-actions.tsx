@@ -45,6 +45,7 @@ interface Props {
 }
 
 const PASSING_GRADES = ['A', 'AB', 'B', 'BC', 'C', 'D', 'E'] as const
+const GRADE_KEYS = ['A', 'AB', 'B', 'BC', 'C', 'D', 'E'] as const
 
 function AcademicRuleForm({
   mode,
@@ -109,7 +110,8 @@ function AcademicRuleForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col">
-        <div className="flex flex-col gap-4 px-6 py-4 max-h-[60vh] overflow-y-auto">
+        <div className="flex flex-col gap-5 px-6 py-4 max-h-[65vh] overflow-y-auto">
+
           {mode === 'create' && (
             <FormField
               control={form.control}
@@ -139,110 +141,121 @@ function AcademicRuleForm({
             />
           )}
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="total_sks_graduation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Total SKS Kelulusan <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="min_gpa"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>IPK Minimum <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="number" step="0.01" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">SKS & Semester</p>
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="total_sks_graduation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Total SKS Kelulusan <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="min_gpa"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>IPK Minimum <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" step="0.01" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="normal_semester"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Semester Normal <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="max_semester"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Semester Maksimal <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="min_sks_per_semester"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKS Min/Semester <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="max_sks_per_semester"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>SKS Maks/Semester <span className="text-destructive">*</span></FormLabel>
+                    <FormControl>
+                      <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="normal_semester"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Semester Normal <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="max_semester"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Semester Maksimal <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="min_sks_per_semester"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>SKS Min/Semester <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="max_sks_per_semester"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>SKS Maks/Semester <span className="text-destructive">*</span></FormLabel>
-                  <FormControl>
-                    <Input type="number" disabled={isLoading} {...field} onChange={(e) => field.onChange(Number(e.target.value))} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
+          <Separator />
 
           <FormField
             control={form.control}
             name="passing_grade"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Nilai Lulus Minimum <span className="text-destructive">*</span></FormLabel>
+                <div className="mb-1">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Nilai Lulus Minimum</p>
+                  <p className="text-xs text-muted-foreground">Nilai terendah yang dianggap lulus untuk suatu mata kuliah</p>
+                </div>
                 <FormControl>
                   <RadioGroup
                     value={field.value}
                     onValueChange={field.onChange}
-                    className="flex flex-wrap gap-x-4 gap-y-2"
+                    className="flex flex-wrap gap-2"
                     disabled={isLoading}
                   >
                     {PASSING_GRADES.map((g) => (
-                      <div key={g} className="flex items-center gap-2">
-                        <RadioGroupItem value={g} id={`grade-${g}`} />
-                        <FormLabel htmlFor={`grade-${g}`} className="cursor-pointer font-normal">{g}</FormLabel>
+                      <div key={g} className="flex items-center">
+                        <RadioGroupItem value={g} id={`grade-${g}`} className="sr-only" />
+                        <FormLabel
+                          htmlFor={`grade-${g}`}
+                          className={`cursor-pointer px-3 py-1.5 rounded-md border text-sm font-medium transition-colors ${
+                            field.value === g
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background border-input hover:bg-muted'
+                          }`}
+                        >
+                          {g}
+                        </FormLabel>
                       </div>
                     ))}
                   </RadioGroup>
@@ -251,6 +264,40 @@ function AcademicRuleForm({
               </FormItem>
             )}
           />
+
+          <Separator />
+
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Skala Nilai (Bobot)</p>
+            <p className="text-xs text-muted-foreground mb-3">Nilai bobot (0–4) untuk setiap grade huruf</p>
+            <div className="grid grid-cols-4 gap-2">
+              {GRADE_KEYS.map((g) => (
+                <FormField
+                  key={g}
+                  control={form.control}
+                  name={`grade_scale.${g}`}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs font-semibold">{g}</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min={0}
+                          max={4}
+                          disabled={isLoading}
+                          {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="h-8 text-sm"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
+          </div>
         </div>
 
         <Separator />

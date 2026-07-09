@@ -91,11 +91,12 @@ export interface User {
   role: UserRole
   full_name: string
   email: string
-  nim: string | null           // hanya student
+  nim: string | null
   phone: string | null
   avatar_url: string | null
   current_semester: number | null
-  profile_visible: boolean     // consent ke company
+  current_semester_type: 'ganjil' | 'genap' | null
+  profile_visible: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -145,10 +146,14 @@ export interface StudentSemester {
 // ============================================================
 // Student Grades
 // ============================================================
+export type SemesterType = 'ganjil' | 'genap'
+
 export interface StudentGrade {
   id: string
   student_id: string
   semester_number: number
+  semester_type: SemesterType
+  academic_year: string    // contoh: '2024/2025'
   course_name: string
   credits: number          // SKS
   grade: GradeValue
@@ -160,6 +165,8 @@ export interface StudentGrade {
 
 export interface CreateGradePayload {
   semester_number: number
+  semester_type: SemesterType
+  academic_year: string
   course_name: string
   credits: number
   grade: GradeValue
@@ -170,6 +177,8 @@ export interface UpdateGradePayload {
   course_name?: string
   credits?: number
   grade?: GradeValue
+  semester_type?: SemesterType
+  academic_year?: string
   is_retake?: boolean
 }
 

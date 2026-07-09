@@ -114,7 +114,9 @@ export default async function CompaniesPage({
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">{formatDate(company.created_at)}</TableCell>
                       <TableCell className="pr-4 sm:pr-6 text-right">
-                        <span className="text-xs text-muted-foreground">—</span>
+                        <Button asChild variant="ghost" size="sm">
+                          <Link href={`/admin/users/companies/${company.id}`}>Detail</Link>
+                        </Button>
                       </TableCell>
                     </TableRow>
                   ))

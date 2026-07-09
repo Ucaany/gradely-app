@@ -1,8 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Separator } from '@/components/ui/separator'
 import { AcademicRuleActions } from '@/components/admin/academic-rule-actions'
+import { AcademicRulesView } from '@/components/admin/academic-rules-view'
+import { BookOpen } from 'lucide-react'
 
 export default async function AcademicRulesPage() {
   const supabase = await createClient()
@@ -31,12 +34,18 @@ export default async function AcademicRulesPage() {
         </div>
       </div>
 
+      {/* Default Rule */}
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-4">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <CardTitle className="text-base">Aturan Default Kampus</CardTitle>
-              <CardDescription>Digunakan apabila program studi tidak memiliki aturan khusus</CardDescription>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted">
+                <BookOpen className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Aturan Default Kampus</CardTitle>
+                <CardDescription className="text-xs mt-0.5">Digunakan apabila program studi tidak memiliki aturan khusus</CardDescription>
+              </div>
             </div>
             {defaultRule && (
               <div className="shrink-0">
@@ -45,77 +54,63 @@ export default async function AcademicRulesPage() {
             )}
           </div>
         </CardHeader>
-        <CardContent>
+        <Separator />
+        <CardContent className="pt-5">
           {defaultRule ? (
-            <div className="grid grid-cols-2 gap-x-8 gap-y-4 sm:grid-cols-3">
-              <RuleItem label="Total SKS Kelulusan" value={`${defaultRule.total_sks_graduation} SKS`} />
-              <RuleItem label="Semester Normal" value={`${defaultRule.normal_semester} Semester`} />
-              <RuleItem label="Semester Maksimal" value={`${defaultRule.max_semester} Semester`} />
-              <RuleItem label="IPK Minimum" value={defaultRule.min_gpa.toString()} />
-              <RuleItem label="SKS Maks/Semester" value={`${defaultRule.max_sks_per_semester} SKS`} />
-              <RuleItem label="Nilai Lulus Minimum" value={defaultRule.passing_grade} />
+            <div className="flex flex-col gap-5">
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+                <RuleItem label="Total SKS" value={`${defaultRule.total_sks_graduation} SKS`} />
+                <RuleItem label="Semester Normal" value={`${defaultRule.normal_semester} Sem`} />
+                <RuleItem label="Semester Maks" value={`${defaultRule.max_semester} Sem`} />
+                <RuleItem label="IPK Minimum" value={defaultRule.min_gpa.toString()} />
+                <RuleItem label="SKS Maks/Sem" value={`${defaultRule.max_sks_per_semester} SKS`} />
+                <RuleItem label="Nilai Lulus Min" value={
+                  <Badge variant="secondary" className="text-xs font-semibold w-fit">{defaultRule.passing_grade}</Badge>
+                } />
+              </div>
+              {defaultRule.grade_scale && (
+                <>
+                  <Separator />
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Skala Nilai</p>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(defaultRule.grade_scale as Record<string, number>).map(([g, v]) => (
+                        <div key={g} className="flex items-center gap-1.5 rounded-lg border bg-muted/40 px-3 py-1.5">
+                          <span className="text-sm font-semibold">{g}</span>
+                          <span className="text-xs text-muted-foreground">= {v.toFixed(2)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Aturan default belum dikonfigurasi.</p>
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+              <p className="text-sm text-muted-foreground">Aturan default belum dikonfigurasi.</p>
+            </div>
           )}
         </CardContent>
       </Card>
 
-      <div className="space-y-4">
-        <h2 className="text-lg font-semibold">Aturan per Program Studi</h2>
-        {programRules.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {programRules.map((rule) => (
-              <Card key={rule.id}>
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <CardTitle className="text-sm font-semibold leading-tight line-clamp-1">
-                      {(rule.study_programs as { name: string } | null)?.name ?? 'Program Studi'}
-                    </CardTitle>
-                    <div className="shrink-0">
-                      <AcademicRuleActions mode="edit" rule={rule} studyPrograms={programs ?? []} universityId={universityId} />
-                    </div>
-                  </div>
-                </CardHeader>
-                <Separator />
-                <CardContent className="pt-4 pb-4">
-                  <div className="space-y-2">
-                    {[
-                      { label: 'Total SKS', value: `${rule.total_sks_graduation} SKS` },
-                      { label: 'Semester Normal', value: `${rule.normal_semester} Semester` },
-                      { label: 'Semester Maksimal', value: `${rule.max_semester} Semester` },
-                      { label: 'IPK Minimum', value: `${rule.min_gpa}` },
-                      { label: 'Nilai Lulus Min.', value: rule.passing_grade },
-                      { label: 'SKS Maks/Semester', value: `${rule.max_sks_per_semester} SKS` },
-                    ].map((item, i, arr) => (
-                      <div key={item.label}>
-                        <div className="flex items-center justify-between py-1">
-                          <span className="text-xs text-muted-foreground">{item.label}</span>
-                          <span className="text-sm font-medium">{item.value}</span>
-                        </div>
-                        {i < arr.length - 1 && <Separator className="opacity-50" />}
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Belum ada aturan khusus per program studi. Program studi akan menggunakan aturan default.
-          </p>
-        )}
-      </div>
+      {/* Per Program Studi */}
+      <AcademicRulesView
+        programRules={programRules}
+        programs={programs ?? []}
+        universityId={universityId}
+      />
     </div>
   )
 }
 
-function RuleItem({ label, value }: { label: string; value: string }) {
+function RuleItem({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="space-y-0.5">
+    <div className="flex flex-col gap-1">
       <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value}</p>
+      {typeof value === 'string'
+        ? <p className="text-sm font-semibold">{value}</p>
+        : value
+      }
     </div>
   )
 }

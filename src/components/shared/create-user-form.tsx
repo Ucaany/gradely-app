@@ -61,6 +61,8 @@ export function CreateUserForm({
       password: '',
       phone: '',
       nim: '',
+      study_program_id: '',
+      current_semester_type: 'ganjil',
     },
   })
 
@@ -83,6 +85,7 @@ export function CreateUserForm({
       }
 
       toast.success('Akun berhasil dibuat!')
+      router.refresh()
       router.push(redirectTo ?? `/admin/users/${data.role === 'student' ? 'students' : data.role === 'lecturer' ? 'lecturers' : 'companies'}`)
     } finally {
       setIsLoading(false)
@@ -253,6 +256,31 @@ export function CreateUserForm({
                           value={field.value ?? ''}
                         />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="current_semester_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Jenis Semester Aktif</FormLabel>
+                      <Select
+                        value={field.value ?? 'ganjil'}
+                        onValueChange={field.onChange}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih jenis semester" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ganjil">Ganjil</SelectItem>
+                          <SelectItem value="genap">Genap</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

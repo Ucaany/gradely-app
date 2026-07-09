@@ -13,9 +13,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { formatDate, getInitials } from '@/lib/utils'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { StudentsSearchForm } from '@/components/admin/students-search-form'
 
 export default async function StudentsPage({
   searchParams,
@@ -31,21 +31,27 @@ export default async function StudentsPage({
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
 
-  let query = supabase
-    .from('users')
-    .select(`id, full_name, email, nim, current_semester, is_active, created_at, avatar_url, study_programs(id, name, short_name)`, { count: 'exact' })
-    .eq('role', 'student')
-    .order('full_name')
-    .range(from, to)
+  const [studentsQuery, programsRes] = await Promise.all([
+    (() => {
+      let q = supabase
+        .from('users')
+        .select('id, full_name, email, nim, current_semester, is_active, created_at, avatar_url, study_programs(id, name, short_name)', { count: 'exact' })
+        .eq('role', 'student')
+        .order('full_name')
+        .range(from, to)
+      if (searchParams.search) {
+        q = q.or(`full_name.ilike.%${searchParams.search}%,email.ilike.%${searchParams.search}%,nim.ilike.%${searchParams.search}%`)
+      }
+      if (searchParams.program) {
+        q = q.eq('study_program_id', searchParams.program)
+      }
+      return q
+    })(),
+    supabase.from('study_programs').select('id, name, short_name').eq('is_active', true).order('name'),
+  ])
 
-  if (searchParams.search) {
-    query = query.or(`full_name.ilike.%${searchParams.search}%,email.ilike.%${searchParams.search}%,nim.ilike.%${searchParams.search}%`)
-  }
-  if (searchParams.program) {
-    query = query.eq('study_program_id', searchParams.program)
-  }
-
-  const { data: students, count } = await query
+  const { data: students, count, error } = studentsQuery
+  const programs = programsRes.data ?? []
   const totalPages = Math.ceil((count ?? 0) / pageSize)
 
   return (
@@ -71,27 +77,25 @@ export default async function StudentsPage({
         </div>
       </div>
 
-      <form method="GET" className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          name="search"
-          defaultValue={searchParams.search}
-          placeholder="Cari nama, email, atau NIM..."
-          className="w-full sm:max-w-sm"
-        />
-        <div className="flex gap-2">
-          <Button type="submit" size="sm">Cari</Button>
-          {(searchParams.search || searchParams.program) && (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/admin/users/students">Reset</Link>
-            </Button>
-          )}
+      <StudentsSearchForm
+        programs={programs}
+        defaultSearch={searchParams.search}
+        defaultProgram={searchParams.program}
+      />
+
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          Gagal memuat data: {error.message}
         </div>
-      </form>
+      )}
 
       <Card className="overflow-hidden">
         <CardHeader className="px-4 py-3 sm:px-6 border-b">
           <CardTitle className="text-sm font-medium text-muted-foreground">
             Menampilkan {students?.length ?? 0} dari {count ?? 0} mahasiswa
+            {searchParams.program && programs.find(p => p.id === searchParams.program) && (
+              <span className="ml-1">· {programs.find(p => p.id === searchParams.program)?.name}</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -147,7 +151,7 @@ export default async function StudentsPage({
                 ) : (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-16 text-muted-foreground">
-                      {searchParams.search ? 'Tidak ada mahasiswa yang cocok.' : 'Belum ada mahasiswa terdaftar.'}
+                      {searchParams.search || searchParams.program ? 'Tidak ada mahasiswa yang cocok.' : 'Belum ada mahasiswa terdaftar.'}
                     </TableCell>
                   </TableRow>
                 )}
@@ -161,13 +165,17 @@ export default async function StudentsPage({
         <div className="flex items-center justify-center gap-2 pb-2">
           {page > 1 && (
             <Button asChild variant="outline" size="sm">
-              <Link href={`?page=${page - 1}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>Sebelumnya</Link>
+              <Link href={`?page=${page - 1}${searchParams.search ? `&search=${searchParams.search}` : ''}${searchParams.program ? `&program=${searchParams.program}` : ''}`}>
+                Sebelumnya
+              </Link>
             </Button>
           )}
           <span className="text-sm text-muted-foreground">Halaman {page} dari {totalPages}</span>
           {page < totalPages && (
             <Button asChild variant="outline" size="sm">
-              <Link href={`?page=${page + 1}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>Berikutnya</Link>
+              <Link href={`?page=${page + 1}${searchParams.search ? `&search=${searchParams.search}` : ''}${searchParams.program ? `&program=${searchParams.program}` : ''}`}>
+                Berikutnya
+              </Link>
             </Button>
           )}
         </div>

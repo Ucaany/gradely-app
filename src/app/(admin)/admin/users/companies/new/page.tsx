@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CreateUserForm } from '@/components/shared/create-user-form'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
 
 export default async function NewCompanyPage() {
   const supabase = await createClient()
@@ -9,7 +11,7 @@ export default async function NewCompanyPage() {
 
   const { data: universities } = await supabase
     .from('universities')
-    .select('id')
+    .select('id, name')
     .limit(1)
     .single()
 
@@ -21,6 +23,15 @@ export default async function NewCompanyPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Tambah Perusahaan</h1>
         <p className="text-sm text-muted-foreground">Buat akun baru untuk perusahaan mitra</p>
       </div>
+      {!universityId && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Data Universitas Belum Ada</AlertTitle>
+          <AlertDescription>
+            Jalankan migration seed <code className="font-mono text-xs">002_seed_isi_yogyakarta.sql</code> di Supabase SQL Editor terlebih dahulu, lalu refresh halaman ini.
+          </AlertDescription>
+        </Alert>
+      )}
       <CreateUserForm
         studyPrograms={[]}
         universityId={universityId}

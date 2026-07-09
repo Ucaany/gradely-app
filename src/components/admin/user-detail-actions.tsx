@@ -55,6 +55,7 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
       nim: userData.nim ?? '',
       phone: userData.phone ?? '',
       current_semester: userData.current_semester ?? undefined,
+      current_semester_type: userData.current_semester_type ?? 'ganjil',
       study_program_id: userData.study_program_id ?? undefined,
       is_active: userData.is_active,
     },
@@ -166,6 +167,31 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
                         </FormItem>
                       )}
                     />
+                    <FormField
+                      control={form.control}
+                      name="current_semester_type"
+                      render={({ field }) => (
+                        <FormItem className="col-span-2">
+                          <FormLabel>Jenis Semester Aktif</FormLabel>
+                          <Select
+                            value={field.value ?? 'ganjil'}
+                            onValueChange={field.onChange}
+                            disabled={isLoading}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue placeholder="Pilih jenis semester" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="ganjil">Ganjil</SelectItem>
+                              <SelectItem value="genap">Genap</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 )}
 
@@ -190,7 +216,7 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
                     <FormItem>
                       <FormLabel>Program Studi</FormLabel>
                       <Select
-                        defaultValue={field.value ?? ''}
+                        value={field.value ?? ''}
                         onValueChange={field.onChange}
                         disabled={isLoading}
                       >
@@ -217,7 +243,7 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
                     <FormItem>
                       <FormLabel>Status</FormLabel>
                       <Select
-                        defaultValue={field.value ? 'true' : 'false'}
+                        value={field.value ? 'true' : 'false'}
                         onValueChange={(v) => field.onChange(v === 'true')}
                         disabled={isLoading}
                       >

@@ -25,25 +25,28 @@ export const updatePasswordSchema = z
 // ============================================================
 // User Management
 // ============================================================
+const uuidOrEmpty = z.union([
+  z.string().regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
+  z.literal(''),
+  z.null(),
+]).optional()
+
 export const createUserSchema = z.object({
   full_name: z.string().min(2, 'Nama minimal 2 karakter').max(100),
   email: z.string().email('Email tidak valid'),
+  password: z.string().min(8, 'Password minimal 8 karakter'),
   role: z.enum(['student', 'lecturer', 'admin', 'company']),
-  university_id: z.string().uuid('University ID tidak valid'),
-  study_program_id: z.string().uuid().optional().nullable(),
-  nim: z
-    .string()
-    .max(20)
-    .optional()
-    .nullable(),
+  university_id: z.string().optional().nullable(),
+  study_program_id: uuidOrEmpty,
+  nim: z.string().max(20).optional().nullable(),
   phone: z
     .string()
-    .regex(/^(\+62|62|0)[0-9]{8,13}$/, 'Format nomor HP tidak valid')
+    .regex(/^(\+62|62|0)[0-9]{7,14}$/, 'Format nomor HP tidak valid')
     .optional()
     .nullable()
     .or(z.literal('')),
   current_semester: z.number().int().min(1).max(14).optional().nullable(),
-  password: z.string().min(8, 'Password minimal 8 karakter'),
+  current_semester_type: z.enum(['ganjil', 'genap']).optional().nullable(),
 })
 
 export const updateUserSchema = z.object({
@@ -51,12 +54,13 @@ export const updateUserSchema = z.object({
   nim: z.string().max(20).optional().nullable(),
   phone: z
     .string()
-    .regex(/^(\+62|62|0)[0-9]{8,13}$/, 'Format nomor HP tidak valid')
+    .regex(/^(\+62|62|0)[0-9]{7,14}$/, 'Format nomor HP tidak valid')
     .optional()
     .nullable()
     .or(z.literal('')),
   current_semester: z.number().int().min(1).max(14).optional().nullable(),
-  study_program_id: z.string().uuid().optional().nullable(),
+  current_semester_type: z.enum(['ganjil', 'genap']).optional().nullable(),
+  study_program_id: uuidOrEmpty,
   is_active: z.boolean().optional(),
 })
 
@@ -67,12 +71,15 @@ export const createStudyProgramSchema = z.object({
   university_id: z.string().uuid(),
   name: z.string().min(2, 'Nama program studi minimal 2 karakter').max(100),
   short_name: z.string().max(20).optional().nullable(),
-  degree_level: z.enum(['S1', 'S2', 'S3', 'D3', 'D4']).default('S1'),
-  is_active: z.boolean().default(true),
+  degree_level: z.enum(['S1', 'S2', 'S3', 'D3', 'D4']),
+  is_active: z.boolean(),
 })
 
-export const updateStudyProgramSchema = createStudyProgramSchema.partial().omit({
-  university_id: true,
+export const updateStudyProgramSchema = z.object({
+  name: z.string().min(2).max(100).optional(),
+  short_name: z.string().max(20).optional().nullable(),
+  degree_level: z.enum(['S1', 'S2', 'S3', 'D3', 'D4']).optional(),
+  is_active: z.boolean().optional(),
 })
 
 // ============================================================
@@ -97,12 +104,20 @@ export const createAcademicRuleSchema = z.object({
   min_gpa: z.number().min(0).max(4),
   max_sks_per_semester: z.number().int().min(12).max(30),
   min_sks_per_semester: z.number().int().min(1).max(24),
-  passing_grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']).default('D'),
+  passing_grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']),
   grade_scale: gradeScaleSchema,
 })
 
-export const updateAcademicRuleSchema = createAcademicRuleSchema.partial().omit({
-  university_id: true,
+export const updateAcademicRuleSchema = z.object({
+  study_program_id: z.string().uuid().optional().nullable(),
+  total_sks_graduation: z.number().int().min(100).max(200).optional(),
+  normal_semester: z.number().int().min(4).max(14).optional(),
+  max_semester: z.number().int().min(8).max(20).optional(),
+  min_gpa: z.number().min(0).max(4).optional(),
+  max_sks_per_semester: z.number().int().min(12).max(30).optional(),
+  min_sks_per_semester: z.number().int().min(1).max(24).optional(),
+  passing_grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']).optional(),
+  grade_scale: gradeScaleSchema.optional(),
 })
 
 // ============================================================
@@ -110,13 +125,23 @@ export const updateAcademicRuleSchema = createAcademicRuleSchema.partial().omit(
 // ============================================================
 export const createGradeSchema = z.object({
   semester_number: z.number().int().min(1).max(14),
+  semester_type: z.enum(['ganjil', 'genap']),
+  academic_year: z.string().min(4, 'Tahun ajaran wajib diisi').max(20),
   course_name: z.string().min(2, 'Nama mata kuliah minimal 2 karakter').max(100),
   credits: z.number().int().min(1).max(6),
   grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']),
-  is_retake: z.boolean().default(false),
+  is_retake: z.boolean(),
 })
 
-export const updateGradeSchema = createGradeSchema.partial()
+export const updateGradeSchema = z.object({
+  semester_number: z.number().int().min(1).max(14).optional(),
+  semester_type: z.enum(['ganjil', 'genap']).optional(),
+  academic_year: z.string().min(4).max(20).optional(),
+  course_name: z.string().min(2).max(100).optional(),
+  credits: z.number().int().min(1).max(6).optional(),
+  grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']).optional(),
+  is_retake: z.boolean().optional(),
+})
 
 // ============================================================
 // Student Target

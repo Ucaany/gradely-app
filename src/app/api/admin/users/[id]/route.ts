@@ -59,9 +59,21 @@ export async function PATCH(
     }
 
     const serviceClient = createServiceClient()
+    const updateData = {
+      ...parsed.data,
+      study_program_id: parsed.data.study_program_id && parsed.data.study_program_id.length > 0
+        ? parsed.data.study_program_id
+        : null,
+      phone: parsed.data.phone && parsed.data.phone.length > 0
+        ? parsed.data.phone
+        : null,
+      nim: parsed.data.nim && parsed.data.nim.length > 0
+        ? parsed.data.nim
+        : null,
+    }
     const { data, error } = await serviceClient
       .from('users')
-      .update(parsed.data)
+      .update(updateData)
       .eq('id', params.id)
       .select()
       .single()

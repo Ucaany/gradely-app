@@ -1,23 +1,18 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { CreateUserForm } from '@/components/shared/create-user-form'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { AlertCircle } from 'lucide-react'
 
 export default async function NewLecturerPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: universities } = await supabase
-    .from('universities')
-    .select('id')
-    .limit(1)
-    .single()
-
-  const { data: studyPrograms } = await supabase
-    .from('study_programs')
-    .select('id, name, short_name, degree_level, university_id, is_active, created_at')
-    .eq('is_active', true)
-    .order('name')
+  const [{ data: universities }, { data: studyPrograms }] = await Promise.all([
+    supabase.from('universities').select('id, name').limit(1).single(),
+    supabase.from('study_programs').select('id, name, short_name, degree_level, university_id, is_active, created_at').eq('is_active', true).order('name'),
+  ])
 
   const universityId = universities?.id ?? ''
 
@@ -27,6 +22,15 @@ export default async function NewLecturerPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Tambah Dosen Wali</h1>
         <p className="text-sm text-muted-foreground">Buat akun baru untuk dosen wali</p>
       </div>
+      {!universityId && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Data Universitas Belum Ada</AlertTitle>
+          <AlertDescription>
+            Jalankan migration seed <code className="font-mono text-xs">002_seed_isi_yogyakarta.sql</code> di Supabase SQL Editor terlebih dahulu, lalu refresh halaman ini.
+          </AlertDescription>
+        </Alert>
+      )}
       <CreateUserForm
         studyPrograms={studyPrograms ?? []}
         universityId={universityId}

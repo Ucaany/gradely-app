@@ -27,6 +27,12 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
     { label: 'No. HP', value: student.phone ?? '-' },
     { label: 'Program Studi', value: studyProgram },
     { label: 'Semester Aktif', value: student.current_semester ? `Semester ${student.current_semester}` : '-' },
+    {
+      label: 'Jenis Semester',
+      value: student.current_semester_type
+        ? student.current_semester_type.charAt(0).toUpperCase() + student.current_semester_type.slice(1)
+        : '-'
+    },
     { label: 'Universitas', value: university },
     { label: 'Terdaftar', value: formatDate(student.created_at) },
     { label: 'Profil ke Perusahaan', value: student.profile_visible ? 'Terlihat' : 'Tersembunyi' },

@@ -16,10 +16,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Cek role admin
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, university_id')
       .eq('id', user.id)
       .single()
 
@@ -45,9 +44,28 @@ export async function POST(request: NextRequest) {
     }
 
     const data = parsed.data
-
-    // Gunakan service role untuk bypass RLS saat create auth user
     const serviceClient = createServiceClient()
+
+    // Resolve university_id: gunakan dari form, atau dari profile admin, atau ambil pertama dari DB
+    let universityId = data.university_id && data.university_id.length > 0
+      ? data.university_id
+      : (profile.university_id ?? null)
+
+    if (!universityId) {
+      const { data: firstUniversity } = await serviceClient
+        .from('universities')
+        .select('id')
+        .limit(1)
+        .single()
+
+      if (!firstUniversity) {
+        return NextResponse.json<ApiResponse>(
+          { data: null, error: 'Belum ada data universitas. Silakan setup universitas terlebih dahulu di Supabase.', success: false },
+          { status: 400 }
+        )
+      }
+      universityId = firstUniversity.id
+    }
 
     // 1. Buat auth user
     const { data: authData, error: authError } =
@@ -73,24 +91,41 @@ export async function POST(request: NextRequest) {
     // 2. Insert ke tabel users
     const { error: insertError } = await serviceClient.from('users').insert({
       id: authData.user.id,
-      university_id: data.university_id,
-      study_program_id: data.study_program_id ?? null,
+      university_id: universityId,
+      study_program_id: data.study_program_id && data.study_program_id.length > 0 ? data.study_program_id : null,
       role: data.role,
       full_name: data.full_name,
       email: data.email,
-      nim: data.nim ?? null,
-      phone: data.phone ?? null,
+      nim: data.nim && data.nim.length > 0 ? data.nim : null,
+      phone: data.phone && data.phone.length > 0 ? data.phone : null,
       current_semester: data.current_semester ?? null,
+      current_semester_type: data.current_semester_type ?? 'ganjil',
       is_active: true,
     })
 
     if (insertError) {
-      // Rollback: hapus auth user kalau insert gagal
       await serviceClient.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json<ApiResponse>(
         { data: null, error: insertError.message, success: false },
         { status: 500 }
       )
+    }
+
+    // 3. Jika role company, insert ke tabel companies
+    if (data.role === 'company') {
+      const { error: companyError } = await serviceClient.from('companies').insert({
+        user_id: authData.user.id,
+        university_id: universityId,
+        company_name: data.full_name,
+        is_active: true,
+      })
+      if (companyError) {
+        await serviceClient.auth.admin.deleteUser(authData.user.id)
+        return NextResponse.json<ApiResponse>(
+          { data: null, error: companyError.message, success: false },
+          { status: 500 }
+        )
+      }
     }
 
     return NextResponse.json<ApiResponse>(

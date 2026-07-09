@@ -169,20 +169,24 @@ export default async function AdminDashboardPage({
             <CardTitle className="text-base">Aksi Cepat</CardTitle>
             <CardDescription>Pintasan ke fitur yang sering digunakan</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2">
+          <CardContent className="grid grid-cols-2 gap-3">
             {quickActions.map((action) => (
-              <Button key={action.href} variant="outline" className="h-auto w-full justify-between px-4 py-3" asChild>
-                <Link href={action.href}>
-                  <div className="flex items-center gap-3 min-w-0">
-                    <action.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <div className="text-left min-w-0">
-                      <div className="text-sm font-medium">{action.label}</div>
-                      <div className="text-xs text-muted-foreground truncate">{action.description}</div>
-                    </div>
+              <Link
+                key={action.href}
+                href={action.href}
+                className="group flex flex-col gap-2 rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted group-hover:bg-background">
+                    <action.icon className="h-4 w-4 text-muted-foreground" />
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </Link>
-              </Button>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium leading-tight">{action.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{action.description}</p>
+                </div>
+              </Link>
             ))}
           </CardContent>
         </Card>

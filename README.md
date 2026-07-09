@@ -131,7 +131,7 @@ gradely/
 │   │       └── auth/            # Auth API (signout)
 │   ├── components/
 │   │   ├── ui/                  # shadcn/ui components (Radix UI)
-│   │   ├── shared/              # Komponen reusable (CreateUserForm)
+│   │   ├── shared/              # Komponen reusable (CreateUserForm, StudentsSearchForm)
 │   │   └── admin/               # Komponen khusus admin
 │   ├── lib/
 │   │   ├── supabase/            # Client, server, middleware helpers
@@ -175,13 +175,15 @@ settings
 
 ### Admin Panel
 - Dashboard statistik (mahasiswa, dosen, prodi, perusahaan)
+- Aksi Cepat dengan card grid 2x2 di dashboard
 - Riwayat pesan WhatsApp dengan filter 24h / 1 minggu / semua
 - CRUD Mahasiswa (list, detail, tambah, edit, hapus)
 - CRUD Dosen Wali (list, detail + daftar bimbingan, tambah, edit, hapus)
-- CRUD Perusahaan (list, tambah)
-- Bulk import CSV dengan preview data
-- Kelola Program Studi (CRUD via dialog)
-- Kelola Aturan Akademik (CRUD via dialog)
+- CRUD Perusahaan (list, tambah — auto insert ke tabel `companies`)
+- Bulk import CSV dengan preview data, drag & drop
+- Kelola Program Studi (CRUD via dialog + toggle aktif/nonaktif inline)
+- Kelola Aturan Akademik (CRUD via dialog, grade scale customizable, view grid/list)
+- Search mahasiswa dengan shadcn Select (program studi filter)
 - Konfigurasi WAHA (URL, session, API key, test koneksi)
 - Pengaturan umum institusi
 
@@ -189,9 +191,18 @@ settings
 - Responsive layout (320px — 1920px)
 - Full width pada semua halaman
 - Dark mode support
-- shadcn/ui Form components (FormField, FormItem, FormLabel, FormMessage)
+- shadcn/ui components (Badge, Toaster, Switch, Select, Form)
 - Sonner toast notifications
 - Sticky footer pada form panjang
+- Toggle grid/list view pada halaman aturan akademik
+
+### Bug Fixes
+- Validasi UUID Zod v4 kompatibel dengan semua format UUID
+- Fix `study_program_id` & `current_semester_type` di `defaultValues` form
+- Fix Select controlled component (pakai `value` bukan `defaultValue`)
+- Fix API PATCH sanitize empty string ke `null` sebelum update DB
+- Fix regex validasi nomor HP Indonesia (`{7,14}` digit)
+- Fix router.refresh() sebelum push agar server component revalidate cache
 
 ---
 
@@ -213,13 +224,13 @@ settings
 |--------|-------|-----------|
 | POST | `/api/auth/signout` | Server-side sign out |
 | GET | `/api/admin/users` | List semua users |
-| POST | `/api/admin/users` | Buat user baru |
+| POST | `/api/admin/users` | Buat user baru (+ auto insert companies jika role=company) |
 | PATCH | `/api/admin/users/[id]` | Update user |
 | DELETE | `/api/admin/users/[id]` | Hapus user |
 | POST | `/api/admin/import` | Bulk import CSV |
 | GET | `/api/admin/study-programs` | List program studi |
 | POST | `/api/admin/study-programs` | Tambah program studi |
-| PATCH | `/api/admin/study-programs/[id]` | Update program studi |
+| PATCH | `/api/admin/study-programs/[id]` | Update program studi (termasuk toggle is_active) |
 | DELETE | `/api/admin/study-programs/[id]` | Hapus program studi |
 | GET | `/api/admin/academic-rules` | List aturan akademik |
 | POST | `/api/admin/academic-rules` | Tambah aturan akademik |

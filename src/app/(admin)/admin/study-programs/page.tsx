@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { StudyProgramActions } from '@/components/admin/study-program-actions'
+import { StudyProgramToggle } from '@/components/admin/study-program-toggle'
 
 export default async function StudyProgramsPage() {
   const supabase = await createClient()
@@ -64,9 +65,7 @@ export default async function StudyProgramsPage() {
                         <Badge variant="outline" className="text-xs">{program.degree_level}</Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={`whitespace-nowrap text-xs ${program.is_active ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'text-muted-foreground'}`}>
-                          {program.is_active ? 'Aktif' : 'Nonaktif'}
-                        </Badge>
+                        <StudyProgramToggle programId={program.id} isActive={program.is_active} />
                       </TableCell>
                       <TableCell className="pr-4 sm:pr-6 text-right">
                         <StudyProgramActions mode="edit" program={program} />
