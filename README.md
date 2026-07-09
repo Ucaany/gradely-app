@@ -1,36 +1,163 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Gradely
 
-## Getting Started
+Platform Monitoring Akademik, Perencanaan Kelulusan, Portofolio, dan Career Development Mahasiswa — Institut Seni Indonesia (ISI) Yogyakarta.
 
-First, run the development server:
+## Tech Stack
+
+- **Framework**: Next.js 14 (App Router)
+- **Language**: TypeScript
+- **Styling**: Tailwind CSS + shadcn/ui
+- **Database**: PostgreSQL via Supabase
+- **Auth**: Supabase Auth
+- **Notifikasi**: WAHA (WhatsApp HTTP API)
+
+## Role Pengguna
+
+| Role | Kode | Akses |
+|------|------|-------|
+| Mahasiswa | `student` | Dashboard akademik, nilai, portofolio, karier |
+| Dosen Wali | `lecturer` | Monitoring mahasiswa bimbingan |
+| Admin Kampus | `admin` | Kelola pengguna, aturan akademik, sistem |
+| Perusahaan | `company` | Talent scouting (dengan consent mahasiswa) |
+
+## Setup Development
+
+### 1. Clone & Install
+
+```bash
+git clone <repo-url>
+cd gradely
+npm install
+```
+
+### 2. Environment Variables
+
+Salin file contoh dan isi dengan credentials Supabase:
+
+```bash
+cp .env.local.example .env.local
+```
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+### 3. Database Migration
+
+Pastikan Supabase CLI sudah terinstall:
+
+```bash
+npm install -g supabase
+```
+
+Jalankan migration ke Supabase cloud:
+
+```bash
+npx supabase db push --db-url "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
+```
+
+Migration akan menjalankan `supabase/migrations/001_initial_schema.sql` yang berisi:
+- 16 tabel lengkap dengan relasi
+- Row Level Security (RLS) policies per role
+- Indexes untuk performa query
+- Triggers `updated_at` otomatis
+
+### 4. Seed Data
+
+Seed data ISI Yogyakarta (kampus, 9 prodi, aturan akademik, kategori portofolio) dijalankan otomatis bersama migration via `supabase/seed.sql`.
+
+### 5. Buat Akun Admin Pertama
+
+Buat akun admin melalui Supabase Dashboard → Authentication → Users:
+
+| Field | Nilai |
+|-------|-------|
+| Email | `admin@isi.ac.id` |
+| Password | Sesuai pilihan |
+
+Kemudian insert profil ke tabel `users` di SQL Editor:
+
+```sql
+INSERT INTO users (id, university_id, role, full_name, email, is_active)
+VALUES (
+  '<auth-user-id>',
+  '00000000-0000-0000-0000-000000000001',
+  'admin',
+  'Budi Santoso',
+  'admin@isi.ac.id',
+  true
+);
+```
+
+> `auth-user-id` didapat dari kolom `id` di tabel `auth.users` setelah membuat akun.
+
+### 6. Jalankan Dev Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Buka [http://localhost:3000](http://localhost:3000) — akan redirect ke `/login`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Struktur Direktori
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+src/
+├── app/
+│   ├── (auth)/          # Login, Reset Password
+│   ├── (admin)/         # Panel Admin (sidebar-08)
+│   ├── (student)/       # Dashboard Mahasiswa
+│   ├── (lecturer)/      # Dashboard Dosen Wali
+│   └── (company)/       # Company Dashboard
+├── components/
+│   ├── ui/              # shadcn/ui components (Radix UI)
+│   ├── shared/          # Komponen reusable
+│   └── admin/           # Komponen khusus admin
+├── lib/
+│   ├── supabase/        # Client, server, middleware
+│   ├── validations/     # Zod schemas
+│   └── utils/           # Helpers + kalkulasi akademik
+├── types/               # TypeScript types
+└── hooks/               # Custom hooks
+supabase/
+├── migrations/          # SQL migration files
+└── seed.sql             # Seed data ISI Yogyakarta
+```
 
-## Learn More
+## Database Tables
 
-To learn more about Next.js, take a look at the following resources:
+```
+universities          study_programs        academic_rules
+users                 student_semesters     student_grades
+student_targets       student_portfolios    portfolio_categories
+career_interests      companies             company_categories
+advisor_students      notifications         whatsapp_logs
+settings
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Roadmap
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Phase | Status | Deskripsi |
+|-------|--------|-----------|
+| Phase 1 | ✅ Selesai | Auth, Database, Admin User Management |
+| Phase 2 | 🔄 Berikutnya | Dashboard Mahasiswa, Nilai, IPK, SKS |
+| Phase 3 | ⏳ Pending | Dashboard Dosen, Monitoring, Risiko |
+| Phase 4 | ⏳ Pending | Portofolio, Career, Company Dashboard |
+| Phase 5 | ⏳ Pending | WAHA Notifikasi, Testing, Launch |
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+```bash
+npm run dev      # Development server
+npm run build    # Production build
+npm run lint     # ESLint check
+npx supabase db push --db-url "<url>"   # Push migration
+```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Deployment
+
+- **Frontend**: Vercel
+- **Database**: Supabase Cloud
+- **WAHA**: Self-hosted VPS / Docker
