@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
-import { Loader2, Target, TrendingUp, BookOpen, GraduationCap } from 'lucide-react'
+import { Loader2, Target, TrendingUp, BookOpen, GraduationCap, CheckCircle2, AlertTriangle, AlertOctagon, XCircle } from 'lucide-react'
 import { studentTargetSchema, type StudentTargetInput } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -235,7 +235,13 @@ export default function StudentTargetPage() {
           {/* Status akademik */}
           {statusConfig && summary && (
             <div className={`rounded-lg border px-4 py-3 flex items-center gap-3 ${statusConfig.bgColor}`}>
-              <span className="text-xl">{statusConfig.emoji}</span>
+              <span className={`shrink-0 ${statusConfig.iconColor}`}>
+                {statusConfig.icon === 'TrendingUp' && <TrendingUp className="h-5 w-5" />}
+                {statusConfig.icon === 'CheckCircle2' && <CheckCircle2 className="h-5 w-5" />}
+                {statusConfig.icon === 'AlertTriangle' && <AlertTriangle className="h-5 w-5" />}
+                {statusConfig.icon === 'AlertOctagon' && <AlertOctagon className="h-5 w-5" />}
+                {statusConfig.icon === 'XCircle' && <XCircle className="h-5 w-5" />}
+              </span>
               <div>
                 <p className={`font-semibold text-sm ${statusConfig.color}`}>
                   Status: {statusConfig.label}

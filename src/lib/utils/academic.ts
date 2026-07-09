@@ -184,39 +184,45 @@ export function groupGradesBySemester(grades: StudentGrade[]): SemesterSummary[]
 
 /**
  * Label & warna per status akademik.
+ * icon: nama lucide-react icon yang dirender di komponen pemanggil
  */
 export const ACADEMIC_STATUS_CONFIG: Record<
   AcademicStatus,
-  { label: string; color: string; bgColor: string; emoji: string }
+  { label: string; color: string; bgColor: string; iconColor: string; icon: string }
 > = {
   ahead: {
-    label: 'Ahead',
-    color: 'text-green-700',
-    bgColor: 'bg-green-100',
-    emoji: '🟢',
+    label: 'Unggul',
+    color: 'text-green-700 dark:text-green-400',
+    bgColor: 'bg-green-50 border border-green-200 dark:bg-green-950/40 dark:border-green-800',
+    iconColor: 'text-green-600 dark:text-green-400',
+    icon: 'TrendingUp',
   },
   on_track: {
-    label: 'On Track',
-    color: 'text-blue-700',
-    bgColor: 'bg-blue-100',
-    emoji: '🔵',
+    label: 'Sesuai Target',
+    color: 'text-blue-700 dark:text-blue-400',
+    bgColor: 'bg-blue-50 border border-blue-200 dark:bg-blue-950/40 dark:border-blue-800',
+    iconColor: 'text-blue-600 dark:text-blue-400',
+    icon: 'CheckCircle2',
   },
   need_attention: {
-    label: 'Need Attention',
-    color: 'text-yellow-700',
-    bgColor: 'bg-yellow-100',
-    emoji: '🟡',
+    label: 'Perlu Perhatian',
+    color: 'text-yellow-700 dark:text-yellow-400',
+    bgColor: 'bg-yellow-50 border border-yellow-200 dark:bg-yellow-950/40 dark:border-yellow-800',
+    iconColor: 'text-yellow-600 dark:text-yellow-400',
+    icon: 'AlertTriangle',
   },
   recovery_mode: {
-    label: 'Recovery Mode',
-    color: 'text-orange-700',
-    bgColor: 'bg-orange-100',
-    emoji: '🟠',
+    label: 'Butuh Pemulihan',
+    color: 'text-orange-700 dark:text-orange-400',
+    bgColor: 'bg-orange-50 border border-orange-200 dark:bg-orange-950/40 dark:border-orange-800',
+    iconColor: 'text-orange-600 dark:text-orange-400',
+    icon: 'AlertOctagon',
   },
   critical: {
-    label: 'Critical',
-    color: 'text-red-700',
-    bgColor: 'bg-red-100',
-    emoji: '🔴',
+    label: 'Darurat Akademik',
+    color: 'text-red-700 dark:text-red-400',
+    bgColor: 'bg-red-50 border border-red-200 dark:bg-red-950/40 dark:border-red-800',
+    iconColor: 'text-red-600 dark:text-red-400',
+    icon: 'XCircle',
   },
 }

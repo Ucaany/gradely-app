@@ -9,6 +9,8 @@ import {
   Target,
   Briefcase,
   Heart,
+  UserCircle,
+  Settings,
 } from "lucide-react"
 import {
   Sidebar,
@@ -35,6 +37,10 @@ const studentNavAkademik = [
     title: "Nilai Akademik",
     url: "/student/grades",
     icon: BookOpen,
+    items: [
+      { title: "Daftar Nilai", url: "/student/grades" },
+      { title: "Import KHS", url: "/student/grades/import" },
+    ],
   },
   {
     title: "Target Kelulusan",
@@ -56,11 +62,24 @@ const studentNavKarier = [
   },
 ]
 
+const studentNavPengaturan = [
+  {
+    title: "Pengaturan",
+    url: "/student/settings",
+    icon: Settings,
+    items: [
+      { title: "Profil Saya", url: "/student/profile" },
+      { title: "Invite Token", url: "/student/settings/invite" },
+    ],
+  },
+]
+
 interface StudentAppSidebarProps {
   user: {
     name: string
     email: string
     avatar?: string | null
+    role?: 'student' | 'admin' | 'lecturer' | 'company'
   }
 }
 
@@ -89,6 +108,7 @@ export function StudentAppSidebar({ user, ...props }: StudentAppSidebarProps & R
         <NavMain items={studentNavMain} label="Utama" />
         <NavMain items={studentNavAkademik} label="Akademik" />
         <NavMain items={studentNavKarier} label="Karier" />
+        <NavMain items={studentNavPengaturan} label="Pengaturan" />
       </SidebarContent>
 
       <SidebarFooter>

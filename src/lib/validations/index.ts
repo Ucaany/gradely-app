@@ -25,6 +25,15 @@ export const updatePasswordSchema = z
 // ============================================================
 // User Management
 // ============================================================
+const phoneSchema = z
+  .string()
+  .refine(
+    (val) => val === '' || /^(\+62|62|0)[0-9]{7,14}$/.test(val),
+    'Format nomor HP tidak valid (contoh: 08123456789)'
+  )
+  .optional()
+  .nullable()
+
 const uuidOrEmpty = z.union([
   z.string().regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/),
   z.literal(''),
@@ -39,12 +48,7 @@ export const createUserSchema = z.object({
   university_id: z.string().optional().nullable(),
   study_program_id: uuidOrEmpty,
   nim: z.string().max(20).optional().nullable(),
-  phone: z
-    .string()
-    .regex(/^(\+62|62|0)[0-9]{7,14}$/, 'Format nomor HP tidak valid')
-    .optional()
-    .nullable()
-    .or(z.literal('')),
+  phone: phoneSchema,
   current_semester: z.number().int().min(1).max(14).optional().nullable(),
   current_semester_type: z.enum(['ganjil', 'genap']).optional().nullable(),
 })
@@ -52,12 +56,7 @@ export const createUserSchema = z.object({
 export const updateUserSchema = z.object({
   full_name: z.string().min(2).max(100).optional(),
   nim: z.string().max(20).optional().nullable(),
-  phone: z
-    .string()
-    .regex(/^(\+62|62|0)[0-9]{7,14}$/, 'Format nomor HP tidak valid')
-    .optional()
-    .nullable()
-    .or(z.literal('')),
+  phone: phoneSchema,
   current_semester: z.number().int().min(1).max(14).optional().nullable(),
   current_semester_type: z.enum(['ganjil', 'genap']).optional().nullable(),
   study_program_id: uuidOrEmpty,
@@ -185,6 +184,27 @@ export const csvUserRowSchema = z.object({
   study_program_id: z.string().optional(),
   current_semester: z.number().int().min(1).max(14).optional(),
 })
+
+// ============================================================
+// Student Profile Update
+// ============================================================
+export const updateStudentProfileSchema = z.object({
+  full_name: z.string().min(2, 'Nama minimal 2 karakter').max(100),
+  phone: z
+    .string()
+    .refine(
+      (val) => val === '' || /^(\+62|62|0)[0-9]{7,14}$/.test(val),
+      'Format nomor HP tidak valid (contoh: 08123456789)'
+    )
+    .optional()
+    .nullable(),
+  avatar_url: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
+  current_semester: z.number().int().min(1).max(14).optional().nullable(),
+  current_semester_type: z.enum(['ganjil', 'genap']).optional().nullable(),
+  profile_visible: z.boolean().optional(),
+})
+
+export type UpdateStudentProfileInput = z.infer<typeof updateStudentProfileSchema>
 
 // ============================================================
 // WAHA / Settings

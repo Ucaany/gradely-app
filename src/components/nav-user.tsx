@@ -3,9 +3,11 @@
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
-  BadgeCheck,
   ChevronsUpDown,
   LogOut,
+  UserCircle,
+  Settings,
+  Lock,
 } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -30,18 +32,23 @@ interface NavUserProps {
     name: string
     email: string
     avatar?: string | null
+    role?: 'student' | 'admin' | 'lecturer' | 'company'
   }
 }
 
 export function NavUser({ user }: NavUserProps) {
   const { isMobile } = useSidebar()
   const router = useRouter()
+
   async function handleLogout() {
     await fetch('/api/auth/signout', { method: 'POST' })
     toast.success("Berhasil keluar")
     router.push("/login")
     router.refresh()
   }
+
+  const profileHref = user.role === 'admin' ? '/admin/account' : '/student/profile'
+  const settingsHref = user.role === 'admin' ? '/admin/account' : '/student/settings'
 
   return (
     <SidebarMenu>
@@ -60,7 +67,7 @@ export function NavUser({ user }: NavUserProps) {
               </Avatar>
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate text-xs text-muted-foreground">{user.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
@@ -81,20 +88,26 @@ export function NavUser({ user }: NavUserProps) {
                 </Avatar>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate text-xs text-muted-foreground">{user.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem>
-                <BadgeCheck />
-                Profil
+              {user.role === 'student' && (
+                <DropdownMenuItem onClick={() => router.push(profileHref)}>
+                  <UserCircle className="h-4 w-4" />
+                  Profil Saya
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => router.push(settingsHref)}>
+                {user.role === 'admin' ? <Lock className="h-4 w-4" /> : <Settings className="h-4 w-4" />}
+                {user.role === 'admin' ? 'Akun Saya' : 'Pengaturan'}
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout}>
-              <LogOut />
+            <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">
+              <LogOut className="h-4 w-4" />
               Keluar
             </DropdownMenuItem>
           </DropdownMenuContent>

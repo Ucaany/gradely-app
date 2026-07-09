@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { UserPlus } from 'lucide-react'
+import { UserPlus, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -33,7 +33,7 @@ export default async function LecturersPage({
 
   let query = supabase
     .from('users')
-    .select(`id, full_name, email, phone, is_active, created_at, avatar_url, study_programs(id, name, short_name)`, { count: 'exact' })
+    .select(`id, full_name, email, phone, is_active, created_at, avatar_url, join_code, study_programs(id, name, short_name)`, { count: 'exact' })
     .eq('role', 'lecturer')
     .order('full_name')
     .range(from, to)
@@ -43,6 +43,20 @@ export default async function LecturersPage({
   }
 
   const { data: lecturers, count } = await query
+
+  // Ambil jumlah mahasiswa per dosen
+  const lecturerIds = (lecturers ?? []).map((l) => l.id)
+  let advisorCounts: Record<string, number> = {}
+  if (lecturerIds.length > 0) {
+    const { data: advisorRows } = await supabase
+      .from('advisor_students')
+      .select('lecturer_id')
+      .in('lecturer_id', lecturerIds)
+    for (const row of advisorRows ?? []) {
+      advisorCounts[row.lecturer_id] = (advisorCounts[row.lecturer_id] ?? 0) + 1
+    }
+  }
+
   const totalPages = Math.ceil((count ?? 0) / pageSize)
 
   return (
@@ -86,6 +100,8 @@ export default async function LecturersPage({
                   <TableHead className="pl-4 sm:pl-6 min-w-[200px]">Dosen</TableHead>
                   <TableHead className="min-w-[130px]">Program Studi</TableHead>
                   <TableHead className="min-w-[130px]">No. HP</TableHead>
+                  <TableHead className="min-w-[100px]">Mahasiswa</TableHead>
+                  <TableHead className="min-w-[110px]">Kode Join</TableHead>
                   <TableHead className="min-w-[80px]">Status</TableHead>
                   <TableHead className="min-w-[110px]">Terdaftar</TableHead>
                   <TableHead className="pr-4 sm:pr-6 text-right min-w-[70px]">Aksi</TableHead>
@@ -93,40 +109,59 @@ export default async function LecturersPage({
               </TableHeader>
               <TableBody>
                 {lecturers && lecturers.length > 0 ? (
-                  lecturers.map((lecturer) => (
-                    <TableRow key={lecturer.id}>
-                      <TableCell className="pl-4 sm:pl-6">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8 shrink-0">
-                            <AvatarImage src={lecturer.avatar_url ?? ''} />
-                            <AvatarFallback className="text-xs">{getInitials(lecturer.full_name)}</AvatarFallback>
-                          </Avatar>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate max-w-[160px]">{lecturer.full_name}</p>
-                            <p className="text-xs text-muted-foreground truncate max-w-[160px]">{lecturer.email}</p>
+                  lecturers.map((lecturer) => {
+                    const studentCount = advisorCounts[lecturer.id] ?? 0
+                    return (
+                      <TableRow key={lecturer.id}>
+                        <TableCell className="pl-4 sm:pl-6">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 shrink-0">
+                              <AvatarImage src={lecturer.avatar_url ?? ''} />
+                              <AvatarFallback className="text-xs">{getInitials(lecturer.full_name)}</AvatarFallback>
+                            </Avatar>
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate max-w-[160px]">{lecturer.full_name}</p>
+                              <p className="text-xs text-muted-foreground truncate max-w-[160px]">{lecturer.email}</p>
+                            </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {((Array.isArray(lecturer.study_programs) ? lecturer.study_programs[0] : lecturer.study_programs) as { short_name: string | null } | null)?.short_name ?? '-'}
-                      </TableCell>
-                      <TableCell className="text-sm">{lecturer.phone ?? '-'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className={`whitespace-nowrap text-xs ${lecturer.is_active ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'text-muted-foreground'}`}>
-                          {lecturer.is_active ? 'Aktif' : 'Nonaktif'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">{formatDate(lecturer.created_at)}</TableCell>
-                      <TableCell className="pr-4 sm:pr-6 text-right">
-                        <Button asChild variant="ghost" size="sm">
-                          <Link href={`/admin/users/lecturers/${lecturer.id}`}>Detail</Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {((Array.isArray(lecturer.study_programs) ? lecturer.study_programs[0] : lecturer.study_programs) as { short_name: string | null } | null)?.short_name ?? '-'}
+                        </TableCell>
+                        <TableCell className="text-sm">{lecturer.phone ?? '-'}</TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="text-sm font-medium">{studentCount}</span>
+                            <span className="text-xs text-muted-foreground">mahasiswa</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {lecturer.join_code ? (
+                            <Badge variant="outline" className="font-mono text-xs tracking-widest text-violet-600 border-violet-300 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-400">
+                              {lecturer.join_code}
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">Belum dibuat</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className={`whitespace-nowrap text-xs ${lecturer.is_active ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'text-muted-foreground'}`}>
+                            {lecturer.is_active ? 'Aktif' : 'Nonaktif'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{formatDate(lecturer.created_at)}</TableCell>
+                        <TableCell className="pr-4 sm:pr-6 text-right">
+                          <Button asChild variant="ghost" size="sm">
+                            <Link href={`/admin/users/lecturers/${lecturer.id}`}>Detail</Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-16 text-muted-foreground">
                       {searchParams.search ? 'Tidak ada dosen yang cocok.' : 'Belum ada dosen terdaftar.'}
                     </TableCell>
                   </TableRow>

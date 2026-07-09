@@ -1,6 +1,6 @@
 'use client'
 
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { useState } from 'react'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -26,7 +26,6 @@ interface StudentsSearchFormProps {
 
 export function StudentsSearchForm({ programs, defaultSearch, defaultProgram }: StudentsSearchFormProps) {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [search, setSearch] = useState(defaultSearch ?? '')
   const [program, setProgram] = useState(defaultProgram ?? '')
 

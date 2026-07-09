@@ -86,6 +86,11 @@ const adminNavKonfigurasi = [
     url: "/admin/settings/general",
     icon: Settings,
   },
+  {
+    title: "Akun Saya",
+    url: "/admin/account",
+    icon: Settings,
+  },
 ]
 
 interface AdminAppSidebarProps {
@@ -93,6 +98,7 @@ interface AdminAppSidebarProps {
     name: string
     email: string
     avatar?: string | null
+    role?: 'student' | 'admin' | 'lecturer' | 'company'
   }
 }
 

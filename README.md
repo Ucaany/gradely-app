@@ -4,7 +4,7 @@ Platform Monitoring Akademik, Perencanaan Kelulusan, Portofolio, dan Career Deve
 
 **Repository:** https://github.com/Ucaany/gradely-app  
 **Last Updated:** 09 Juli 2026  
-**Phase Saat Ini:** Phase 1 ✅ Selesai → Phase 2 🔄 Berikutnya
+**Phase Saat Ini:** Phase 2 ✅ Selesai → Phase 3 🔄 Berikutnya
 
 ---
 
@@ -23,6 +23,7 @@ Platform Monitoring Akademik, Perencanaan Kelulusan, Portofolio, dan Career Deve
 | Toast | Sonner |
 | Icons | Lucide React |
 | CSV | Papaparse |
+| AI | OpenAI GPT-4o (KHS import) |
 
 ---
 
@@ -30,7 +31,7 @@ Platform Monitoring Akademik, Perencanaan Kelulusan, Portofolio, dan Career Deve
 
 | Role | Kode | Akses |
 |------|------|-------|
-| Mahasiswa | `student` | Dashboard akademik, nilai, portofolio, karier |
+| Mahasiswa | `student` | Dashboard akademik, nilai, portofolio, karier, onboarding |
 | Dosen Wali | `lecturer` | Monitoring mahasiswa bimbingan |
 | Admin Kampus | `admin` | Kelola pengguna, aturan akademik, sistem |
 | Perusahaan | `company` | Talent scouting (dengan consent mahasiswa) |
@@ -59,8 +60,6 @@ Isi `.env.local` dengan credentials Supabase:
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-
-# Set ke production URL saat deploy
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
 ```
 
@@ -70,33 +69,15 @@ NEXT_PUBLIC_SITE_URL=http://localhost:3000
 npx supabase db push --db-url "postgresql://postgres.<project-ref>:<password>@aws-0-<region>.pooler.supabase.com:5432/postgres"
 ```
 
-Migration `supabase/migrations/001_initial_schema.sql` membuat:
-- 16 tabel dengan relasi lengkap
-- Row Level Security (RLS) per role
-- Indexes untuk performa query
-- Triggers `updated_at` otomatis
+Migration files:
+- `001_initial_schema.sql` — 16 tabel, RLS, indexes, triggers
+- `002_seed_isi_yogyakarta.sql` — Data ISI Yogyakarta
+- `003_add_semester_type.sql` — Kolom semester_type di student_grades
+- `004_add_semester_type_users.sql` — Kolom current_semester_type di users
+- `005_add_join_code.sql` — Kolom join_code di users (dosen wali invite)
+- `006_add_onboarding.sql` — Kolom onboarding_completed di users
 
-### 4. Seed Data
-
-Seed data ISI Yogyakarta (kampus, 9 prodi, aturan akademik, kategori portofolio) dijalankan via `supabase/seed.sql`.
-
-### 5. Buat Akun Admin Pertama
-
-Buat akun di Supabase Dashboard → Authentication → Users, lalu insert profil:
-
-```sql
-INSERT INTO users (id, university_id, role, full_name, email, is_active)
-VALUES (
-  '<auth-user-id>',
-  '00000000-0000-0000-0000-000000000001',
-  'admin',
-  'Nama Admin',
-  'admin@isi.ac.id',
-  true
-);
-```
-
-### 6. Jalankan Dev Server
+### 4. Jalankan Dev Server
 
 ```bash
 npm run dev
@@ -113,35 +94,43 @@ gradely/
 ├── src/
 │   ├── app/
 │   │   ├── (auth)/              # Login, Reset Password, Update Password
+│   │   ├── (onboarding)/        # Onboarding mahasiswa (full screen, 3 step)
 │   │   ├── (admin)/admin/       # Panel Admin
-│   │   │   ├── dashboard/       # Dashboard statistik + WA history
+│   │   │   ├── dashboard/       # Dashboard + advisor stats
+│   │   │   ├── account/         # Ubah password admin
 │   │   │   ├── users/
 │   │   │   │   ├── students/    # CRUD Mahasiswa + bulk import
-│   │   │   │   ├── lecturers/   # CRUD Dosen Wali
+│   │   │   │   ├── lecturers/   # CRUD Dosen Wali + join code + student count
 │   │   │   │   ├── companies/   # CRUD Perusahaan
 │   │   │   │   └── import/      # Import CSV
 │   │   │   ├── study-programs/  # Kelola Program Studi
 │   │   │   ├── academic-rules/  # Kelola Aturan Akademik
-│   │   │   └── settings/        # Konfigurasi WAHA + General
-│   │   ├── (student)/           # Dashboard Mahasiswa (Phase 2)
+│   │   │   └── settings/        # WAHA, General, AI API key
+│   │   ├── (student)/student/   # Dashboard Mahasiswa
+│   │   │   ├── dashboard/       # Dashboard + charts + onboarding banner
+│   │   │   ├── grades/          # Nilai akademik (grid/list) + import KHS
+│   │   │   ├── target/          # Target kelulusan
+│   │   │   ├── profile/         # Profil mahasiswa
+│   │   │   └── settings/        # Pengaturan + invite token
 │   │   ├── (lecturer)/          # Dashboard Dosen (Phase 3)
 │   │   ├── (company)/           # Company Dashboard (Phase 4)
 │   │   └── api/
 │   │       ├── admin/           # API routes admin
-│   │       └── auth/            # Auth API (signout)
+│   │       ├── auth/            # signout, change-password
+│   │       ├── lecturer/        # join-code generator
+│   │       └── student/         # grades, profile, target, join-advisor, khs-import, onboarding
 │   ├── components/
-│   │   ├── ui/                  # shadcn/ui components (Radix UI)
-│   │   ├── shared/              # Komponen reusable (CreateUserForm, StudentsSearchForm)
-│   │   └── admin/               # Komponen khusus admin
+│   │   ├── ui/                  # shadcn/ui components
+│   │   ├── admin/               # Komponen khusus admin
+│   │   └── student/             # Komponen mahasiswa (charts, grade form)
 │   ├── lib/
 │   │   ├── supabase/            # Client, server, middleware helpers
 │   │   ├── validations/         # Zod schemas semua entity
 │   │   └── utils/               # Helpers + kalkulasi akademik
-│   ├── types/                   # TypeScript types (16 entities)
-│   ├── hooks/                   # Custom hooks
-│   └── middleware.ts            # Route protection + RBAC
+│   ├── types/                   # TypeScript types
+│   └── middleware.ts            # Route protection + RBAC + onboarding gate
 ├── supabase/
-│   ├── migrations/              # SQL migration files
+│   ├── migrations/              # SQL migration files (006 total)
 │   └── seed.sql                 # Seed data ISI Yogyakarta
 └── docs/                        # Dokumentasi perencanaan
 ```
@@ -161,60 +150,67 @@ settings
 
 **Total: 16 tabel** dengan RLS policies per role.
 
+**Kolom tambahan di `users`:**
+- `join_code TEXT UNIQUE` — kode invite dosen wali
+- `onboarding_completed BOOLEAN` — status onboarding mahasiswa
+- `current_semester_type TEXT` — jenis semester aktif
+
 ---
 
-## Fitur yang Sudah Selesai (Phase 1)
+## Fitur Phase 1 + Phase 2
 
 ### Authentication
-- Login email + password
-- Reset password via email
-- Update password
+- Login email + password, reset password, update password
 - Role-based redirect otomatis
-- Middleware route protection (RBAC)
-- Server-side session management via `@supabase/ssr`
+- Middleware RBAC + onboarding gate
+- Server-side session via `@supabase/ssr`
 
 ### Admin Panel
-- Dashboard statistik (mahasiswa, dosen, prodi, perusahaan)
-- Aksi Cepat dengan card grid 2x2 di dashboard
-- Riwayat pesan WhatsApp dengan filter 24h / 1 minggu / semua
-- CRUD Mahasiswa (list, detail, tambah, edit, hapus)
-- CRUD Dosen Wali (list, detail + daftar bimbingan, tambah, edit, hapus)
-- CRUD Perusahaan (list, tambah — auto insert ke tabel `companies`)
-- Bulk import CSV dengan preview data, drag & drop
-- Kelola Program Studi (CRUD via dialog + toggle aktif/nonaktif inline)
-- Kelola Aturan Akademik (CRUD via dialog, grade scale customizable, view grid/list)
-- Search mahasiswa dengan shadcn Select (program studi filter)
-- Konfigurasi WAHA (URL, session, API key, test koneksi)
-- Pengaturan umum institusi
+- Dashboard statistik + advisor connection stats (total koneksi, dosen aktif, top dosen)
+- CRUD Mahasiswa, Dosen Wali, Perusahaan
+- Daftar dosen wali: kolom jumlah mahasiswa + kode join
+- Bulk import CSV drag & drop
+- Kelola Program Studi + Aturan Akademik
+- Konfigurasi WAHA + AI API key (OpenAI untuk KHS import)
+- Akun admin: ubah password
 
-### UI/UX
-- Responsive layout (320px — 1920px)
-- Full width pada semua halaman
-- Dark mode support
-- shadcn/ui components (Badge, Toaster, Switch, Select, Form)
-- Sonner toast notifications
-- Sticky footer pada form panjang
-- Toggle grid/list view pada halaman aturan akademik
+### Dashboard Mahasiswa
+- Banner onboarding belum selesai (dengan tombol Lanjutkan)
+- Status akademik dengan icon (Unggul / Sesuai Target / Perlu Perhatian / Butuh Pemulihan / Darurat Akademik)
+- Stat cards: IPK, SKS Lulus, MK Lulus, Prediksi Lulus
+- Grafik IPS per semester (Recharts AreaChart)
+- Progress SKS dengan donut chart (Recharts PieChart) + stats sejajar
+- Aksi Cepat grid 2x3 dengan icon berwarna
+- Mata kuliah mengulang
 
-### Bug Fixes
-- Validasi UUID Zod v4 kompatibel dengan semua format UUID
-- Fix `study_program_id` & `current_semester_type` di `defaultValues` form
-- Fix Select controlled component (pakai `value` bukan `defaultValue`)
-- Fix API PATCH sanitize empty string ke `null` sebelum update DB
-- Fix regex validasi nomor HP Indonesia (`{7,14}` digit)
-- Fix router.refresh() sebelum push agar server component revalidate cache
+### Nilai Akademik
+- Mode list (tabel per semester) + mode grid (kartu per MK)
+- Toggle grid/list di header
+- Import KHS via AI (GPT-4o baca PDF/gambar, ekstrak MK, SKS, nilai)
+- Badge clean tanpa border untuk nilai dan status
 
----
+### Profil Mahasiswa
+- Edit nama, foto (URL), nomor HP, semester aktif
+- Toggle tampil ke perusahaan (bukan publik — hanya company)
+- Tersinkron ke database realtime
 
-## Roadmap
+### Pengaturan Mahasiswa
+- Subheading: Profil Saya + Invite Token
+- Ubah password dengan show/hide
+- Join dosen wali via kode (1x permanent, tidak bisa ganti)
+- Daftar dosen wali terhubung
 
-| Phase | Minggu | Status | Deskripsi |
-|-------|--------|--------|-----------|
-| Phase 1 | 1–4 | ✅ Selesai | Auth, Database, Admin Panel, User Management |
-| Phase 2 | 5–9 | 🔄 Berikutnya | Dashboard Mahasiswa, Nilai, IPK, SKS, Target |
-| Phase 3 | 10–13 | ⏳ Pending | Dashboard Dosen, Monitoring, Risiko |
-| Phase 4 | 14–17 | ⏳ Pending | Portofolio, Career Profile, Company Dashboard |
-| Phase 5 | 18–20 | 🟡 Partial | WAHA Notifikasi, Testing, Launch |
+### Onboarding (3 Step, Full Screen)
+- Step 1: Pilih skill & minat (16 opsi)
+- Step 2: Perusahaan mitra relevan berdasarkan skill
+- Step 3: Konfirmasi profil dari admin
+- Tombol "Isi Nanti" → dashboard dengan banner reminder
+- Hanya tampil sekali, tidak bisa diulang setelah selesai
+
+### Invite System Dosen Wali
+- Dosen wali generate kode unik 8 karakter via `/api/lecturer/join-code`
+- Mahasiswa input kode → bergabung 1x permanent
+- Admin bisa lihat kode join + jumlah mahasiswa per dosen
 
 ---
 
@@ -222,29 +218,39 @@ settings
 
 | Method | Route | Deskripsi |
 |--------|-------|-----------|
-| POST | `/api/auth/signout` | Server-side sign out |
-| GET | `/api/admin/users` | List semua users |
-| POST | `/api/admin/users` | Buat user baru (+ auto insert companies jika role=company) |
-| PATCH | `/api/admin/users/[id]` | Update user |
-| DELETE | `/api/admin/users/[id]` | Hapus user |
+| POST | `/api/auth/signout` | Sign out |
+| POST | `/api/auth/change-password` | Ubah password |
+| GET/PATCH | `/api/student/profile` | Profil mahasiswa |
+| GET/POST | `/api/student/grades` | Nilai akademik |
+| PATCH/DELETE | `/api/student/grades/[id]` | Edit/hapus nilai |
+| GET/POST | `/api/student/join-advisor` | Cek / join dosen wali |
+| POST | `/api/student/khs-import/parse` | Parse KHS via AI |
+| POST | `/api/student/khs-import` | Import nilai dari KHS |
+| GET/POST | `/api/student/onboarding/companies` | Companies + complete onboarding |
+| GET/POST | `/api/lecturer/join-code` | Ambil / regenerate kode join |
+| GET | `/api/admin/chart-data` | Data chart IPK/IPS |
 | POST | `/api/admin/import` | Bulk import CSV |
-| GET | `/api/admin/study-programs` | List program studi |
-| POST | `/api/admin/study-programs` | Tambah program studi |
-| PATCH | `/api/admin/study-programs/[id]` | Update program studi (termasuk toggle is_active) |
-| DELETE | `/api/admin/study-programs/[id]` | Hapus program studi |
-| GET | `/api/admin/academic-rules` | List aturan akademik |
-| POST | `/api/admin/academic-rules` | Tambah aturan akademik |
-| PATCH | `/api/admin/academic-rules/[id]` | Update aturan akademik |
-| DELETE | `/api/admin/academic-rules/[id]` | Hapus aturan akademik |
-| POST | `/api/admin/settings` | Simpan konfigurasi WAHA |
+| GET/POST | `/api/admin/settings` | Simpan konfigurasi |
 | POST | `/api/admin/waha/test` | Test koneksi WAHA |
+
+---
+
+## Roadmap
+
+| Phase | Status | Deskripsi |
+|-------|--------|-----------|
+| Phase 1 | ✅ Selesai | Auth, Database, Admin Panel, User Management |
+| Phase 2 | ✅ Selesai | Dashboard Mahasiswa, Nilai, Profil, Onboarding, Invite |
+| Phase 3 | 🔄 Berikutnya | Dashboard Dosen, Monitoring Mahasiswa, Risiko Akademik |
+| Phase 4 | ⏳ Pending | Portofolio, Career Profile, Company Dashboard |
+| Phase 5 | ⏳ Pending | WAHA Notifikasi, Testing, Launch |
 
 ---
 
 ## Scripts
 
 ```bash
-npm run dev      # Development server (port 3000)
+npm run dev      # Development server
 npm run build    # Production build
 npm run lint     # ESLint check
 npm run start    # Production server
@@ -259,27 +265,3 @@ npm run start    # Production server
 | Frontend | Vercel |
 | Database | Supabase Cloud |
 | WAHA | Self-hosted VPS / Docker |
-
-### Environment Production
-
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
-NEXT_PUBLIC_SITE_URL=https://gradely.isi.ac.id
-```
-
----
-
-## Utility Functions (Kalkulasi Akademik)
-
-Tersedia di `src/lib/utils/academic.ts`, siap digunakan di Phase 2:
-
-| Fungsi | Deskripsi |
-|--------|-----------|
-| `calculateIPS()` | Hitung Indeks Prestasi Semester |
-| `calculateIPK()` | Hitung Indeks Prestasi Kumulatif |
-| `calculateSKSLulus()` | Hitung total SKS yang lulus |
-| `calculateAcademicStatus()` | Tentukan status akademik |
-| `predictGraduationSemester()` | Prediksi semester kelulusan |
-| `ACADEMIC_STATUS_CONFIG` | Konfigurasi label & warna status |

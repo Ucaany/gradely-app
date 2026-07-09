@@ -2,7 +2,6 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 import type { UserRole } from '@/types'
 
-// Route map per role
 const ROLE_HOME: Record<UserRole, string> = {
   student: '/student/dashboard',
   lecturer: '/lecturer/dashboard',
@@ -20,7 +19,6 @@ const PROTECTED_PREFIXES: Record<string, UserRole> = {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Lewati static files dan API routes yang tidak perlu auth
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/favicon') ||
@@ -29,12 +27,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  // Update session (refresh cookies)
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
   const isAuthPage = pathname === '/login' || pathname === '/reset-password' || pathname === '/update-password'
+  const isOnboarding = pathname.startsWith('/student/onboarding')
 
-  // Jika belum login dan akses halaman protected → redirect login
   if (!user) {
     if (isAuthPage) return supabaseResponse
     const loginUrl = new URL('/login', request.url)
@@ -42,20 +39,21 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl)
   }
 
-  // Jika sudah login dan akses halaman auth → redirect ke dashboard
   if (isAuthPage) {
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, onboarding_completed')
       .eq('id', user.id)
       .single()
 
     const role = profile?.role as UserRole | undefined
+    if (role === 'student' && !profile?.onboarding_completed) {
+      return NextResponse.redirect(new URL('/student/onboarding', request.url))
+    }
     const home = role ? ROLE_HOME[role] : '/login'
     return NextResponse.redirect(new URL(home, request.url))
   }
 
-  // Cek otorisasi berdasarkan prefix route
   const matchedPrefix = Object.keys(PROTECTED_PREFIXES).find((prefix) =>
     pathname.startsWith(prefix)
   )
@@ -65,14 +63,13 @@ export async function middleware(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role, is_active')
+      .select('role, is_active, onboarding_completed')
       .eq('id', user.id)
       .single()
 
     const userRole = profile?.role as UserRole | undefined
     const isActive = profile?.is_active ?? false
 
-    // Akun tidak aktif → redirect login
     if (!isActive) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('error', 'account_inactive')
@@ -82,22 +79,33 @@ export async function middleware(request: NextRequest) {
       return response
     }
 
-    // Role salah → redirect ke dashboard role yang benar
     if (userRole !== requiredRole) {
       const correctHome = userRole ? ROLE_HOME[userRole] : '/login'
       return NextResponse.redirect(new URL(correctHome, request.url))
     }
+
+    // Student onboarding gate — skip if already on onboarding page or dashboard
+    if (userRole === 'student' && !profile?.onboarding_completed && !isOnboarding && pathname !== '/student/dashboard') {
+      return NextResponse.redirect(new URL('/student/onboarding', request.url))
+    }
+
+    // If onboarding already completed, don't allow re-entry
+    if (userRole === 'student' && profile?.onboarding_completed && isOnboarding) {
+      return NextResponse.redirect(new URL('/student/dashboard', request.url))
+    }
   }
 
-  // Root redirect ke dashboard sesuai role
   if (pathname === '/') {
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, onboarding_completed')
       .eq('id', user.id)
       .single()
 
     const role = profile?.role as UserRole | undefined
+    if (role === 'student' && !profile?.onboarding_completed) {
+      return NextResponse.redirect(new URL('/student/onboarding', request.url))
+    }
     const home = role ? ROLE_HOME[role] : '/login'
     return NextResponse.redirect(new URL(home, request.url))
   }

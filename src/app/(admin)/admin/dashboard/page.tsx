@@ -33,6 +33,7 @@ import {
   MessageCircle,
   XCircle,
   Clock,
+  Link2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardChart } from '@/components/admin/dashboard-chart'
@@ -60,7 +61,7 @@ export default async function AdminDashboardPage({
       ? new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
       : null
 
-  const [studentsRes, lecturersRes, companiesRes, programsRes, recentStudentsRes, wahaLogsRes] =
+  const [studentsRes, lecturersRes, companiesRes, programsRes, recentStudentsRes, wahaLogsRes, advisorRes] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').eq('is_active', true),
@@ -70,6 +71,7 @@ export default async function AdminDashboardPage({
       periodStart
         ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).limit(50)
         : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(50),
+      supabase.from('advisor_students').select('id, lecturer_id, users!advisor_students_lecturer_id_fkey(id, full_name, avatar_url)', { count: 'exact' }).limit(100),
     ])
 
   const stats = [
@@ -94,6 +96,26 @@ export default async function AdminDashboardPage({
 
   const students = recentStudentsRes.data ?? []
   const wahaLogs = (wahaLogsRes.data ?? []) as WhatsappLog[]
+
+  // Advisor stats
+  const advisorRows = advisorRes.data ?? []
+  const totalAdvisorConnections = advisorRes.count ?? 0
+  // Count unique lecturers yang sudah punya mahasiswa
+  const activeLecturerIds = new Set(advisorRows.map((a) => a.lecturer_id))
+  const activeLecturersCount = activeLecturerIds.size
+  // Group: berapa mahasiswa per dosen (top 5)
+  const lecturerStudentCount: Record<string, { name: string; avatar: string | null; count: number }> = {}
+  for (const row of advisorRows) {
+    const lec = (row.users as unknown) as { id: string; full_name: string; avatar_url: string | null } | null
+    if (!lec) continue
+    if (!lecturerStudentCount[lec.id]) {
+      lecturerStudentCount[lec.id] = { name: lec.full_name, avatar: lec.avatar_url, count: 0 }
+    }
+    lecturerStudentCount[lec.id].count++
+  }
+  const topLecturers = Object.entries(lecturerStudentCount)
+    .sort(([, a], [, b]) => b.count - a.count)
+    .slice(0, 5)
 
   const periodLabels: Record<Period, string> = {
     '24h': '24 Jam Terakhir',
@@ -162,8 +184,87 @@ export default async function AdminDashboardPage({
         </Card>
       </div>
 
-      {/* Aksi Cepat + Mahasiswa Terbaru */}
+      {/* Advisor Connections */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Koneksi</CardTitle>
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{totalAdvisorConnections}</div>
+            <p className="text-xs text-muted-foreground mt-1">Mahasiswa terhubung ke dosen wali</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Dosen Aktif</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{activeLecturersCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">Dosen wali sudah punya mahasiswa</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Mahasiswa Belum Terhubung</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">
+              {Math.max(0, (studentsRes.count ?? 0) - totalAdvisorConnections)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">Belum memiliki dosen wali</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Top Dosen + Aksi Cepat */}
       <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
+            <div>
+              <CardTitle className="text-base">Dosen Wali Paling Aktif</CardTitle>
+              <CardDescription>Berdasarkan jumlah mahasiswa terhubung</CardDescription>
+            </div>
+            <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
+              <Link href="/admin/users/lecturers">
+                Lihat semua
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent className="pt-4">
+            {topLecturers.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+                <Users className="h-8 w-8 text-muted-foreground/30" />
+                <p className="text-sm text-muted-foreground">Belum ada koneksi dosen-mahasiswa</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {topLecturers.map(([id, lec]) => (
+                  <div key={id} className="flex items-center gap-3">
+                    <Avatar className="h-8 w-8 shrink-0">
+                      <AvatarImage src={lec.avatar ?? ''} />
+                      <AvatarFallback className="text-xs">{getInitials(lec.name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{lec.name}</p>
+                      <div className="mt-1 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                        <div
+                          className="h-full rounded-full bg-primary transition-all"
+                          style={{ width: `${Math.min(100, (lec.count / Math.max(...topLecturers.map(([,l]) => l.count))) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className="text-sm font-semibold shrink-0 w-6 text-right">{lec.count}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Aksi Cepat</CardTitle>
@@ -190,8 +291,10 @@ export default async function AdminDashboardPage({
             ))}
           </CardContent>
         </Card>
+      </div>
 
-        <Card className="overflow-hidden">
+      {/* Mahasiswa Terbaru */}
+      <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
             <div>
               <CardTitle className="text-base">Mahasiswa Terbaru</CardTitle>
@@ -248,7 +351,6 @@ export default async function AdminDashboardPage({
             </Table>
           </CardContent>
         </Card>
-      </div>
 
       {/* Riwayat WhatsApp dengan filter periode */}
       <Card className="overflow-hidden">

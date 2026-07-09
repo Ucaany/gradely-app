@@ -33,6 +33,7 @@ export default async function AdminLayout({
           name: profile.full_name,
           email: profile.email,
           avatar: profile.avatar_url,
+          role: 'admin',
         }}
       />
       <SidebarInset>

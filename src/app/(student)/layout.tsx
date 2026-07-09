@@ -26,6 +26,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
           name: profile.full_name,
           email: profile.email,
           avatar: profile.avatar_url,
+          role: 'student',
         }}
       />
       <SidebarInset>

@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
 import {
   BookOpen,
   Target,
@@ -19,6 +18,14 @@ import {
   AlertCircle,
   GraduationCap,
   BarChart3,
+  Plus,
+  FileUp,
+  CheckCircle2,
+  AlertTriangle,
+  AlertOctagon,
+  XCircle,
+  Briefcase,
+  ClipboardList,
 } from 'lucide-react'
 import {
   calculateAcademicSummary,
@@ -27,6 +34,16 @@ import {
 } from '@/lib/utils/academic'
 import { formatGPA } from '@/lib/utils'
 import type { AcademicRule, StudentGrade } from '@/types'
+import { StudentIPSChart } from '@/components/student/student-ips-chart'
+import { StudentSKSChart } from '@/components/student/student-sks-chart'
+
+const STATUS_ICONS = {
+  TrendingUp,
+  CheckCircle2,
+  AlertTriangle,
+  AlertOctagon,
+  XCircle,
+} as const
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -36,7 +53,7 @@ export default async function StudentDashboardPage() {
   const [profileRes, gradesRes, targetRes] = await Promise.all([
     supabase
       .from('users')
-      .select('full_name, nim, current_semester, study_program_id, university_id, study_programs(name, short_name)')
+      .select('full_name, nim, current_semester, study_program_id, university_id, onboarding_completed, study_programs(name, short_name)')
       .eq('id', user.id)
       .single(),
     supabase
@@ -55,7 +72,6 @@ export default async function StudentDashboardPage() {
   const grades = (gradesRes.data ?? []) as StudentGrade[]
   const target = targetRes.data
 
-  // Ambil academic rules
   let rule: AcademicRule | null = null
   if (profile?.university_id) {
     if (profile.study_program_id) {
@@ -99,6 +115,7 @@ export default async function StudentDashboardPage() {
   const summary = calculateAcademicSummary(grades, currentSemester, targetSemester, effectiveRule)
   const semesterSummaries = groupGradesBySemester(grades)
   const statusConfig = ACADEMIC_STATUS_CONFIG[summary.academic_status]
+  const StatusIcon = STATUS_ICONS[statusConfig.icon as keyof typeof STATUS_ICONS]
 
   const retakeCourses = grades.filter((g) => g.is_retake)
   const studyProgramName =
@@ -106,29 +123,100 @@ export default async function StudentDashboardPage() {
       ? (profile.study_programs as { name: string; short_name: string | null }).name
       : null
 
+  const chartData = semesterSummaries.map((s) => ({
+    semester: `Sem ${s.semester_number}`,
+    ips: s.gpa,
+    sks: s.total_sks,
+  }))
+
+  const quickActions = [
+    {
+      label: 'Input Nilai Baru',
+      href: '/student/grades',
+      desc: 'Tambah nilai mata kuliah',
+      icon: Plus,
+      color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-400',
+    },
+    {
+      label: 'Import KHS',
+      href: '/student/grades/import',
+      desc: 'Upload dokumen KHS',
+      icon: FileUp,
+      color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-400',
+    },
+    {
+      label: 'Target Kelulusan',
+      href: '/student/target',
+      desc: 'Atur & pantau target lulus',
+      icon: Target,
+      color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400',
+    },
+    {
+      label: 'Lihat Semua Nilai',
+      href: '/student/grades',
+      desc: 'Riwayat nilai per semester',
+      icon: ClipboardList,
+      color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400',
+    },
+    {
+      label: 'Portofolio',
+      href: '/student/portfolio',
+      desc: 'Kelola portofolio kamu',
+      icon: Briefcase,
+      color: 'text-pink-600 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-400',
+    },
+    {
+      label: 'Nilai Akademik',
+      href: '/student/grades',
+      desc: 'Detail transkrip nilai',
+      icon: BookOpen,
+      color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-400',
+    },
+  ]
+
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
-          Halo, {profile?.full_name?.split(' ')[0] ?? 'Mahasiswa'} 👋
+          Halo, {profile?.full_name?.split(' ')[0] ?? 'Mahasiswa'}
         </h1>
         <p className="text-sm text-muted-foreground">
           {studyProgramName ?? 'Program Studi'} · NIM {profile?.nim ?? '-'} · Semester {currentSemester}
         </p>
       </div>
 
+      {/* Onboarding incomplete banner */}
+      {!profile?.onboarding_completed && (
+        <div className="rounded-xl border border-yellow-200 bg-yellow-50 dark:bg-yellow-950/30 dark:border-yellow-800 px-4 py-3 flex items-center gap-3">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-400">
+            <AlertTriangle className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">Onboarding belum selesai</p>
+            <p className="text-xs text-yellow-700 dark:text-yellow-400 mt-0.5">Lengkapi profil dan pilih minat kariermu agar pengalaman Gradely lebih personal.</p>
+          </div>
+          <Button size="sm" variant="outline" className="shrink-0 border-yellow-300 text-yellow-800 hover:bg-yellow-100 dark:border-yellow-700 dark:text-yellow-300 dark:hover:bg-yellow-900/40" asChild>
+            <Link href="/student/onboarding">Lanjutkan</Link>
+          </Button>
+        </div>
+      )}
+
       {/* Status Akademik Banner */}
-      <div className={`rounded-lg border px-4 py-3 flex items-center gap-3 ${statusConfig.bgColor}`}>
-        <span className="text-xl">{statusConfig.emoji}</span>
+      <div className={`rounded-xl px-4 py-3 flex items-center gap-3 ${statusConfig.bgColor}`}>
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/60 dark:bg-black/20 ${statusConfig.iconColor}`}>
+          <StatusIcon className="h-5 w-5" />
+        </div>
         <div>
-          <p className={`font-semibold text-sm ${statusConfig.color}`}>Status Akademik: {statusConfig.label}</p>
+          <p className={`font-semibold text-sm ${statusConfig.color}`}>
+            Status Akademik: {statusConfig.label}
+          </p>
           <p className="text-xs text-muted-foreground">
             {summary.academic_status === 'ahead' && 'Progres SKS kamu melebihi target. Pertahankan!'}
             {summary.academic_status === 'on_track' && 'Progres kamu sesuai target. Terus semangat!'}
             {summary.academic_status === 'need_attention' && 'Progres sedikit di bawah target. Perlu ditingkatkan.'}
             {summary.academic_status === 'recovery_mode' && 'Progres jauh di bawah target. Segera konsultasi dosen wali.'}
-            {summary.academic_status === 'critical' && 'Risiko tidak lulus tepat waktu. Segera hubungi dosen wali.'}
+            {summary.academic_status === 'critical' && 'Nilai & SKS kamu berisiko gagal tepat waktu. Segera hubungi dosen wali sekarang.'}
           </p>
         </div>
       </div>
@@ -154,7 +242,9 @@ export default async function StudentDashboardPage() {
           <CardContent>
             <div className="text-3xl font-bold">{summary.total_sks_earned}</div>
             <p className="text-xs text-muted-foreground mt-1">dari {summary.total_sks_required} SKS</p>
-            <Progress value={summary.sks_percentage} className="mt-2 h-1.5" />
+            <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${summary.sks_percentage}%` }} />
+            </div>
           </CardContent>
         </Card>
 
@@ -182,14 +272,38 @@ export default async function StudentDashboardPage() {
             <div className="text-3xl font-bold">Sem {summary.predicted_graduation_semester}</div>
             <p className="text-xs text-muted-foreground mt-1">
               Target: Semester {targetSemester}
-              {summary.predicted_graduation_semester <= targetSemester ? ' ✅' : ' ⚠️'}
+              {summary.predicted_graduation_semester <= targetSemester ? (
+                <CheckCircle2 className="inline ml-1 h-3 w-3 text-emerald-500" />
+              ) : (
+                <AlertTriangle className="inline ml-1 h-3 w-3 text-yellow-500" />
+              )}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Progress SKS + Semester */}
+      {/* Chart IPS + Progress SKS */}
       <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Grafik IPS per Semester</CardTitle>
+            <CardDescription>Perkembangan Indeks Prestasi Semester</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {chartData.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
+                <BarChart3 className="h-8 w-8 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">Belum ada data nilai</p>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href="/student/grades">Input Nilai Pertama</Link>
+                </Button>
+              </div>
+            ) : (
+              <StudentIPSChart data={chartData} />
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Progress SKS</CardTitle>
@@ -197,31 +311,27 @@ export default async function StudentDashboardPage() {
               {summary.total_sks_earned} / {summary.total_sks_required} SKS ({summary.sks_percentage}%)
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Progress value={summary.sks_percentage} className="h-3" />
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-muted-foreground text-xs">SKS Lulus</p>
-                <p className="font-semibold text-lg">{summary.total_sks_earned}</p>
-              </div>
-              <div className="rounded-lg bg-muted p-3">
-                <p className="text-muted-foreground text-xs">SKS Tersisa</p>
-                <p className="font-semibold text-lg">{summary.total_sks_required - summary.total_sks_earned}</p>
-              </div>
-              <div className="rounded-lg bg-muted p-3">
+          <CardContent className="space-y-5">
+            <StudentSKSChart
+              earned={summary.total_sks_earned}
+              required={summary.total_sks_required}
+              percentage={summary.sks_percentage}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-muted/60 px-3 py-2.5 flex flex-col gap-0.5">
                 <p className="text-muted-foreground text-xs">Rata-rata SKS/Sem</p>
-                <p className="font-semibold text-lg">
-                  {currentSemester > 0
-                    ? Math.round(summary.total_sks_earned / currentSemester)
-                    : 0}
+                <p className="font-semibold text-base tabular-nums">
+                  {currentSemester > 0 ? Math.round(summary.total_sks_earned / currentSemester) : 0}
+                  <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>
                 </p>
               </div>
-              <div className="rounded-lg bg-muted p-3">
+              <div className="rounded-lg bg-muted/60 px-3 py-2.5 flex flex-col gap-0.5">
                 <p className="text-muted-foreground text-xs">SKS Butuh/Sem</p>
-                <p className="font-semibold text-lg">
+                <p className="font-semibold text-base tabular-nums">
                   {targetSemester > currentSemester
                     ? Math.ceil((summary.total_sks_required - summary.total_sks_earned) / (targetSemester - currentSemester))
                     : '-'}
+                  {targetSemester > currentSemester && <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>}
                 </p>
               </div>
             </div>
@@ -233,37 +343,6 @@ export default async function StudentDashboardPage() {
             </Button>
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">IPS per Semester</CardTitle>
-            <CardDescription>Indeks Prestasi Semester historis</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {semesterSummaries.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center gap-2">
-                <BarChart3 className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">Belum ada data nilai</p>
-                <Button variant="outline" size="sm" asChild>
-                  <Link href="/student/grades">Input Nilai Pertama</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {semesterSummaries.map((sem) => (
-                  <div key={sem.semester_number} className="flex items-center gap-3">
-                    <span className="text-xs text-muted-foreground w-16 shrink-0">Sem {sem.semester_number}</span>
-                    <div className="flex-1">
-                      <Progress value={(sem.gpa / 4) * 100} className="h-2" />
-                    </div>
-                    <span className="text-xs font-medium w-10 text-right">{formatGPA(sem.gpa)}</span>
-                    <span className="text-xs text-muted-foreground w-16 text-right">{sem.total_sks} SKS</span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       {/* Aksi Cepat + MK Mengulang */}
@@ -271,23 +350,26 @@ export default async function StudentDashboardPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Aksi Cepat</CardTitle>
+            <CardDescription>Pintasan ke fitur yang sering digunakan</CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-2">
-            {[
-              { label: 'Input Nilai Baru', href: '/student/grades', desc: 'Tambah nilai mata kuliah' },
-              { label: 'Lihat Semua Nilai', href: '/student/grades', desc: 'Riwayat nilai per semester' },
-              { label: 'Target Kelulusan', href: '/student/target', desc: 'Atur & pantau target lulus' },
-              { label: 'Portofolio', href: '/student/portfolio', desc: 'Kelola portofolio kamu' },
-            ].map((action) => (
-              <Button key={action.href + action.label} variant="outline" className="h-auto w-full justify-between px-4 py-3" asChild>
-                <Link href={action.href}>
-                  <div className="text-left">
-                    <div className="text-sm font-medium">{action.label}</div>
-                    <div className="text-xs text-muted-foreground">{action.desc}</div>
+          <CardContent className="grid grid-cols-2 gap-3">
+            {quickActions.map((action) => (
+              <Link
+                key={action.label}
+                href={action.href}
+                className="group flex flex-col gap-2 rounded-lg border bg-card p-4 text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <div className="flex items-center justify-between">
+                  <div className={`flex h-8 w-8 items-center justify-center rounded-md ${action.color}`}>
+                    <action.icon className="h-4 w-4" />
                   </div>
-                  <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </Link>
-              </Button>
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+                <div>
+                  <p className="text-sm font-medium leading-tight">{action.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{action.desc}</p>
+                </div>
+              </Link>
             ))}
           </CardContent>
         </Card>
