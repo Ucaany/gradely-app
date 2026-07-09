@@ -10,6 +10,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import {
   Table,
   TableBody,
@@ -29,22 +30,28 @@ import {
   UserPlus,
   ClipboardList,
   CheckCircle2,
+  MessageCircle,
+  XCircle,
+  Clock,
 } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardChart } from '@/components/admin/dashboard-chart'
+import { formatDate, getInitials } from '@/lib/utils'
+import type { WhatsappLog } from '@/types'
 
 export default async function AdminDashboardPage() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [studentsRes, lecturersRes, companiesRes, programsRes, recentStudents] =
+  const [studentsRes, lecturersRes, companiesRes, programsRes, recentStudentsRes, wahaLogsRes] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').eq('is_active', true),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').eq('is_active', true),
       supabase.from('study_programs').select('id', { count: 'exact', head: true }).eq('is_active', true),
-      supabase.from('users').select('id, full_name, email, nim, is_active, created_at').eq('role', 'student').order('created_at', { ascending: false }).limit(5),
+      supabase.from('users').select('id, full_name, email, nim, is_active, avatar_url, created_at').eq('role', 'student').order('created_at', { ascending: false }).limit(5),
+      supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(8),
     ])
 
   const stats = [
@@ -67,7 +74,26 @@ export default async function AdminDashboardPage() {
     { label: 'Notifikasi WhatsApp', status: 'Aktif' },
   ]
 
-  const students = recentStudents.data ?? []
+  const students = recentStudentsRes.data ?? []
+  const wahaLogs = (wahaLogsRes.data ?? []) as WhatsappLog[]
+
+  function WahaStatusBadge({ status }: { status: WhatsappLog['status'] }) {
+    if (status === 'sent') return (
+      <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800">
+        <CheckCircle2 className="h-3 w-3 mr-1" />Terkirim
+      </Badge>
+    )
+    if (status === 'failed') return (
+      <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-destructive border-destructive/30 bg-destructive/5">
+        <XCircle className="h-3 w-3 mr-1" />Gagal
+      </Badge>
+    )
+    return (
+      <Badge variant="outline" className="shrink-0 whitespace-nowrap text-xs text-muted-foreground">
+        <Clock className="h-3 w-3 mr-1" />Pending
+      </Badge>
+    )
+  }
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -78,6 +104,7 @@ export default async function AdminDashboardPage() {
         </p>
       </div>
 
+      {/* Stat cards — full width */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {stats.map((stat) => (
           <Card key={stat.title}>
@@ -97,6 +124,7 @@ export default async function AdminDashboardPage() {
         ))}
       </div>
 
+      {/* Chart + Status Sistem — full width */}
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <DashboardChart />
@@ -125,6 +153,7 @@ export default async function AdminDashboardPage() {
         </Card>
       </div>
 
+      {/* Aksi Cepat + Mahasiswa Terbaru — full width */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -149,55 +178,124 @@ export default async function AdminDashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
             <div>
               <CardTitle className="text-base">Mahasiswa Terbaru</CardTitle>
               <CardDescription>5 mahasiswa terakhir didaftarkan</CardDescription>
             </div>
-            <Button variant="ghost" size="sm" className="shrink-0 self-start sm:self-auto" asChild>
-              <Link href="/admin/users/students">Lihat semua</Link>
+            <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
+              <Link href="/admin/users/students">
+                Lihat semua
+                <ArrowRight className="h-3.5 w-3.5 ml-1" />
+              </Link>
             </Button>
           </CardHeader>
-          <CardContent className="p-0 pb-2">
-            <div className="w-full overflow-x-auto">
-              <Table>
-                <TableHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-4 sm:pl-6">Mahasiswa</TableHead>
+                  <TableHead>NIM</TableHead>
+                  <TableHead className="pr-4 sm:pr-6">Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {students.length === 0 ? (
                   <TableRow>
-                    <TableHead className="min-w-[180px]">Nama</TableHead>
-                    <TableHead className="min-w-[100px]">NIM</TableHead>
-                    <TableHead className="min-w-[80px]">Status</TableHead>
+                    <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
+                      Belum ada data mahasiswa
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {students.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-8">
-                        Belum ada data mahasiswa
+                ) : (
+                  students.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="pl-4 sm:pl-6">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-7 w-7 shrink-0">
+                            <AvatarImage src={s.avatar_url ?? ''} />
+                            <AvatarFallback className="text-xs">{getInitials(s.full_name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm leading-tight truncate max-w-[140px]">{s.full_name}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">{s.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm font-mono">{s.nim ?? '-'}</TableCell>
+                      <TableCell className="pr-4 sm:pr-6">
+                        <Badge variant="outline" className={`shrink-0 whitespace-nowrap text-xs ${s.is_active ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'text-muted-foreground'}`}>
+                          {s.is_active ? 'Aktif' : 'Nonaktif'}
+                        </Badge>
                       </TableCell>
                     </TableRow>
-                  ) : (
-                    students.map((s) => (
-                      <TableRow key={s.id}>
-                        <TableCell className="min-w-0">
-                          <div className="font-medium text-sm leading-tight truncate">{s.full_name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{s.email}</div>
-                        </TableCell>
-                        <TableCell className="text-sm font-mono">{s.nim ?? '-'}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className={`shrink-0 whitespace-nowrap text-xs ${s.is_active ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800' : 'text-muted-foreground'}`}>
-                            {s.is_active ? 'Aktif' : 'Nonaktif'}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </div>
+
+      {/* Riwayat WhatsApp — full width */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-muted-foreground" />
+              Riwayat Pesan WhatsApp
+            </CardTitle>
+            <CardDescription>8 pesan terakhir yang dikirim via WAHA</CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
+            <Link href="/admin/settings">
+              Pengaturan WAHA
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="w-full overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="pl-4 sm:pl-6 min-w-[130px]">No. HP</TableHead>
+                  <TableHead className="min-w-[260px]">Pesan</TableHead>
+                  <TableHead className="min-w-[90px]">Status</TableHead>
+                  <TableHead className="pr-4 sm:pr-6 min-w-[130px]">Waktu</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {wahaLogs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-10">
+                      Belum ada riwayat pesan WhatsApp
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  wahaLogs.map((log) => (
+                    <TableRow key={log.id}>
+                      <TableCell className="pl-4 sm:pl-6 text-sm font-mono">{log.phone_number}</TableCell>
+                      <TableCell className="text-sm">
+                        <p className="truncate max-w-[300px] text-muted-foreground">{log.message}</p>
+                        {log.error_message && (
+                          <p className="text-xs text-destructive mt-0.5 truncate max-w-[300px]">{log.error_message}</p>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <WahaStatusBadge status={log.status} />
+                      </TableCell>
+                      <TableCell className="pr-4 sm:pr-6 text-sm text-muted-foreground">
+                        {formatDate(log.sent_at ?? log.created_at)}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
