@@ -25,6 +25,7 @@ import {
   Briefcase,
   ClipboardList,
   Code2,
+  Sparkles,
 } from 'lucide-react'
 import {
   calculateAcademicSummary,
@@ -41,7 +42,7 @@ export default async function StudentDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileRes, gradesRes, targetRes] = await Promise.all([
+  const [profileRes, gradesRes, targetRes, latestAnalysisRes] = await Promise.all([
     supabase
       .from('users')
       .select('full_name, nim, current_semester, study_program_id, university_id, onboarding_completed, study_programs(name, short_name)')
@@ -57,11 +58,19 @@ export default async function StudentDashboardPage() {
       .select('*')
       .eq('student_id', user.id)
       .single(),
+    supabase
+      .from('student_target_analyses')
+      .select('id, target_semester, target_ipk, target_years, analysis, created_at')
+      .eq('student_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ])
 
   const profile = profileRes.data
   const grades = (gradesRes.data ?? []) as StudentGrade[]
   const target = targetRes.data
+  const latestAnalysis = latestAnalysisRes.data
 
   let rule: AcademicRule | null = null
   if (profile?.university_id) {
@@ -325,6 +334,80 @@ export default async function StudentDashboardPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Ringkasan analisis terbaru */}
+      {latestAnalysis && (() => {
+        const s = latestAnalysis.analysis?.status
+        const statusCfg = s === 'aman'
+          ? { label: 'Aman', color: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', pct: 85 }
+          : s === 'perlu_usaha'
+          ? { label: 'Perlu Usaha', color: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500', pct: 50 }
+          : { label: 'Perlu Perhatian', color: 'text-orange-700 dark:text-orange-400', dot: 'bg-orange-500', pct: 25 }
+
+        const metrics = [
+          { label: 'SKS/Sem', value: latestAnalysis.analysis?.sks_per_semester_dibutuhkan ?? '-', unit: latestAnalysis.analysis?.sks_per_semester_dibutuhkan ? 'SKS' : '' },
+          { label: 'IPK Min', value: latestAnalysis.analysis?.ipk_minimal_per_semester != null ? Number(latestAnalysis.analysis.ipk_minimal_per_semester).toFixed(2) : '-', unit: '' },
+          { label: 'Target IPS', value: latestAnalysis.analysis?.ips_target_semester_depan != null ? Number(latestAnalysis.analysis.ips_target_semester_depan).toFixed(2) : '-', unit: '' },
+        ]
+
+        return (
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary" />
+                  <CardTitle className="text-base">Analisis Target Kelulusan</CardTitle>
+                </div>
+                <Button variant="ghost" size="sm" asChild>
+                  <Link href="/student/target/history">
+                    Detail <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                  </Link>
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Status + progress */}
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${statusCfg.dot}`} />
+                  <span className={`text-sm font-semibold ${statusCfg.color}`}>{statusCfg.label}</span>
+                </div>
+                <div className="flex-1">
+                  <div className="h-2 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${statusCfg.dot}`}
+                      style={{ width: `${statusCfg.pct}%` }}
+                    />
+                  </div>
+                </div>
+                <span className={`text-sm font-bold shrink-0 ${statusCfg.color}`}>{statusCfg.pct}%</span>
+              </div>
+
+              {/* 3 metrik */}
+              <div className="grid grid-cols-3 gap-2">
+                {metrics.map(({ label, value, unit }) => (
+                  <div key={label} className="rounded-xl bg-muted/50 px-3 py-2.5 text-center">
+                    <p className="text-xs text-muted-foreground mb-1">{label}</p>
+                    <p className="text-lg font-bold leading-none">{value}
+                      <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              {/* Satu saran singkat */}
+              {latestAnalysis.analysis?.rekomendasi?.[0] && (
+                <div className="flex items-start gap-2.5 rounded-xl bg-primary/5 px-4 py-3">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
+                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                    {latestAnalysis.analysis.rekomendasi[0]}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Prompt to set target when not set */}
       {!target && (
