@@ -22,20 +22,17 @@ export default async function NewLecturerPage() {
   const universityId = universities?.id ?? ''
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <div className="w-full max-w-2xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Tambah Dosen Wali</h1>
-          <p className="text-sm text-muted-foreground">Buat akun baru untuk dosen wali</p>
-        </div>
-        
-        <CreateUserForm
-          studyPrograms={studyPrograms ?? []}
-          universityId={universityId}
-          defaultRole="lecturer"
-          redirectTo="/admin/users/lecturers"
-        />
+    <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      <div className="mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Tambah Dosen Wali</h1>
+        <p className="text-sm text-muted-foreground">Buat akun baru untuk dosen wali</p>
       </div>
+      <CreateUserForm
+        studyPrograms={studyPrograms ?? []}
+        universityId={universityId}
+        defaultRole="lecturer"
+        redirectTo="/admin/users/lecturers"
+      />
     </div>
   )
 }

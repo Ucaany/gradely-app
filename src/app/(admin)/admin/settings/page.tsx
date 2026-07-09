@@ -27,8 +27,8 @@ export default async function AdminSettingsPage() {
   )
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <div className="w-full max-w-2xl">
+    <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      <div>
         <div className="flex items-center gap-3 mb-6">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted">
             <MessageSquare className="h-5 w-5 text-muted-foreground" />

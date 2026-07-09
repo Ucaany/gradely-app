@@ -31,12 +31,11 @@ export default async function LecturerDetailPage({ params }: { params: { id: str
   ]
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <div className="w-full max-w-2xl space-y-4">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Detail Dosen Wali</h1>
-          <p className="text-sm text-muted-foreground">Informasi lengkap akun dosen wali</p>
-        </div>
+    <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      <div className="mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Detail Dosen Wali</h1>
+        <p className="text-sm text-muted-foreground">Informasi lengkap akun dosen wali</p>
+      </div>
 
         <Card>
           <CardHeader className="pb-4">
@@ -103,7 +102,6 @@ export default async function LecturerDetailPage({ params }: { params: { id: str
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   )
 }

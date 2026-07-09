@@ -33,14 +33,13 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
   ]
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <div className="w-full max-w-2xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Detail Mahasiswa</h1>
-          <p className="text-sm text-muted-foreground">Informasi lengkap akun mahasiswa</p>
-        </div>
+    <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      <div className="mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Detail Mahasiswa</h1>
+        <p className="text-sm text-muted-foreground">Informasi lengkap akun mahasiswa</p>
+      </div>
 
-        <Card>
+      <Card>
           <CardHeader className="pb-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div className="flex items-center gap-4">
@@ -74,8 +73,7 @@ export default async function StudentDetailPage({ params }: { params: { id: stri
               ))}
             </div>
           </CardContent>
-        </Card>
-      </div>
+      </Card>
     </div>
   )
 }

@@ -22,20 +22,17 @@ export default async function NewStudentPage() {
   const universityId = universities?.id ?? ''
 
   return (
-    <div className="flex flex-1 flex-col items-center gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <div className="w-full max-w-2xl">
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Tambah Mahasiswa</h1>
-          <p className="text-sm text-muted-foreground">Buat akun baru untuk mahasiswa</p>
-        </div>
-        
-        <CreateUserForm
-          studyPrograms={studyPrograms ?? []}
-          universityId={universityId}
-          defaultRole="student"
-          redirectTo="/admin/users/students"
-        />
+    <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      <div className="mb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Tambah Mahasiswa</h1>
+        <p className="text-sm text-muted-foreground">Buat akun baru untuk mahasiswa</p>
       </div>
+      <CreateUserForm
+        studyPrograms={studyPrograms ?? []}
+        universityId={universityId}
+        defaultRole="student"
+        redirectTo="/admin/users/students"
+      />
     </div>
   )
 }
