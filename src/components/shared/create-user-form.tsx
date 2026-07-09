@@ -263,7 +263,7 @@ export function CreateUserForm({
         </Card>
 
         {/* Sticky footer */}
-        <div className="sticky bottom-0 z-10 flex justify-end gap-3 border-t bg-background px-4 py-4 -mx-4 sm:-mx-6 lg:-mx-8">
+        <div className="flex justify-end gap-3 pt-2">
           <Button
             type="button"
             variant="outline"
