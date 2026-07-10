@@ -217,8 +217,95 @@ export interface PortfolioCategory {
 }
 
 // ============================================================
+// Portfolio Categories metadata types
+// ============================================================
+export interface PortfolioMetadataCertificate {
+  issuer?: string
+  certificate_number?: string
+  expired_date?: string
+}
+
+export interface PortfolioMetadataInternship {
+  company_name?: string
+  position?: string
+  work_description?: string
+}
+
+export interface PortfolioMetadataVolunteer {
+  organization_name?: string
+  role?: string
+  hours?: number
+}
+
+export interface PortfolioMetadataOrganization {
+  organization_name?: string
+  position?: string
+}
+
+export interface PortfolioMetadataAchievement {
+  level?: 'lokal' | 'nasional' | 'internasional'
+  organizer?: string
+  rank?: string
+}
+
+export interface PortfolioMetadataCompetition {
+  competition_name?: string
+  organizer?: string
+  level?: 'lokal' | 'nasional' | 'internasional'
+  rank?: string
+}
+
+export interface PortfolioMetadataWorkshop {
+  organizer?: string
+  duration_hours?: number
+  has_certificate?: boolean
+}
+
+export interface PortfolioMetadataTraining {
+  organizer?: string
+  duration_hours?: number
+  method?: 'online' | 'offline' | 'hybrid'
+}
+
+export interface PortfolioMetadataProject {
+  tech_stack?: string[]
+  role?: string
+}
+
+export interface PortfolioMetadataWork {
+  medium?: string
+  format?: string
+  client?: string
+}
+
+export interface PortfolioMetadataExperience {
+  place_name?: string
+  role?: string
+  context?: string
+}
+
+export type PortfolioMetadata =
+  | PortfolioMetadataCertificate
+  | PortfolioMetadataInternship
+  | PortfolioMetadataVolunteer
+  | PortfolioMetadataOrganization
+  | PortfolioMetadataAchievement
+  | PortfolioMetadataCompetition
+  | PortfolioMetadataWorkshop
+  | PortfolioMetadataTraining
+  | PortfolioMetadataProject
+  | PortfolioMetadataWork
+  | PortfolioMetadataExperience
+  | Record<string, unknown>
+
+// ============================================================
 // Student Portfolios
 // ============================================================
+export interface PortfolioLink {
+  label: string
+  url: string
+}
+
 export interface StudentPortfolio {
   id: string
   student_id: string
@@ -227,14 +314,11 @@ export interface StudentPortfolio {
   description: string | null
   skills: string[]
   start_date: string | null
-  end_date: string | null      // null = ongoing
+  end_date: string | null
   status: PortfolioStatus
-  url_gdrive: string | null
-  url_github: string | null
-  url_behance: string | null
-  url_linkedin: string | null
-  url_youtube: string | null
-  url_website: string | null
+  is_public: boolean
+  links: PortfolioLink[]
+  metadata: PortfolioMetadata
   created_at: string
   updated_at: string
 }

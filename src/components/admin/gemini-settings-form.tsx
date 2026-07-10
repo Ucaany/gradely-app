@@ -36,6 +36,7 @@ export function GeminiSettingsForm({ universityId, defaultValue }: Props) {
           university_id: universityId,
           settings: { gemini_api_key: apiKey.trim() },
         }),
+        credentials: 'include',
       })
       const result = await res.json()
       if (!res.ok) {

@@ -20,7 +20,7 @@ export function StudentStatusChart() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch('/api/admin/student-status')
+        const res = await fetch('/api/admin/student-status', { credentials: 'include' })
         const result = await res.json()
         if (result.success && result.data?.length > 0) {
           setData(result.data.filter((d: StatusDataItem) => d.count > 0))

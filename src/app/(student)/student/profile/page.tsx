@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
@@ -21,6 +21,7 @@ import {
   X,
   Hash,
   BadgeCheck,
+  Tag,
 } from 'lucide-react'
 import {
   Card,
@@ -89,6 +90,8 @@ export default function StudentProfilePage() {
   const [isLoading, setIsLoading] = useState(true)
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [skills, setSkills] = useState<string[]>([])
+  const [careerInterests, setCareerInterests] = useState<string[]>([])
 
   const form = useForm<UpdateStudentProfileInput>({
     resolver: zodResolver(updateStudentProfileSchema),
@@ -102,29 +105,44 @@ export default function StudentProfilePage() {
     },
   })
 
-  async function fetchProfile() {
+  const fetchProfile = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('/api/student/profile')
-      const result = await res.json()
-      if (result.success) {
-        setProfile(result.data)
+      const [profileRes, portfolioRes, careerRes] = await Promise.all([
+        fetch('/api/student/profile'),
+        fetch('/api/student/portfolio'),
+        fetch('/api/student/career'),
+      ])
+      const [profileData, portfolioData, careerData] = await Promise.all([
+        profileRes.json(), portfolioRes.json(), careerRes.json(),
+      ])
+      if (profileData.success) {
+        setProfile(profileData.data)
         form.reset({
-          full_name: result.data.full_name ?? '',
-          phone: result.data.phone ?? '',
-          avatar_url: result.data.avatar_url ?? '',
-          current_semester: result.data.current_semester ?? 1,
-          current_semester_type: result.data.current_semester_type ?? 'ganjil',
-          profile_visible: result.data.profile_visible ?? true,
+          full_name: profileData.data.full_name ?? '',
+          phone: profileData.data.phone ?? '',
+          avatar_url: profileData.data.avatar_url ?? '',
+          current_semester: profileData.data.current_semester ?? 1,
+          current_semester_type: profileData.data.current_semester_type ?? 'ganjil',
+          profile_visible: profileData.data.profile_visible ?? true,
         })
+      }
+      if (portfolioData.success) {
+        const allSkills = new Set<string>()
+        for (const item of portfolioData.data ?? []) {
+          for (const skill of item.skills ?? []) allSkills.add(skill)
+        }
+        setSkills(Array.from(allSkills))
+      }
+      if (careerData.success) {
+        setCareerInterests((careerData.data ?? []).map((c: { interest: string }) => c.interest))
       }
     } finally {
       setIsLoading(false)
     }
-  }
+  }, [form])
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchProfile() }, [])
+  useEffect(() => { fetchProfile() }, [fetchProfile])
 
   async function onSubmit(data: UpdateStudentProfileInput) {
     setIsSaving(true)
@@ -438,6 +456,43 @@ export default function StudentProfilePage() {
                   />
                   <InfoRow icon={GraduationCap} label="Program Studi" value={studyProgram?.name} />
                   <InfoRow icon={Building2} label="Universitas" value={university?.name} />
+                </CardContent>
+              </Card>
+
+              {/* Skill dari portofolio */}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-muted-foreground" />
+                    Skill
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5 py-2">
+                      {skills.map((skill) => (
+                        <Badge key={skill} variant="secondary" className="text-xs">
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic py-2">
+                      Belum ada skill. Tambahkan skill melalui portofolio kamu.
+                    </p>
+                  )}
+                  {careerInterests.length > 0 && (
+                    <>
+                      <p className="text-xs text-muted-foreground mt-3 mb-1.5">Minat Karier</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {careerInterests.map((interest) => (
+                          <Badge key={interest} variant="outline" className="text-xs">
+                            {interest}
+                          </Badge>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 

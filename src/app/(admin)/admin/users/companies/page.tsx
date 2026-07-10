@@ -19,13 +19,14 @@ import { formatDate } from '@/lib/utils'
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: { search?: string; page?: string }
+  searchParams: Promise<{ search?: string; page?: string }>
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const page = Number(searchParams.page ?? 1)
+  const { search, page: pageParam } = await searchParams
+  const page = Number(pageParam ?? 1)
   const pageSize = 20
   const from = (page - 1) * pageSize
   const to = from + pageSize - 1
@@ -36,8 +37,8 @@ export default async function CompaniesPage({
     .order('company_name')
     .range(from, to)
 
-  if (searchParams.search) {
-    query = query.ilike('company_name', `%${searchParams.search}%`)
+  if (search) {
+    query = query.ilike('company_name', `%${search}%`)
   }
 
   const { data: companies, count } = await query
@@ -59,10 +60,10 @@ export default async function CompaniesPage({
       </div>
 
       <form method="GET" className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input name="search" defaultValue={searchParams.search} placeholder="Cari nama perusahaan..." className="w-full sm:max-w-sm" />
+        <Input name="search" defaultValue={search} placeholder="Cari nama perusahaan..." className="w-full sm:max-w-sm" />
         <div className="flex gap-2">
           <Button type="submit" size="sm">Cari</Button>
-          {searchParams.search && (
+          {search && (
             <Button asChild variant="ghost" size="sm">
               <Link href="/admin/users/companies">Reset</Link>
             </Button>
@@ -123,7 +124,7 @@ export default async function CompaniesPage({
                 ) : (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center py-16 text-muted-foreground">
-                      {searchParams.search ? 'Tidak ada perusahaan yang cocok.' : 'Belum ada perusahaan terdaftar.'}
+                      {search ? 'Tidak ada perusahaan yang cocok.' : 'Belum ada perusahaan terdaftar.'}
                     </TableCell>
                   </TableRow>
                 )}
@@ -137,13 +138,13 @@ export default async function CompaniesPage({
         <div className="flex items-center justify-center gap-2 pb-2">
           {page > 1 && (
             <Button asChild variant="outline" size="sm">
-              <Link href={`?page=${page - 1}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>Sebelumnya</Link>
+              <Link href={`?page=${page - 1}${search ? `&search=${search}` : ''}`}>Sebelumnya</Link>
             </Button>
           )}
           <span className="text-sm text-muted-foreground">Halaman {page} dari {totalPages}</span>
           {page < totalPages && (
             <Button asChild variant="outline" size="sm">
-              <Link href={`?page=${page + 1}${searchParams.search ? `&search=${searchParams.search}` : ''}`}>Berikutnya</Link>
+              <Link href={`?page=${page + 1}${search ? `&search=${search}` : ''}`}>Berikutnya</Link>
             </Button>
           )}
         </div>

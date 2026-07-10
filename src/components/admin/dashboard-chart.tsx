@@ -32,7 +32,7 @@ export function DashboardChart() {
   useEffect(() => {
     async function fetchChartData() {
       try {
-        const res = await fetch('/api/admin/chart-data')
+        const res = await fetch('/api/admin/chart-data', { credentials: 'include' })
         const result = await res.json()
         if (result.success && result.data?.length > 0) {
           setData(result.data)

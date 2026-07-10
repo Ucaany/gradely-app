@@ -12,8 +12,15 @@ export default async function OnboardingLayout({ children }: { children: React.R
     .eq('id', user.id)
     .single()
 
-  if (!profile || profile.role !== 'student') redirect('/login')
-  if (profile.onboarding_completed) redirect('/student/dashboard')
+  if (!profile) redirect('/login')
+
+  if (profile.role === 'student') {
+    if (profile.onboarding_completed) redirect('/student/dashboard')
+  } else if (profile.role === 'company') {
+    if (profile.onboarding_completed) redirect('/company/dashboard')
+  } else {
+    redirect('/login')
+  }
 
   return <>{children}</>
 }

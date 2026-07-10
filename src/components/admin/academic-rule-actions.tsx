@@ -96,7 +96,7 @@ function AcademicRuleForm({
     try {
       const url = mode === 'create' ? '/api/admin/academic-rules' : `/api/admin/academic-rules/${rule!.id}`
       const method = mode === 'create' ? 'POST' : 'PATCH'
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), credentials: 'include' })
       const result = await res.json()
       if (!res.ok) { toast.error(result.error ?? 'Gagal menyimpan aturan akademik'); return }
       toast.success(mode === 'create' ? 'Aturan akademik berhasil ditambahkan' : 'Aturan akademik berhasil diperbarui')
@@ -323,7 +323,7 @@ export function AcademicRuleActions({ mode, rule, studyPrograms, universityId }:
     if (!rule) return
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/academic-rules/${rule.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/academic-rules/${rule.id}`, { method: 'DELETE', credentials: 'include' })
       const result = await res.json()
       if (!res.ok) { toast.error(result.error ?? 'Gagal menghapus'); return }
       toast.success('Aturan akademik berhasil dihapus')

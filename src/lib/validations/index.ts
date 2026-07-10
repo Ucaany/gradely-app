@@ -63,11 +63,13 @@ export const updateUserSchema = z.object({
   is_active: z.boolean().optional(),
 })
 
+const uuidLoose = z.string().regex(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/, 'Invalid UUID')
+
 // ============================================================
 // Study Program
 // ============================================================
 export const createStudyProgramSchema = z.object({
-  university_id: z.string().uuid(),
+  university_id: uuidLoose,
   name: z.string().min(2, 'Nama program studi minimal 2 karakter').max(100),
   short_name: z.string().max(20).optional().nullable(),
   degree_level: z.enum(['S1', 'S2', 'S3', 'D3', 'D4']),
@@ -95,8 +97,8 @@ export const gradeScaleSchema = z.object({
 })
 
 export const createAcademicRuleSchema = z.object({
-  university_id: z.string().uuid(),
-  study_program_id: z.string().uuid().optional().nullable(),
+  university_id: uuidLoose,
+  study_program_id: uuidLoose.optional().nullable(),
   total_sks_graduation: z.number().int().min(100).max(200),
   normal_semester: z.number().int().min(4).max(14),
   max_semester: z.number().int().min(8).max(20),
@@ -108,7 +110,7 @@ export const createAcademicRuleSchema = z.object({
 })
 
 export const updateAcademicRuleSchema = z.object({
-  study_program_id: z.string().uuid().optional().nullable(),
+  study_program_id: uuidLoose.optional().nullable(),
   total_sks_graduation: z.number().int().min(100).max(200).optional(),
   normal_semester: z.number().int().min(4).max(14).optional(),
   max_semester: z.number().int().min(8).max(20).optional(),
@@ -170,20 +172,22 @@ export type StudentAchievementInput = z.infer<typeof studentAchievementSchema>
 // ============================================================
 // Portfolio
 // ============================================================
+export const portfolioLinkSchema = z.object({
+  label: z.string().min(1, 'Label wajib diisi').max(50),
+  url: z.string().url('URL tidak valid'),
+})
+
 export const createPortfolioSchema = z.object({
   category_id: z.string().uuid('Kategori tidak valid'),
   title: z.string().min(2, 'Judul minimal 2 karakter').max(200),
   description: z.string().max(1000).optional().nullable(),
-  skills: z.array(z.string()).default([]),
+  skills: z.array(z.string().max(50)).default([]),
   start_date: z.string().optional().nullable(),
   end_date: z.string().optional().nullable(),
   status: z.enum(['completed', 'ongoing']).default('completed'),
-  url_gdrive: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
-  url_github: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
-  url_behance: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
-  url_linkedin: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
-  url_youtube: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
-  url_website: z.string().url('URL tidak valid').optional().nullable().or(z.literal('')),
+  is_public: z.boolean().default(true),
+  links: z.array(portfolioLinkSchema).default([]),
+  metadata: z.record(z.string(), z.unknown()).default({}),
 })
 
 export const updatePortfolioSchema = createPortfolioSchema.partial()
@@ -244,6 +248,7 @@ export type UpdateAcademicRuleInput = z.infer<typeof updateAcademicRuleSchema>
 export type CreateGradeInput = z.infer<typeof createGradeSchema>
 export type UpdateGradeInput = z.infer<typeof updateGradeSchema>
 export type StudentTargetInput = z.infer<typeof studentTargetSchema>
+export type PortfolioLinkInput = z.infer<typeof portfolioLinkSchema>
 export type CreatePortfolioInput = z.infer<typeof createPortfolioSchema>
 export type UpdatePortfolioInput = z.infer<typeof updatePortfolioSchema>
 export type WahaSettingsInput = z.infer<typeof wahaSettingsSchema>

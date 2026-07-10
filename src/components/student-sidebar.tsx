@@ -10,6 +10,7 @@ import {
   Briefcase,
   Heart,
   Settings,
+  Building2,
 } from "lucide-react"
 import {
   Sidebar,
@@ -57,11 +58,20 @@ const studentNavKarier = [
     title: "Portofolio",
     url: "/student/portfolio",
     icon: Briefcase,
+    items: [
+      { title: "Semua Portofolio", url: "/student/portfolio" },
+      { title: "Tambah Portofolio", url: "/student/portfolio/new" },
+    ],
   },
   {
     title: "Minat Karier",
     url: "/student/career",
     icon: Heart,
+  },
+  {
+    title: "Perusahaan Mitra",
+    url: "/student/companies",
+    icon: Building2,
   },
 ]
 

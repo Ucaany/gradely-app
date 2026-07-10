@@ -2,12 +2,11 @@
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
 
-import { createStudyProgramSchema, type CreateStudyProgramInput } from '@/lib/validations'
+import { type CreateStudyProgramInput } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -54,7 +53,6 @@ function StudyProgramForm({
   const [loading, setLoading] = useState(false)
 
   const form = useForm<CreateStudyProgramInput>({
-    resolver: zodResolver(createStudyProgramSchema),
     defaultValues: program
       ? {
           name: program.name,
@@ -71,11 +69,15 @@ function StudyProgramForm({
   })
 
   async function onSubmit(data: CreateStudyProgramInput) {
+    if (!data.name || data.name.trim().length < 2) {
+      form.setError('name', { message: 'Nama program studi minimal 2 karakter' })
+      return
+    }
     setLoading(true)
     try {
       const url = mode === 'create' ? '/api/admin/study-programs' : `/api/admin/study-programs/${program!.id}`
       const method = mode === 'create' ? 'POST' : 'PATCH'
-      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data), credentials: 'include' })
       const result = await res.json()
       if (!res.ok) { toast.error(result.error ?? 'Gagal menyimpan'); return }
       toast.success(mode === 'create' ? 'Program studi berhasil ditambahkan' : 'Program studi berhasil diperbarui')
@@ -191,7 +193,7 @@ export function StudyProgramActions({ mode, program, universityId }: Props) {
     if (!program) return
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/study-programs/${program.id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/study-programs/${program.id}`, { method: 'DELETE', credentials: 'include' })
       const result = await res.json()
       if (!res.ok) { toast.error(result.error ?? 'Gagal menghapus'); return }
       toast.success('Program studi berhasil dihapus')

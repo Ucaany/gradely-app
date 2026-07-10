@@ -14,7 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Settings, Globe, Shield, Bell, Bot } from 'lucide-react'
 import Link from 'next/link'
-import { GeminiSettingsForm } from '@/components/admin/gemini-settings-form'
+import { AISettingsForm } from '@/components/admin/ai-settings-form'
 
 export default async function GeneralSettingsPage() {
   const supabase = await createClient()
@@ -30,10 +30,16 @@ export default async function GeneralSettingsPage() {
   const { data: aiSettings } = await supabase
     .from('settings')
     .select('key, value')
-    .eq('key', 'gemini_api_key')
-    .limit(1)
+    .eq('university_id', university?.id ?? '')
+    .in('key', ['ai_api_key', 'ai_base_url', 'ai_model', 'ai_vision_api_key', 'ai_vision_base_url', 'ai_vision_model'])
 
-  const geminiApiKey = aiSettings?.[0]?.value ?? ''
+  const aiMap = Object.fromEntries((aiSettings ?? []).map(r => [r.key, r.value]))
+  const aiApiKey = aiMap['ai_api_key'] ?? ''
+  const aiBaseUrl = aiMap['ai_base_url'] ?? ''
+  const aiModel = aiMap['ai_model'] ?? ''
+  const aiVisionApiKey = aiMap['ai_vision_api_key'] ?? ''
+  const aiVisionBaseUrl = aiMap['ai_vision_base_url'] ?? ''
+  const aiVisionModel = aiMap['ai_vision_model'] ?? ''
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -124,13 +130,18 @@ export default async function GeneralSettingsPage() {
               </div>
               <div>
                 <CardTitle className="text-base">AI & Pembacaan Dokumen</CardTitle>
-                <CardDescription>API key Gemini untuk fitur import KHS otomatis</CardDescription>
+                <CardDescription>Konfigurasi AI untuk fitur import KHS dan analisis otomatis</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
-              <GeminiSettingsForm
+              <AISettingsForm
                 universityId={university?.id ?? ''}
-                defaultValue={geminiApiKey}
+                defaultApiKey={aiApiKey}
+                defaultBaseUrl={aiBaseUrl}
+                defaultModel={aiModel}
+                defaultVisionApiKey={aiVisionApiKey}
+                defaultVisionBaseUrl={aiVisionBaseUrl}
+                defaultVisionModel={aiVisionModel}
               />
             </CardContent>
           </Card>

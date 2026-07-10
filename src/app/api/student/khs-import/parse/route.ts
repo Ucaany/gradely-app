@@ -5,6 +5,27 @@ import type { ApiResponse } from '@/types'
 const SUPPORTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_SIZE = 10 * 1024 * 1024
 
+function isValidPublicHttpsUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw)
+    if (parsed.protocol !== 'https:') return false
+    const h = parsed.hostname
+    if (
+      h === 'localhost' ||
+      /^127\./.test(h) ||
+      /^10\./.test(h) ||
+      /^192\.168\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      h === '169.254.169.254' ||
+      h.endsWith('.internal') ||
+      h.endsWith('.local')
+    ) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -22,13 +43,24 @@ export async function POST(request: NextRequest) {
 
     const { data: settingRows } = await supabase
       .from('settings')
-      .select('value')
-      .eq('key', 'gemini_api_key')
-      .limit(1)
-    const apiKey = settingRows?.[0]?.value ?? ''
+      .select('key, value')
+      .in('key', ['ai_vision_api_key', 'ai_vision_base_url', 'ai_vision_model'])
+
+    const settingsMap = Object.fromEntries((settingRows ?? []).map(r => [r.key, r.value]))
+    const apiKey = settingsMap['ai_vision_api_key'] ?? ''
+    const rawBaseUrl = (settingsMap['ai_vision_base_url'] ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
+    const model = settingsMap['ai_vision_model'] ?? 'kr/auto'
+
     if (!apiKey) {
       return NextResponse.json<ApiResponse>(
-        { data: null, error: 'Gemini API key belum dikonfigurasi. Hubungi admin.', success: false },
+        { data: null, error: 'AI Vision API key belum dikonfigurasi. Hubungi admin.', success: false },
+        { status: 503 }
+      )
+    }
+
+    if (!isValidPublicHttpsUrl(rawBaseUrl)) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: 'Konfigurasi AI Base URL tidak valid. Hubungi admin.', success: false },
         { status: 503 }
       )
     }
@@ -46,6 +78,7 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer()
     const base64 = Buffer.from(bytes).toString('base64')
     const mimeType = file.type
+    const isPdf = mimeType === 'application/pdf'
 
     const prompt = `Kamu adalah parser dokumen KHS (Kartu Hasil Studi) mahasiswa Indonesia.
 Ekstrak semua mata kuliah dari dokumen ini dan kembalikan HANYA JSON array dengan format berikut:
@@ -68,49 +101,86 @@ Aturan:
 - Jika informasi tahun ajaran tidak ada, gunakan "2024/2025"
 - Kembalikan HANYA JSON array, tidak ada teks lain sama sekali`
 
-    const geminiModel = 'gemini-2.0-flash'
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${apiKey}`
+    const contentParts: object[] = [{ type: 'text', text: prompt }]
 
-    const geminiRes = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              {
-                inline_data: {
-                  mime_type: mimeType,
-                  data: base64,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0,
-          maxOutputTokens: 4096,
+    if (isPdf) {
+      contentParts.push({
+        type: 'text',
+        text: `[File PDF terlampir sebagai base64 — ukuran: ${Math.round(file.size / 1024)} KB. Ekstrak semua data nilai dari dokumen KHS ini.]\nData base64 PDF: data:application/pdf;base64,${base64}`,
+      })
+    } else {
+      contentParts.push({
+        type: 'image_url',
+        image_url: { url: `data:${mimeType};base64,${base64}` },
+      })
+    }
+
+    const aiUrl = `${rawBaseUrl}/chat/completions`
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 55000)
+
+    let aiRes: Response
+    try {
+      aiRes = await fetch(aiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
         },
-      }),
-    })
-
-    if (!geminiRes.ok) {
-      const errBody = await geminiRes.text()
-      console.error('Gemini error:', errBody)
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: contentParts }],
+          temperature: 0,
+          max_tokens: 4096,
+          stream: false,
+        }),
+        signal: controller.signal,
+      })
+    } catch (fetchErr: unknown) {
+      clearTimeout(timeout)
+      const isAbort = fetchErr instanceof Error && fetchErr.name === 'AbortError'
       return NextResponse.json<ApiResponse>(
-        { data: null, error: 'Gagal menghubungi layanan AI. Periksa konfigurasi API key.', success: false },
+        {
+          data: null,
+          error: isAbort
+            ? 'AI terlalu lama merespons. Coba lagi dengan file yang lebih kecil atau gambar.'
+            : 'Gagal menghubungi layanan AI. Periksa konfigurasi API key.',
+          success: false,
+        },
+        { status: 502 }
+      )
+    }
+    clearTimeout(timeout)
+
+    if (!aiRes.ok) {
+      const errBody = await aiRes.text()
+      console.error('AI error:', aiRes.status, errBody)
+      let userMsg = `Layanan AI mengembalikan error ${aiRes.status}.`
+      if (aiRes.status === 401) userMsg = 'API key tidak valid atau tidak memiliki akses. Periksa konfigurasi Vision API key.'
+      else if (aiRes.status === 403) userMsg = 'API key tidak memiliki izin untuk model ini.'
+      else if (aiRes.status === 404) userMsg = `Model "${model}" tidak ditemukan di endpoint ini.`
+      else if (aiRes.status === 429) userMsg = 'Rate limit tercapai. Coba lagi beberapa saat.'
+      else if (aiRes.status >= 500) userMsg = 'Server AI sedang bermasalah. Coba lagi nanti.'
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: userMsg, success: false },
         { status: 502 }
       )
     }
 
-    const geminiData = await geminiRes.json()
-    const content: string = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    const aiData = await aiRes.json()
+    const content: string = aiData.choices?.[0]?.message?.content ?? ''
+
+    if (!content) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: 'AI tidak mengembalikan respons. Pastikan model mendukung input gambar/dokumen.', success: false },
+        { status: 422 }
+      )
+    }
 
     const jsonMatch = content.match(/\[[\s\S]*\]/)
     if (!jsonMatch) {
       return NextResponse.json<ApiResponse>(
-        { data: null, error: 'AI tidak dapat mengekstrak data nilai dari dokumen ini.', success: false },
+        { data: null, error: 'AI tidak dapat mengekstrak data nilai dari dokumen ini. Pastikan dokumen adalah KHS yang valid.', success: false },
         { status: 422 }
       )
     }
@@ -141,6 +211,13 @@ Aturan:
           academic_year: String(item.academic_year ?? '2024/2025'),
         }
       })
+
+    if (grades.length === 0) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: 'Tidak ada data nilai yang valid ditemukan. Pastikan dokumen adalah KHS yang terbaca jelas.', success: false },
+        { status: 422 }
+      )
+    }
 
     return NextResponse.json({ data: grades, error: null, success: true })
   } catch (err) {

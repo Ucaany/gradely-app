@@ -3,14 +3,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
-  Loader2, Sparkles, ChevronRight, ChevronLeft, Save, RotateCcw,
-  CheckCircle2, AlertTriangle, TrendingUp, ShieldCheck, AlertCircle,
-  Flame, Target, GraduationCap, Briefcase, Code2, Building2, Edit3, Info,
+  Loader2, Sparkles, ChevronRight, ChevronLeft, Save,
+  CheckCircle2, TrendingUp,
+  GraduationCap, Briefcase, Code2, Building2, Info,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
+
+
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -38,11 +39,7 @@ interface AIAnalysis {
   remaining_quota?: number
 }
 
-const AI_STATUS = {
-  aman: { label: 'Aman', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800', icon: ShieldCheck, iconColor: 'text-emerald-600', badgeClass: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  perlu_usaha: { label: 'Perlu Usaha', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:border-amber-800', icon: Flame, iconColor: 'text-amber-600', badgeClass: 'bg-amber-100 text-amber-700 border-amber-200' },
-  berisiko: { label: 'Berisiko', color: 'text-red-700 dark:text-red-400', bg: 'bg-red-50 border-red-200 dark:bg-red-950/40 dark:border-red-800', icon: AlertCircle, iconColor: 'text-red-600', badgeClass: 'bg-red-100 text-red-700 border-red-200' },
-}
+
 const SKILL_OPTIONS = ['Desain Grafis','UI/UX Design','Ilustrasi','Fotografi','Videografi','Animasi','Musik','Seni Pertunjukan','Kriya & Kerajinan','Arsitektur','Fashion Design','Branding','Social Media','Copywriting','Web Development','Mobile Development']
 const SKILL_DESC: Record<string,string> = { 'Desain Grafis':'Membuat visual untuk media cetak, digital, dan branding menggunakan Illustrator & Photoshop.','UI/UX Design':'Merancang antarmuka dan pengalaman pengguna aplikasi/website yang intuitif.','Ilustrasi':'Membuat karya seni ilustrasi digital maupun tradisional.','Fotografi':'Mengabadikan momen dengan teknik pencahayaan dan komposisi yang tepat.','Videografi':'Merekam, mengedit, dan memproduksi konten video.','Animasi':'Membuat animasi 2D/3D untuk film, iklan, atau konten digital.','Musik':'Menciptakan dan memproduksi karya musik original.','Seni Pertunjukan':'Mengembangkan kemampuan teater, tari, atau seni pertunjukan.','Kriya & Kerajinan':'Membuat produk kerajinan tangan bernilai estetika tinggi.','Arsitektur':'Merancang bangunan yang estetis, fungsional, dan berkelanjutan.','Fashion Design':'Merancang pakaian dengan memahami tren dan kebutuhan pasar.','Branding':'Membangun identitas merek melalui strategi visual dan komunikasi.','Social Media':'Mengelola konten dan strategi pemasaran di media sosial.','Copywriting':'Menulis teks iklan dan konten marketing yang persuasif.','Web Development':'Membangun website menggunakan HTML, CSS, JavaScript, dan framework modern.','Mobile Development':'Mengembangkan aplikasi mobile untuk iOS dan Android.' }
 const INDUSTRY_OPTIONS = ['Kreatif & Desain','Periklanan','Media','Teknologi','Startup','Penerbitan','Entertainment','Konstruksi','Properti','Fashion','Ritel']
@@ -112,180 +109,8 @@ function AIProgress({ aiStep }: { aiStep: number }) {
   )
 }
 
-function RightPanel({ analysis, isSaving, saved, onSave, onEdit, onRegenerate, existingTarget, summaryData }: {
-  analysis: AIAnalysis | null
-  isSaving: boolean
-  saved: boolean
-  onSave: () => void
-  onEdit: () => void
-  onRegenerate: () => void
-  existingTarget: StudentTarget | null
-  summaryData: SummaryData | null
-}) {
-  if (!analysis && !existingTarget) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center gap-4 px-8 py-12">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/60">
-          <Target className="h-7 w-7 text-muted-foreground/40" />
-        </div>
-        <div>
-          <p className="text-sm font-semibold">Hasil analisis muncul di sini</p>
-          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">Isi target di kiri dan klik<br />Analisis dengan AI untuk memulai</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!analysis && existingTarget) {
-    const summary = summaryData?.summary
-    const rule = summaryData?.rule
-    return (
-      <div className="px-8 py-8 space-y-5">
-        <div>
-          <p className="text-sm font-semibold">Target Tersimpan</p>
-          <p className="text-xs text-muted-foreground mt-0.5">Klik Analisis untuk mendapatkan rekomendasi terbaru</p>
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          {[
-            { label: 'Semester Lulus', value: `Semester ${existingTarget.target_semester}` },
-            { label: 'Target IPK', value: existingTarget.target_ipk ? existingTarget.target_ipk.toFixed(2) : '-' },
-            { label: 'Durasi', value: existingTarget.target_years ? `${existingTarget.target_years} tahun` : '-' },
-            { label: 'IPK Saat Ini', value: summary ? summary.gpa.toFixed(2) : '-' },
-          ].map(({ label, value }) => (
-            <div key={label} className="rounded-2xl bg-background px-4 py-3">
-              <p className="text-xs text-muted-foreground">{label}</p>
-              <p className="font-semibold text-sm mt-0.5">{value}</p>
-            </div>
-          ))}
-        </div>
-        {summary && rule && (
-          <div className="rounded-2xl bg-background px-4 py-4 space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Progress SKS</span>
-              <span className="font-medium">{summary.sks_percentage}%</span>
-            </div>
-            <Progress value={summary.sks_percentage} className="h-1.5" />
-            <p className="text-xs text-muted-foreground">{summary.total_sks_earned} / {rule.total_sks_graduation} SKS</p>
-          </div>
-        )}
-      </div>
-    )
-  }
-
-  if (!analysis) return null
-  const cfg = AI_STATUS[analysis.status] ?? AI_STATUS.perlu_usaha
-  const Icon = cfg.icon
-
-  return (
-    <div className="px-8 py-8 space-y-5">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <p className="text-sm font-semibold">Hasil Analisis AI</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onEdit}><Edit3 className="h-3 w-3 mr-1" />Ubah</Button>
-          <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={onRegenerate}><RotateCcw className="h-3 w-3 mr-1" />Ulang</Button>
-          {saved ? (
-            <span className="text-xs text-emerald-600 font-medium flex items-center gap-1"><CheckCircle2 className="h-3 w-3" />Tersimpan</span>
-          ) : (
-            <Button size="sm" className="h-7 text-xs" onClick={onSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Save className="h-3 w-3 mr-1" />}Simpan
-            </Button>
-          )}
-        </div>
-      </div>
-
-      <div className={`rounded-2xl p-4 flex items-start gap-3 ${cfg.bg}`}>
-        <Icon className={`h-5 w-5 shrink-0 mt-0.5 ${cfg.iconColor}`} />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className={`font-bold text-sm ${cfg.color}`}>{cfg.label}</span>
-            <Badge variant="outline" className={`text-xs ${cfg.badgeClass}`}>{analysis.status_label}</Badge>
-          </div>
-          <p className="text-sm text-muted-foreground leading-relaxed">{analysis.ringkasan}</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2">
-        {[
-          { label: 'SKS/Semester', value: analysis.sks_per_semester_dibutuhkan ?? '-', unit: analysis.sks_per_semester_dibutuhkan ? 'SKS' : '' },
-          { label: 'IPK Minimal', value: analysis.ipk_minimal_per_semester != null ? analysis.ipk_minimal_per_semester.toFixed(2) : '-', unit: '' },
-          { label: 'Target IPS', value: analysis.ips_target_semester_depan != null ? analysis.ips_target_semester_depan.toFixed(2) : '-', unit: '' },
-        ].map(({ label, value, unit }) => (
-          <div key={label} className="rounded-2xl bg-background px-3 py-3 text-center">
-            <p className="text-xs text-muted-foreground mb-1">{label}</p>
-            <p className="text-xl font-bold">{value}<span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span></p>
-          </div>
-        ))}
-      </div>
-
-      {analysis.analisis_tren && (
-        <div className="rounded-2xl bg-background px-4 py-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Tren Akademik</p>
-          <p className="text-sm leading-relaxed text-muted-foreground">{analysis.analisis_tren}</p>
-        </div>
-      )}
-
-      <div className="rounded-2xl bg-background px-4 py-4">
-        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Rekomendasi</p>
-        <ul className="space-y-2.5">
-          {analysis.rekomendasi.map((r, i) => (
-            <li key={i} className="flex items-start gap-2.5 text-sm">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold mt-0.5">{i + 1}</span>
-              <span className="leading-relaxed">{r}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {analysis.strategi_kelulusan && (
-        <div className="rounded-2xl bg-background px-4 py-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">Strategi Kelulusan</p>
-          <p className="text-sm leading-relaxed text-muted-foreground">{analysis.strategi_kelulusan}</p>
-        </div>
-      )}
-
-      {analysis.rencana_per_semester && analysis.rencana_per_semester.length > 0 && (
-        <div className="rounded-2xl bg-background px-4 py-4">
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Rencana Per Semester</p>
-          <div className="space-y-2">
-            {analysis.rencana_per_semester.map((r) => (
-              <div key={r.semester} className="flex items-center gap-3 py-1.5">
-                <span className="text-xs font-semibold text-muted-foreground w-12 shrink-0">Sem {r.semester}</span>
-                <Badge variant="secondary" className="text-xs">IPS {r.target_ips.toFixed(2)}</Badge>
-                <Badge variant="secondary" className="text-xs">{r.target_sks} SKS</Badge>
-                {r.catatan && <span className="text-xs text-muted-foreground truncate">{r.catatan}</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {analysis.peringatan && (
-        <div className="rounded-2xl bg-orange-50 dark:bg-orange-950/20 px-4 py-4 flex items-start gap-3">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-orange-500" />
-          <div>
-            <p className="text-sm font-semibold text-orange-700 dark:text-orange-400 mb-0.5">Peringatan</p>
-            <p className="text-sm text-orange-700 dark:text-orange-300">{analysis.peringatan}</p>
-          </div>
-        </div>
-      )}
-
-      <div className="rounded-2xl bg-primary/5 px-4 py-4 flex items-start gap-3">
-        <Sparkles className="h-4 w-4 shrink-0 mt-0.5 text-primary" />
-        <p className="text-sm italic text-muted-foreground leading-relaxed">&ldquo;{analysis.motivasi}&rdquo;</p>
-      </div>
-
-      {analysis.remaining_quota !== undefined && (
-        <p className="text-xs text-muted-foreground text-right">Sisa kuota: {analysis.remaining_quota}x / jam</p>
-      )}
-    </div>
-  )
-}
-
 export default function StudentTargetPage() {
-  const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
+  const [, setSummaryData] = useState<SummaryData | null>(null)
   const [userName, setUserName] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -372,8 +197,6 @@ export default function StudentTargetPage() {
       <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
     </div>
   )
-
-  const existingTarget = summaryData?.target
 
   return (
     <div className="flex flex-1 flex-col overflow-y-auto">

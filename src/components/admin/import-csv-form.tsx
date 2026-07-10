@@ -85,6 +85,7 @@ export function ImportCsvForm({ universityId }: Props) {
           university_id: universityId,
           default_password: 'Gradely@2024',
         }),
+        credentials: 'include',
       })
       const data = await res.json()
       if (!res.ok) {

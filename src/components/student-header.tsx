@@ -23,20 +23,50 @@ const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/student/target": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Target Kelulusan" }],
   "/student/target/history": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Target Kelulusan", href: "/student/target" }, { label: "Riwayat & Hasil" }],
   "/student/portfolio": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Portofolio" }],
+  "/student/portfolio/new": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Portofolio", href: "/student/portfolio" }, { label: "Tambah Portofolio" }],
   "/student/career": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Minat Karier" }],
+  "/student/career/companies": [{ label: "Dashboard", href: "/student/dashboard" }, { label: "Minat Karier", href: "/student/career" }, { label: "Perusahaan Relevan" }],
 }
 
 const BACK_ROUTES: Record<string, string> = {
   "/student/grades/import": "/student/grades",
   "/student/settings/invite": "/student/settings",
   "/student/profile": "/student/settings",
+  "/student/portfolio/new": "/student/portfolio",
+}
+
+function getDynamicBreadcrumbs(pathname: string): BreadcrumbItem[] | null {
+  if (/^\/student\/portfolio\/[^/]+\/edit$/.test(pathname)) {
+    return [
+      { label: "Dashboard", href: "/student/dashboard" },
+      { label: "Portofolio", href: "/student/portfolio" },
+      { label: "Edit Portofolio" },
+    ]
+  }
+  if (/^\/student\/target\/history\/[^/]+$/.test(pathname)) {
+    return [
+      { label: "Dashboard", href: "/student/dashboard" },
+      { label: "Target Kelulusan", href: "/student/target" },
+      { label: "Riwayat & Hasil", href: "/student/target/history" },
+      { label: "Detail Analisis" },
+    ]
+  }
+  return null
+}
+
+function getDynamicBackRoute(pathname: string): string | undefined {
+  if (/^\/student\/portfolio\/[^/]+\/edit$/.test(pathname)) return "/student/portfolio"
+  if (/^\/student\/target\/history\/[^/]+$/.test(pathname)) return "/student/target/history"
+  return undefined
 }
 
 export function StudentHeader() {
   const pathname = usePathname()
   const router = useRouter()
-  const breadcrumbs = ROUTE_BREADCRUMBS[pathname] ?? [{ label: "Dashboard" }]
-  const backHref = BACK_ROUTES[pathname]
+
+  const dynamicBreadcrumbs = getDynamicBreadcrumbs(pathname)
+  const breadcrumbs = dynamicBreadcrumbs ?? ROUTE_BREADCRUMBS[pathname] ?? [{ label: "Dashboard" }]
+  const backHref = BACK_ROUTES[pathname] ?? getDynamicBackRoute(pathname)
 
   return (
     <header className="sticky top-0 z-10 flex h-16 shrink-0 items-center gap-2 border-b bg-background px-4">

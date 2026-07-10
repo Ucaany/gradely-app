@@ -112,12 +112,12 @@ export async function POST(request: NextRequest) {
       .from('settings')
       .select('key, value')
       .eq('university_id', lecturer.university_id ?? '')
-      .in('key', ['waha_api_url', 'waha_session', 'waha_api_key'])
+      .in('key', ['waha_url', 'waha_session', 'waha_api_key'])
 
     const settingsMap: Record<string, string> = {}
     for (const s of (wahaSettings ?? [])) settingsMap[s.key] = s.value
 
-    const wahaUrl = settingsMap['waha_api_url']
+    const wahaUrl = settingsMap['waha_url']
     const wahaSession = settingsMap['waha_session']
     const wahaApiKey = settingsMap['waha_api_key']
 

@@ -44,6 +44,7 @@ export function WahaSettingsForm({ universityId, defaultValues }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ university_id: universityId, settings: data }),
+        credentials: 'include',
       })
       const result = await res.json()
       if (!res.ok) {
@@ -74,6 +75,7 @@ export function WahaSettingsForm({ universityId, defaultValues }: Props) {
           waha_session: values.waha_session,
           waha_api_key: values.waha_api_key,
         }),
+        credentials: 'include',
       })
       const result = await res.json()
       if (result.success) {

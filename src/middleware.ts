@@ -30,7 +30,8 @@ export async function middleware(request: NextRequest) {
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
   const isAuthPage = pathname === '/login' || pathname === '/reset-password' || pathname === '/update-password'
-  const isOnboarding = pathname.startsWith('/student/onboarding')
+  const isStudentOnboarding = pathname.startsWith('/student/onboarding')
+  const isCompanyOnboarding = pathname.startsWith('/company/onboarding')
 
   if (!user) {
     if (isAuthPage) return supabaseResponse
@@ -82,8 +83,19 @@ export async function middleware(request: NextRequest) {
     }
 
     // If onboarding already completed, don't allow re-entry
-    if (userRole === 'student' && profile?.onboarding_completed && isOnboarding) {
+    if (userRole === 'student' && profile?.onboarding_completed && isStudentOnboarding) {
       return NextResponse.redirect(new URL('/student/dashboard', request.url))
+    }
+    if (userRole === 'company' && profile?.onboarding_completed && isCompanyOnboarding) {
+      return NextResponse.redirect(new URL('/company/dashboard', request.url))
+    }
+
+    // Redirect to onboarding if not yet completed
+    if (userRole === 'student' && !profile?.onboarding_completed && !isStudentOnboarding) {
+      return NextResponse.redirect(new URL('/student/onboarding', request.url))
+    }
+    if (userRole === 'company' && !profile?.onboarding_completed && !isCompanyOnboarding) {
+      return NextResponse.redirect(new URL('/company/onboarding', request.url))
     }
   }
 

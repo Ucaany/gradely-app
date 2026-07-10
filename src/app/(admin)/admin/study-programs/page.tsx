@@ -20,7 +20,7 @@ export default async function StudyProgramsPage() {
 
   const [{ data: programs }, { data: university }] = await Promise.all([
     supabase.from('study_programs').select('*, universities(id, name, short_name)').order('name'),
-    supabase.from('universities').select('id').limit(1).single(),
+    supabase.from('universities').select('id').limit(1).maybeSingle(),
   ])
 
   const universityId = university?.id ?? ''

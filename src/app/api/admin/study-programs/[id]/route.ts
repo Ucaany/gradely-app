@@ -5,9 +5,10 @@ import type { ApiResponse } from '@/types'
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json<ApiResponse>({ data: null, error: 'Unauthorized', success: false }, { status: 401 })
@@ -25,7 +26,7 @@ export async function PATCH(
     const { data, error } = await serviceClient
       .from('study_programs')
       .update(parsed.data)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single()
 
@@ -39,9 +40,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json<ApiResponse>({ data: null, error: 'Unauthorized', success: false }, { status: 401 })
@@ -50,10 +52,10 @@ export async function DELETE(
     if (!profile || profile.role !== 'admin') return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
 
     const serviceClient = createServiceClient()
-    const { error } = await serviceClient.from('study_programs').delete().eq('id', params.id)
+    const { error } = await serviceClient.from('study_programs').delete().eq('id', id)
     if (error) return NextResponse.json<ApiResponse>({ data: null, error: error.message, success: false }, { status: 500 })
 
-    return NextResponse.json<ApiResponse>({ data: { id: params.id }, error: null, success: true })
+    return NextResponse.json<ApiResponse>({ data: { id }, error: null, success: true })
   } catch {
     return NextResponse.json<ApiResponse>({ data: null, error: 'Internal server error', success: false }, { status: 500 })
   }

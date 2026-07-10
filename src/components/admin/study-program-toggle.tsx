@@ -23,6 +23,7 @@ export function StudyProgramToggle({ programId, isActive }: StudyProgramTogglePr
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ is_active: value }),
+        credentials: 'include',
       })
       const result = await res.json()
       if (!res.ok) {

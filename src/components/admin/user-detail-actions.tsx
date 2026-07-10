@@ -68,6 +68,7 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
+        credentials: 'include',
       })
       const result = await res.json()
       if (!res.ok) {
@@ -85,7 +86,7 @@ export function UserDetailActions({ userId, userData, studyPrograms }: Props) {
   async function handleDelete() {
     setIsLoading(true)
     try {
-      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' })
+      const res = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE', credentials: 'include' })
       const result = await res.json()
       if (!res.ok) {
         toast.error(result.error ?? 'Gagal menghapus akun')
