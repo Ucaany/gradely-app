@@ -1,8 +1,8 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { Building2, Globe, Loader2, Pencil, Save, X, ImageIcon } from 'lucide-react'
+import { Building2, Globe, Loader2, Pencil, Save, X, ImageIcon, MapPin, Hash, CheckCircle2, XCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 
+
 interface CompanyProfile {
   id: string
   company_name: string
@@ -19,7 +20,10 @@ interface CompanyProfile {
   description: string | null
   website: string | null
   logo_url: string | null
+  address: string | null
+  postal_code: string | null
   is_active: boolean
+  is_verified: boolean
   created_at: string
   company_categories: { id: string; category: string }[]
 }
@@ -36,6 +40,8 @@ export default function CompanyProfilePage() {
     description: '',
     website: '',
     logo_url: '',
+    address: '',
+    postal_code: '',
   })
 
   useEffect(() => {
@@ -50,6 +56,8 @@ export default function CompanyProfilePage() {
             description: r.data.description ?? '',
             website: r.data.website ?? '',
             logo_url: r.data.logo_url ?? '',
+            address: r.data.address ?? '',
+            postal_code: r.data.postal_code ?? '',
           })
         }
       })
@@ -64,13 +72,13 @@ export default function CompanyProfilePage() {
       description: profile.description ?? '',
       website: profile.website ?? '',
       logo_url: profile.logo_url ?? '',
+      address: profile.address ?? '',
+      postal_code: profile.postal_code ?? '',
     })
     setIsEditing(true)
   }
 
-  function cancelEdit() {
-    setIsEditing(false)
-  }
+  function cancelEdit() { setIsEditing(false) }
 
   async function handleSave() {
     if (!form.company_name.trim()) {
@@ -115,16 +123,16 @@ export default function CompanyProfilePage() {
   }
 
   return (
-      <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8 w-full">
+    <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8 w-full max-w-3xl">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Profil Perusahaan</h1>
-          <p className="text-sm text-muted-foreground">Kelola informasi perusahaan kamu</p>
+          <h1 className="text-2xl font-semibold tracking-tight">Pengaturan Perusahaan</h1>
+          <p className="text-sm text-muted-foreground">Kelola informasi dan pengaturan perusahaan</p>
         </div>
         {!isEditing ? (
           <Button size="sm" variant="outline" onClick={startEdit} className="gap-1.5 shrink-0">
             <Pencil className="h-4 w-4" />
-            Edit Profil
+            Edit
           </Button>
         ) : (
           <div className="flex gap-2 shrink-0">
@@ -140,28 +148,41 @@ export default function CompanyProfilePage() {
         )}
       </div>
 
+      {/* Identity card with logo */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
-            <Avatar className="h-16 w-16 rounded-xl shrink-0">
-              <AvatarImage src={profile.logo_url ?? ''} />
+            <Avatar className="h-16 w-16 rounded-xl shrink-0 border">
+              <AvatarImage src={profile.logo_url ?? ''} alt={profile.company_name} />
               <AvatarFallback className="rounded-xl text-lg font-bold bg-muted">
                 {profile.company_name.slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="text-lg font-semibold truncate">{profile.company_name}</p>
               {profile.industry && (
                 <p className="text-sm text-muted-foreground">{profile.industry}</p>
               )}
-              <Badge variant={profile.is_active ? 'default' : 'secondary'} className="mt-1 text-xs">
-                {profile.is_active ? 'Aktif' : 'Nonaktif'}
-              </Badge>
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                <Badge variant={profile.is_active ? 'default' : 'secondary'} className="text-xs gap-1">
+                  {profile.is_active
+                    ? <><CheckCircle2 className="h-3 w-3" />Aktif</>
+                    : <><XCircle className="h-3 w-3" />Nonaktif</>
+                  }
+                </Badge>
+                {profile.is_verified && (
+                  <Badge variant="outline" className="text-xs gap-1 border-emerald-500 text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="h-3 w-3" />
+                    Terverifikasi
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
+      {/* Main info form/view */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
@@ -171,24 +192,25 @@ export default function CompanyProfilePage() {
         <CardContent className="space-y-4">
           {isEditing ? (
             <>
-              <div className="space-y-1.5">
-                <Label htmlFor="company_name">Nama Perusahaan</Label>
-                <Input
-                  id="company_name"
-                  value={form.company_name}
-                  onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
-                  placeholder="Nama perusahaan"
-                />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="industry">Industri</Label>
-                <Input
-                  id="industry"
-                  value={form.industry}
-                  onChange={e => setForm(f => ({ ...f, industry: e.target.value }))}
-                  placeholder="Contoh: Teknologi, Kreatif, Pendidikan"
-                />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="company_name">Nama Perusahaan <span className="text-destructive">*</span></Label>
+                  <Input
+                    id="company_name"
+                    value={form.company_name}
+                    onChange={e => setForm(f => ({ ...f, company_name: e.target.value }))}
+                    placeholder="Nama perusahaan"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="industry">Industri</Label>
+                  <Input
+                    id="industry"
+                    value={form.industry}
+                    onChange={e => setForm(f => ({ ...f, industry: e.target.value }))}
+                    placeholder="Contoh: Teknologi, Kreatif"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -205,17 +227,20 @@ export default function CompanyProfilePage() {
                 />
                 {form.logo_url && (
                   <div className="flex items-center gap-2 mt-1">
-                    <Avatar className="h-8 w-8 rounded-lg shrink-0">
+                    <Avatar className="h-10 w-10 rounded-lg shrink-0 border">
                       <AvatarImage src={form.logo_url} />
                       <AvatarFallback className="rounded-lg text-xs bg-muted">?</AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-muted-foreground">Preview</span>
+                    <span className="text-xs text-muted-foreground">Preview logo</span>
                   </div>
                 )}
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="website">Website</Label>
+                <Label htmlFor="website" className="flex items-center gap-1.5">
+                  <Globe className="h-3.5 w-3.5 text-muted-foreground" />
+                  Website
+                </Label>
                 <Input
                   id="website"
                   value={form.website}
@@ -226,7 +251,35 @@ export default function CompanyProfilePage() {
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="description">Deskripsi</Label>
+                <Label htmlFor="address" className="flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-muted-foreground" />
+                  Alamat
+                </Label>
+                <Textarea
+                  id="address"
+                  value={form.address}
+                  onChange={e => setForm(f => ({ ...f, address: e.target.value }))}
+                  placeholder="Jl. Contoh No. 1, Kota, Provinsi"
+                  rows={2}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="postal_code" className="flex items-center gap-1.5">
+                  <Hash className="h-3.5 w-3.5 text-muted-foreground" />
+                  Kode Pos
+                </Label>
+                <Input
+                  id="postal_code"
+                  value={form.postal_code}
+                  onChange={e => setForm(f => ({ ...f, postal_code: e.target.value }))}
+                  placeholder="55281"
+                  maxLength={10}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="description">Deskripsi Perusahaan</Label>
                 <Textarea
                   id="description"
                   value={form.description}
@@ -252,18 +305,29 @@ export default function CompanyProfilePage() {
               <div>
                 <p className="text-xs text-muted-foreground mb-1">Website</p>
                 {profile.website ? (
-                  <a
-                    href={profile.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-primary hover:underline inline-flex items-center gap-1"
-                  >
+                  <a href={profile.website} target="_blank" rel="noopener noreferrer"
+                    className="text-sm text-primary hover:underline inline-flex items-center gap-1">
                     <Globe className="h-3.5 w-3.5" />
                     {profile.website}
                   </a>
                 ) : (
                   <p className="text-sm text-muted-foreground">-</p>
                 )}
+              </div>
+              <Separator />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <MapPin className="h-3 w-3" />Alamat
+                  </p>
+                  <p className="text-sm font-medium whitespace-pre-line">{profile.address ?? '-'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                    <Hash className="h-3 w-3" />Kode Pos
+                  </p>
+                  <p className="text-sm font-medium">{profile.postal_code ?? '-'}</p>
+                </div>
               </div>
               <Separator />
               <div>
@@ -277,6 +341,38 @@ export default function CompanyProfilePage() {
         </CardContent>
       </Card>
 
+      {/* Status card */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Status Akun
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Status Aktif</p>
+              <p className="text-xs text-muted-foreground">Profil perusahaan terlihat oleh mahasiswa</p>
+            </div>
+            <Badge variant={profile.is_active ? 'default' : 'secondary'}>
+              {profile.is_active ? 'Aktif' : 'Nonaktif'}
+            </Badge>
+          </div>
+          <Separator />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Verifikasi</p>
+              <p className="text-xs text-muted-foreground">Status verifikasi oleh admin</p>
+            </div>
+            <Badge variant={profile.is_verified ? 'outline' : 'secondary'}
+              className={profile.is_verified ? 'border-emerald-500 text-emerald-600 dark:text-emerald-400' : ''}>
+              {profile.is_verified ? 'Terverifikasi' : 'Belum Diverifikasi'}
+            </Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Categories */}
       {profile.company_categories.length > 0 && (
         <Card>
           <CardHeader>

@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
 
     const { data: lecturer } = await supabase
       .from('users')
-      .select('role, full_name, university_id')
+      .select('role, full_name, university_id, phone, email')
       .eq('id', user.id)
       .single()
 
@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
     // Load student profile
     const { data: student } = await supabase
       .from('users')
-      .select('full_name, phone, nim, current_semester, study_programs(name)')
+      .select('full_name, phone, nim, current_semester, email, study_programs(name)')
       .eq('id', student_id)
       .single()
 
@@ -49,8 +49,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Mahasiswa tidak ditemukan', success: false }, { status: 404 })
     }
 
-    if (!student.phone) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Mahasiswa tidak memiliki nomor HP yang terdaftar', success: false }, { status: 400 })
+    // Validasi nomor HP mahasiswa — jika tidak ada, return error dengan keterangan jelas
+    if (!student.phone || student.phone.trim() === '') {
+      return NextResponse.json<ApiResponse>({
+        data: null,
+        error: `Nomor HP mahasiswa ${student.full_name} (${student.nim ?? '-'}) belum diisi. Minta mahasiswa mengisi nomor HP di profil terlebih dahulu.`,
+        success: false,
+      }, { status: 400 })
+    }
+
+    // Validasi format nomor HP
+    const phoneDigits = student.phone.replace(/\D/g, '')
+    if (phoneDigits.length < 9 || phoneDigits.length > 15) {
+      return NextResponse.json<ApiResponse>({
+        data: null,
+        error: `Nomor HP mahasiswa ${student.full_name} tidak valid (${student.phone}). Minta mahasiswa memperbarui nomor HP di profil.`,
+        success: false,
+      }, { status: 400 })
     }
 
     // Load grades
@@ -61,6 +76,13 @@ export async function POST(request: NextRequest) {
       .order('semester_number', { ascending: true })
 
     const grades = (gradesRaw ?? []) as StudentGrade[]
+
+    // Load student target
+    const { data: studentTarget } = await supabase
+      .from('student_targets')
+      .select('target_semester, target_ipk, target_years, career_goal, notes')
+      .eq('student_id', student_id)
+      .single()
 
     // Load academic rule
     let rule: AcademicRule | null = null
@@ -83,6 +105,16 @@ export async function POST(request: NextRequest) {
       created_at: '', updated_at: '',
     }
 
+    // Load admin contact info (nomor Gradely/kampus untuk dihubungi)
+    const { data: adminUser } = await supabase
+      .from('users')
+      .select('full_name, phone, email')
+      .eq('university_id', lecturer.university_id ?? '')
+      .eq('role', 'admin')
+      .eq('is_active', true)
+      .limit(1)
+      .single()
+
     const currentSemester = student.current_semester ?? 1
     const summary = calculateAcademicSummary(grades, currentSemester, effectiveRule.normal_semester, effectiveRule)
     const semesterSummaries = groupGradesBySemester(grades)
@@ -98,7 +130,7 @@ export async function POST(request: NextRequest) {
         ? Math.round((gradesUpTo.reduce((a, g) => a + g.grade_points * g.credits, 0) / gradesUpTo.reduce((a, g) => a + g.credits, 0)) * 100) / 100
         : 0
       const retakes = s.grades.filter(g => g.is_retake).length
-      return `Semester ${s.semester_number}: IPS ${s.gpa.toFixed(2)}, IPK kumulatif ${ipkKumulatif.toFixed(2)}, ${s.total_sks} SKS${retakes > 0 ? `, ${retakes} MK mengulang` : ''}`
+      return `  Semester ${s.semester_number}: IPS ${s.gpa.toFixed(2)}, IPK kumulatif ${ipkKumulatif.toFixed(2)}, ${s.total_sks} SKS${retakes > 0 ? `, ${retakes} MK mengulang` : ''}`
     })
 
     const ipsValues = semesterSummaries.map(s => s.gpa)
@@ -106,6 +138,15 @@ export async function POST(request: NextRequest) {
       ? ipsValues[ipsValues.length - 1] > ipsValues[ipsValues.length - 2] ? 'meningkat'
       : ipsValues[ipsValues.length - 1] < ipsValues[ipsValues.length - 2] ? 'menurun' : 'stabil'
       : 'belum dapat ditentukan'
+
+    const semestersLeft = (studentTarget?.target_semester ?? effectiveRule.normal_semester) - currentSemester
+    const sksLeft = effectiveRule.total_sks_graduation - summary.total_sks_earned
+    const avgSksPerSemNeeded = semestersLeft > 0 ? Math.ceil(sksLeft / semestersLeft) : 0
+
+    const statusLabels: Record<string, string> = {
+      ahead: 'Unggul', on_track: 'Sesuai Target',
+      need_attention: 'Perlu Perhatian', recovery_mode: 'Butuh Pemulihan', critical: 'Darurat Akademik',
+    }
 
     // Load WAHA settings
     const { data: wahaSettings } = await supabase
@@ -131,41 +172,82 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Layanan AI belum tersedia', success: false }, { status: 503 })
     }
 
-    const statusLabels: Record<string, string> = {
-      ahead: 'Unggul', on_track: 'Sesuai Target',
-      need_attention: 'Perlu Perhatian', recovery_mode: 'Butuh Pemulihan', critical: 'Darurat Akademik',
-    }
+    const adminContact = adminUser?.phone
+      ? `📞 Kontak Gradely: ${adminUser.phone}${adminUser.email ? ` | ${adminUser.email}` : ''}`
+      : adminUser?.email
+        ? `📧 Kontak Gradely: ${adminUser.email}`
+        : '📩 Hubungi kantor akademik kampus untuk info lebih lanjut'
 
-    const prompt = `Kamu adalah Asisten Gradely, konselor akademik digital kampus. Buatkan pesan WhatsApp dari dosen wali kepada mahasiswa berisi ringkasan perkembangan akademik dan saran-saran konkret. Pesan harus personal, hangat, profesional, dan dalam Bahasa Indonesia.
+    const prompt = `Kamu adalah sistem notifikasi akademik Gradely. Buatkan pesan WhatsApp resmi dari sistem Gradely kepada mahasiswa berisi laporan lengkap perkembangan akademik beserta saran konkret. Pesan harus informatif, terstruktur, hangat, dan profesional dalam Bahasa Indonesia.
 
-PROFIL MAHASISWA:
-- Nama: ${student.full_name}
-- NIM: ${student.nim ?? '-'}
-- Program Studi: ${studyProgramName}
-- Semester aktif: ${currentSemester}
+============================
+DATA MAHASISWA
+============================
+Nama         : ${student.full_name}
+NIM          : ${student.nim ?? '-'}
+Program Studi: ${studyProgramName}
+Semester     : ${currentSemester} dari maks ${effectiveRule.max_semester}
+Email        : ${student.email ?? '-'}
 
-RIWAYAT AKADEMIK (Semester 1 s/d ${currentSemester}):
-${semesterRows.length > 0 ? semesterRows.join('\n') : '(belum ada data nilai)'}
+============================
+DOSEN WALI
+============================
+Nama: ${lecturer.full_name}
+${lecturer.email ? `Email: ${lecturer.email}` : ''}
+${lecturer.phone ? `No HP: ${lecturer.phone}` : ''}
 
-RINGKASAN AKADEMIK:
-- IPK saat ini: ${summary.gpa.toFixed(2)}
-- IPS semester terakhir: ${summary.last_gpa.toFixed(2)}
-- Tren IPS: ${ipsTrend}
-- SKS lulus: ${summary.total_sks_earned} / ${effectiveRule.total_sks_graduation} (${summary.sks_percentage}%)
-- MK mengulang: ${summary.courses_retake}
-- Status akademik: ${statusLabels[summary.academic_status] ?? summary.academic_status}
-- Prediksi lulus: Semester ${summary.predicted_graduation_semester}
+============================
+RIWAYAT NILAI PER SEMESTER
+============================
+${semesterRows.length > 0 ? semesterRows.join('\n') : '  (belum ada data nilai)'}
 
-DOSEN WALI: ${lecturer.full_name}
+============================
+RINGKASAN AKADEMIK SAAT INI
+============================
+IPK saat ini         : ${summary.gpa.toFixed(2)} (min lulus: ${effectiveRule.min_gpa.toFixed(2)})
+IPS semester terakhir: ${summary.last_gpa.toFixed(2)}
+Tren IPS             : ${ipsTrend}
+SKS lulus            : ${summary.total_sks_earned} / ${effectiveRule.total_sks_graduation} SKS (${summary.sks_percentage}%)
+MK mengulang         : ${summary.courses_retake} mata kuliah
+Status akademik      : ${statusLabels[summary.academic_status] ?? summary.academic_status}
+Prediksi lulus       : Semester ${summary.predicted_graduation_semester}
 
-Buatkan pesan WhatsApp yang:
-1. Dibuka dengan salam dan perkenalan singkat dari dosen wali
-2. Ringkasan perkembangan IPK dari semester 1 hingga sekarang (highlight tren naik/turun)
-3. Apresiasi jika ada progres baik, atau perhatian khusus jika ada penurunan
-4. 3-4 saran konkret dan actionable berdasarkan kondisi akademik
-5. Penutup yang memotivasi dan tawaran konsultasi
+============================
+TARGET MAHASISWA
+============================
+Target semester lulus: ${studentTarget?.target_semester ?? effectiveRule.normal_semester}
+Target IPK           : ${studentTarget?.target_ipk ? studentTarget.target_ipk.toFixed(2) : 'belum ditentukan'}
+Target durasi        : ${studentTarget?.target_years ? `${studentTarget.target_years} tahun` : 'belum ditentukan'}
+Minat karier         : ${studentTarget?.career_goal ?? 'belum diisi'}
+Catatan target       : ${studentTarget?.notes ?? '-'}
 
-Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsApp. Maksimal 400 kata. Jangan gunakan format markdown bold/italic. Balas HANYA dengan teks pesan WA, tidak perlu penjelasan lain.`
+============================
+ANALISIS KEBUTUHAN
+============================
+Sisa semester        : ${semestersLeft} semester
+Sisa SKS             : ${sksLeft} SKS
+SKS/semester yg harus diambil: ${avgSksPerSemNeeded} SKS
+IPK min per semester : ${effectiveRule.min_gpa.toFixed(2)}
+Maks SKS/semester    : ${effectiveRule.max_sks_per_semester} SKS
+
+Buatkan pesan WhatsApp dengan struktur TEPAT sebagai berikut:
+
+1. HEADER: Salam pembuka resmi dari sistem Gradely + nama mahasiswa
+2. IDENTITAS: Tampilkan NIM, Prodi, Semester aktif
+3. LAPORAN NILAI: Ringkas riwayat IPS per semester dengan highlight tren naik/turun (gunakan ✅ naik, ⚠️ turun, ➡️ stabil)
+4. STATUS AKADEMIK: IPK saat ini, progress SKS, prediksi lulus, status (${statusLabels[summary.academic_status] ?? summary.academic_status})
+5. TARGET VS REALITA: Bandingkan kondisi sekarang dengan target mahasiswa, apakah on track atau perlu effort lebih
+6. REKOMENDASI: 4-5 saran konkret dan actionable berdasarkan kondisi nyata (bukan generik)
+7. PENUTUP: Motivasi + info kontak dosen wali untuk konsultasi
+8. FOOTER: "${adminContact}"
+
+Aturan format:
+- Gunakan emoji yang relevan tapi tidak berlebihan
+- Paragraf pendek, mudah dibaca di layar HP
+- Jangan gunakan format markdown bold (*text*) atau italic (_text_)
+- Pisahkan tiap bagian dengan baris kosong
+- Maksimal 500 kata
+- Balas HANYA dengan teks pesan WA, tidak perlu penjelasan tambahan`
 
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
     const geminiRes = await fetch(geminiUrl, {
@@ -173,7 +255,7 @@ Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsAp
       headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
       body: JSON.stringify({
         contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+        generationConfig: { temperature: 0.65, maxOutputTokens: 1024 },
       }),
     })
 
@@ -182,7 +264,6 @@ Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsAp
       const geminiData = await geminiRes.json()
       messageText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
     } else {
-      // Fallback to gemini-1.5-flash
       const fallbackRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
         {
@@ -190,7 +271,7 @@ Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsAp
           headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
           body: JSON.stringify({
             contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.7, maxOutputTokens: 800 },
+            generationConfig: { temperature: 0.65, maxOutputTokens: 1024 },
           }),
         }
       )
@@ -205,14 +286,16 @@ Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsAp
       return NextResponse.json<ApiResponse>({ data: null, error: 'AI tidak menghasilkan pesan', success: false }, { status: 422 })
     }
 
-    // If preview_only, return message without sending
     if (preview_only) {
       return NextResponse.json<ApiResponse>({ data: { message: messageText }, error: null, success: true })
     }
 
-    // Send via WAHA
-    const phone = student.phone.replace(/\D/g, '')
-    const chatId = phone.startsWith('0') ? `62${phone.slice(1)}@c.us` : `${phone}@c.us`
+    // Format nomor HP mahasiswa ke format WhatsApp
+    const chatId = phoneDigits.startsWith('0')
+      ? `62${phoneDigits.slice(1)}@c.us`
+      : phoneDigits.startsWith('62')
+        ? `${phoneDigits}@c.us`
+        : `62${phoneDigits}@c.us`
 
     const wahaHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
     if (wahaApiKey) wahaHeaders['X-Api-Key'] = wahaApiKey
@@ -226,7 +309,6 @@ Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsAp
 
     if (!wahaRes.ok) {
       const errText = await wahaRes.text()
-      // Log failed attempt
       await supabase.from('whatsapp_logs').insert({
         recipient_id: student_id,
         phone_number: student.phone,
@@ -237,7 +319,6 @@ Format pesan: gunakan emoji secukupnya, paragraf pendek, mudah dibaca di WhatsAp
       return NextResponse.json<ApiResponse>({ data: null, error: `Gagal mengirim via WAHA: ${wahaRes.status}`, success: false }, { status: 502 })
     }
 
-    // Log success
     await supabase.from('whatsapp_logs').insert({
       recipient_id: student_id,
       phone_number: student.phone,

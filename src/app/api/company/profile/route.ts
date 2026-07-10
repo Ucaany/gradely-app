@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
@@ -15,7 +15,7 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from('companies')
-      .select('id, company_name, industry, description, website, logo_url, is_active, created_at, updated_at, company_categories(id, category)')
+      .select('id, company_name, industry, description, website, logo_url, address, postal_code, is_active, is_verified, created_at, updated_at, company_categories(id, category)')
       .eq('user_id', user.id)
       .single()
 
@@ -39,7 +39,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { company_name, industry, description, website, logo_url } = body
+    const { company_name, industry, description, website, logo_url, address, postal_code } = body
 
     const { data, error } = await supabase
       .from('companies')
@@ -49,6 +49,8 @@ export async function PATCH(request: NextRequest) {
         description: description || null,
         website: website || null,
         logo_url: logo_url || null,
+        address: address || null,
+        postal_code: postal_code || null,
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', user.id)

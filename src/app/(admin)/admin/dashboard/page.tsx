@@ -38,6 +38,7 @@ import {
 import Link from 'next/link'
 import { DashboardChart } from '@/components/admin/dashboard-chart'
 import { StudentStatusChart } from '@/components/admin/student-status-chart'
+import { SendLecturerDialog } from '@/components/admin/send-lecturer-dialog'
 import { formatDate, getInitials } from '@/lib/utils'
 import type { WhatsappLog } from '@/types'
 
@@ -71,6 +72,7 @@ export default async function AdminDashboardPage({
     recentStudentsRes, wahaLogsRes, advisorRes,
     studentsLastMonth, lecturersLastMonth, companiesLastMonth,
     studentsThisMonth, lecturersThisMonth, companiesThisMonth,
+    lecturersListRes,
   ] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
@@ -88,6 +90,7 @@ export default async function AdminDashboardPage({
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', thisMonthStart),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', thisMonthStart),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', thisMonthStart),
+      supabase.from('users').select('id, full_name, email, phone, avatar_url').eq('role', 'lecturer').eq('is_active', true).order('full_name', { ascending: true }),
     ])
 
   function calcTrend(thisMonth: number, lastMonth: number): string {
@@ -131,6 +134,15 @@ export default async function AdminDashboardPage({
   const totalAdvisorConnections = advisorRes.count ?? 0
   const activeLecturerIds = new Set(advisorRows.map((a) => a.lecturer_id))
   const activeLecturersCount = activeLecturerIds.size
+
+  // Dosen list dengan jumlah mahasiswa bimbingan
+  const lecturersList = (lecturersListRes.data ?? []) as Array<{
+    id: string; full_name: string; email: string; phone: string | null; avatar_url: string | null
+  }>
+  const adviseeCountMap = advisorRows.reduce<Record<string, number>>((acc, row) => {
+    acc[row.lecturer_id] = (acc[row.lecturer_id] ?? 0) + 1
+    return acc
+  }, {})
 
   const periodLabels: Record<Period, string> = {
     '24h': '24 Jam Terakhir',
@@ -455,6 +467,96 @@ export default async function AdminDashboardPage({
         </CardContent>
       </Card>
       </div>
+
+      {/* Daftar Dosen Wali + Kirim Laporan WA */}
+      <Card className="overflow-hidden">
+        <CardHeader className="flex flex-row items-start justify-between gap-2 pb-0">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MessageCircle className="h-4 w-4 text-violet-500" />
+              Kirim Laporan ke Dosen Wali
+            </CardTitle>
+            <CardDescription className="mt-1">
+              Kirim laporan kondisi akademik mahasiswa bimbingan via WhatsApp
+            </CardDescription>
+          </div>
+          <Button variant="ghost" size="sm" className="shrink-0 -mt-1" asChild>
+            <Link href="/admin/users/lecturers">
+              Lihat semua
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="p-0 mt-3">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-4 sm:pl-6">Dosen Wali</TableHead>
+                <TableHead>No. HP</TableHead>
+                <TableHead className="text-center">Mhs Bimbingan</TableHead>
+                <TableHead className="pr-4 sm:pr-6 text-right">Aksi</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {lecturersList.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center text-sm text-muted-foreground py-8">
+                    Belum ada dosen wali terdaftar
+                  </TableCell>
+                </TableRow>
+              ) : (
+                lecturersList.map((lec) => {
+                  const count = adviseeCountMap[lec.id] ?? 0
+                  const noPhone = !lec.phone || lec.phone.trim() === ''
+                  return (
+                    <TableRow key={lec.id}>
+                      <TableCell className="pl-4 sm:pl-6">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar className="h-7 w-7 shrink-0">
+                            <AvatarImage src={lec.avatar_url ?? ''} />
+                            <AvatarFallback className="text-xs">{getInitials(lec.full_name)}</AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm leading-tight truncate max-w-[160px]">{lec.full_name}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[160px]">{lec.email}</p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {noPhone ? (
+                          <Badge variant="outline" className="text-xs text-destructive border-destructive/30 bg-destructive/5 whitespace-nowrap">
+                            <XCircle className="h-3 w-3 mr-1" />Belum diisi
+                          </Badge>
+                        ) : (
+                          <span className="text-sm font-mono">{lec.phone}</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <Badge variant="secondary" className="text-xs">{count} mahasiswa</Badge>
+                      </TableCell>
+                      <TableCell className="pr-4 sm:pr-6 text-right">
+                        <SendLecturerDialog
+                          lecturerId={lec.id}
+                          lecturerName={lec.full_name}
+                          lecturerPhone={lec.phone}
+                          adviseeCount={count}
+                          trigger={
+                            <Button variant="outline" size="sm" className="h-7 text-xs" disabled={noPhone}>
+                              <MessageCircle className="h-3.5 w-3.5 mr-1" />
+                              {noPhone ? 'No HP kosong' : 'Kirim Laporan'}
+                            </Button>
+                          }
+                        />
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
     </div>
   )
 }
