@@ -7,6 +7,7 @@ import {
   Plus, FolderOpen, Filter, Globe, Lock,
   Pencil, Trash2, Loader2, Link2, ExternalLink,
 } from 'lucide-react'
+import { LinkPreview } from '@/components/shared/link-preview'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -340,26 +341,10 @@ function PortfolioCard({
 
         {/* Links */}
         {(item.links ?? []).length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-auto pt-1">
-            {item.links.slice(0, 3).map((link, i) => (
-              <a
-                key={i}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <ExternalLink className="h-3 w-3" />
-                {link.label}
-              </a>
+          <div className="flex flex-col gap-2 mt-auto pt-1">
+            {item.links.map((link, i) => (
+              <LinkPreview key={i} url={link.url} label={link.label} />
             ))}
-            {item.links.length > 3 && (
-              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                <Link2 className="h-3 w-3" />
-                +{item.links.length - 3} lainnya
-              </span>
-            )}
           </div>
         )}
       </CardContent>

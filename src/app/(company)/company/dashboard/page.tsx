@@ -110,7 +110,7 @@ export default function CompanyDashboardPage() {
         <StatCard
           title="Total Mahasiswa"
           value={total}
-          desc="Profil aktif & visibel"
+          desc="Total profil terindeks di platform"
           icon={Users}
           isLoading={isLoading}
         />

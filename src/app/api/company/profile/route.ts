@@ -41,6 +41,13 @@ export async function PATCH(request: NextRequest) {
     const body = await request.json()
     const { company_name, industry, description, website, logo_url, address, postal_code } = body
 
+    if (logo_url && !String(logo_url).startsWith('https://')) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'URL logo harus menggunakan https://', success: false }, { status: 400 })
+    }
+    if (website && !String(website).startsWith('https://') && !String(website).startsWith('http://')) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'URL website tidak valid', success: false }, { status: 400 })
+    }
+
     const { data, error } = await supabase
       .from('companies')
       .update({
