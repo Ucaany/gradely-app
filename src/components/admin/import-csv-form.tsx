@@ -83,7 +83,6 @@ export function ImportCsvForm({ universityId }: Props) {
         body: JSON.stringify({
           rows: preview,
           university_id: universityId,
-          default_password: 'Gradely@2024',
         }),
         credentials: 'include',
       })
@@ -192,7 +191,7 @@ export function ImportCsvForm({ universityId }: Props) {
               <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30 px-3 py-2.5">
                 <AlertCircle className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                  Password default: <strong>Gradely@2024</strong>. Minta pengguna mengubah setelah login pertama.
+                  Password default diatur oleh administrator. Minta pengguna mengubah setelah login pertama.
                 </p>
               </div>
             </CardContent>

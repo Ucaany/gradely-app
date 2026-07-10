@@ -14,11 +14,36 @@ export async function GET() {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
-    const [{ data: students }, { data: rules }, { data: grades }] = await Promise.all([
-      supabase.from('users').select('id, current_semester, study_program_id').eq('role', 'student').eq('is_active', true),
-      supabase.from('academic_rules').select('*'),
-      supabase.from('student_grades').select('student_id, semester_number, grade_points, credits, is_retake'),
+    const { data: adminProfile } = await supabase
+      .from('users')
+      .select('university_id')
+      .eq('id', user.id)
+      .single()
+
+    const universityId = adminProfile?.university_id ?? null
+
+    const studentsQuery = supabase
+      .from('users')
+      .select('id, current_semester, study_program_id')
+      .eq('role', 'student')
+      .eq('is_active', true)
+
+    const rulesQuery = supabase.from('academic_rules').select('*')
+
+    const [{ data: allStudents }, { data: rules }] = await Promise.all([
+      universityId ? studentsQuery.eq('university_id', universityId) : studentsQuery,
+      universityId ? rulesQuery.eq('university_id', universityId) : rulesQuery,
     ])
+
+    const students = allStudents ?? []
+    const studentIds = students.map((s: { id: string }) => s.id)
+
+    const { data: grades } = studentIds.length > 0
+      ? await supabase
+          .from('student_grades')
+          .select('student_id, semester_number, grade_points, credits, is_retake')
+          .in('student_id', studentIds)
+      : { data: [] }
 
     if (!students || students.length === 0) {
       return NextResponse.json({ data: [], error: null, success: true })

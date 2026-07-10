@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
-// GET /api/admin/chart-data — rata-rata IPK & IPS per semester dari semua mahasiswa
+// GET /api/admin/chart-data — rata-rata IPK & IPS per semester dari mahasiswa universitas admin
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -11,7 +11,7 @@ export async function GET() {
 
     const { data: profile } = await supabase
       .from('users')
-      .select('role')
+      .select('role, university_id')
       .eq('id', user.id)
       .single()
 
@@ -19,10 +19,23 @@ export async function GET() {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
-    // Ambil semua nilai mahasiswa
+    const universityId = profile.university_id ?? null
+
+    // Ambil ID mahasiswa aktif dalam universitas admin
+    let studentIds: Set<string> = new Set()
+    if (universityId) {
+      const { data: students } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'student')
+        .eq('university_id', universityId)
+        .eq('is_active', true)
+      studentIds = new Set((students ?? []).map((s: { id: string }) => s.id))
+    }
+
     const { data: grades, error } = await supabase
       .from('student_grades')
-      .select('semester_number, grade_points, credits')
+      .select('semester_number, grade_points, credits, student_id')
       .order('semester_number', { ascending: true })
 
     if (error) return NextResponse.json<ApiResponse>({ data: null, error: error.message, success: false }, { status: 500 })
@@ -31,10 +44,19 @@ export async function GET() {
       return NextResponse.json({ data: [], error: null, success: true })
     }
 
+    // Filter hanya grades milik mahasiswa universitas admin
+    const filteredGrades = universityId && studentIds.size > 0
+      ? grades.filter((g: { student_id: string }) => studentIds.has(g.student_id))
+      : grades
+
+    if (filteredGrades.length === 0) {
+      return NextResponse.json({ data: [], error: null, success: true })
+    }
+
     // Group by semester_number, hitung rata-rata IPS per semester dan IPK kumulatif
     const semesterMap = new Map<number, { totalWeighted: number; totalCredits: number }>()
 
-    for (const g of grades) {
+    for (const g of filteredGrades) {
       const sem = g.semester_number
       const existing = semesterMap.get(sem) ?? { totalWeighted: 0, totalCredits: 0 }
       existing.totalWeighted += g.grade_points * g.credits

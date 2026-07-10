@@ -8,6 +8,9 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json<ApiResponse>({ data: null, error: 'Unauthorized', success: false }, { status: 401 })
 
+    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    if (!profile || profile.role !== 'admin') return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
+
     const { data, error } = await supabase
       .from('industry_options')
       .select('id, name, is_active, created_at')

@@ -88,11 +88,17 @@ function LoginFormInner({ className }: { className?: string }) {
       })
 
       if (error) {
-        toast.error(
-          error.message === 'Invalid login credentials'
-            ? 'Email atau password salah'
-            : error.message
+        const msgMap: Record<string, string> = {
+          'Invalid login credentials': 'Email atau password salah',
+          'Email not confirmed': 'Email belum dikonfirmasi. Cek inbox Anda.',
+          'invalid input syntax': 'Email atau password tidak valid',
+          'User not found': 'Akun tidak ditemukan',
+          'Invalid email or password': 'Email atau password salah',
+        }
+        const mapped = Object.entries(msgMap).find(([key]) =>
+          error.message.toLowerCase().includes(key.toLowerCase())
         )
+        toast.error(mapped ? mapped[1] : 'Login gagal. Silakan coba lagi.')
         return
       }
 

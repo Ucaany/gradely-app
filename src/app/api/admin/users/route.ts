@@ -182,9 +182,12 @@ export async function GET(request: NextRequest) {
 
     if (role) query = query.eq('role', role)
     if (search) {
-      query = query.or(
-        `full_name.ilike.%${search}%,email.ilike.%${search}%,nim.ilike.%${search}%`
-      )
+      const safeSearch = search.replace(/[%_\\,.()\[\]]/g, '')
+      if (safeSearch.length > 0) {
+        query = query.or(
+          `full_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%,nim.ilike.%${safeSearch}%`
+        )
+      }
     }
 
     const { data, count, error } = await query

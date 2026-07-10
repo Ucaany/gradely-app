@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('id, full_name, join_code')
       .eq('role', 'lecturer')
-      .ilike('join_code', rawCode.trim())
+      .eq('join_code', rawCode.toUpperCase())
 
     const matched = lecturers?.[0] ?? null
 

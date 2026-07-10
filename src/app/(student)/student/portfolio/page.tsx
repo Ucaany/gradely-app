@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import {
   Plus, FolderOpen, Filter, Globe, Lock,
-  Pencil, Trash2, Loader2, Link2, ExternalLink,
+  Pencil, Trash2, Loader2,
 } from 'lucide-react'
 import { LinkPreview } from '@/components/shared/link-preview'
 import { Button } from '@/components/ui/button'

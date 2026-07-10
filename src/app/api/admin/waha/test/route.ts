@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
+function isValidPublicHttpsUrl(raw: string): boolean {
+  try {
+    const parsed = new URL(raw)
+    if (parsed.protocol !== 'https:') return false
+    const h = parsed.hostname
+    if (
+      h === 'localhost' ||
+      /^127\./.test(h) ||
+      /^10\./.test(h) ||
+      /^192\.168\./.test(h) ||
+      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
+      h === '169.254.169.254' ||
+      h.endsWith('.internal') ||
+      h.endsWith('.local')
+    ) return false
+    return true
+  } catch {
+    return false
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -18,6 +39,13 @@ export async function POST(request: NextRequest) {
 
     if (!waha_url || !waha_session) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'WAHA URL dan Session diperlukan', success: false }, { status: 400 })
+    }
+
+    if (!isValidPublicHttpsUrl(waha_url)) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: 'WAHA URL tidak valid. Gunakan HTTPS dan pastikan bukan alamat jaringan lokal.', success: false },
+        { status: 400 }
+      )
     }
 
     const headers: Record<string, string> = {

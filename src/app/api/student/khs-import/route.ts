@@ -35,6 +35,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Data nilai tidak valid', success: false }, { status: 400 })
     }
 
+    if (grades.length > 200) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Maksimal 200 mata kuliah per import', success: false }, { status: 400 })
+    }
+
     // Ambil grade scale dari academic rules
     let gradeScale = { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 }
     if (profile.study_program_id) {
@@ -49,7 +53,20 @@ export async function POST(request: NextRequest) {
       if (rule?.grade_scale) gradeScale = rule.grade_scale
     }
 
-    let imported = 0
+    // Ambil data existing untuk deteksi duplikat
+    const { data: existingGrades } = await supabase
+      .from('student_grades')
+      .select('course_name, semester_number')
+      .eq('student_id', user.id)
+
+    const existingSet = new Set(
+      (existingGrades ?? []).map((g: { course_name: string; semester_number: number }) =>
+        `${g.course_name.trim().toLowerCase()}__${g.semester_number}`
+      )
+    )
+
+    // Validasi dan siapkan baris yang valid
+    const validRows: object[] = []
     let skipped = 0
     const errors: string[] = []
 
@@ -58,34 +75,44 @@ export async function POST(request: NextRequest) {
         skipped++
         continue
       }
-      try {
-        const grade_points = getGradePoints(g.grade as keyof typeof gradeScale, gradeScale)
-        const { error } = await supabase.from('student_grades').insert({
-          student_id: user.id,
-          course_name: g.course_name.trim(),
-          credits: g.credits,
-          grade: g.grade,
-          grade_points,
-          semester_number: g.semester_number,
-          semester_type: g.semester_type ?? (g.semester_number % 2 === 1 ? 'ganjil' : 'genap'),
-          academic_year: g.academic_year ?? '2024/2025',
-          is_retake: false,
-        })
-        if (error) {
-          errors.push(`${g.course_name}: ${error.message}`)
-          skipped++
-        } else {
-          imported++
-        }
-      } catch {
-        errors.push(`${g.course_name}: Gagal disimpan`)
+
+      const key = `${g.course_name.trim().toLowerCase()}__${g.semester_number}`
+      if (existingSet.has(key)) {
         skipped++
+        errors.push(`${g.course_name}: sudah ada di semester ${g.semester_number}, dilewati`)
+        continue
       }
+
+      const grade_points = getGradePoints(g.grade as keyof typeof gradeScale, gradeScale)
+      validRows.push({
+        student_id: user.id,
+        course_name: g.course_name.trim(),
+        credits: g.credits,
+        grade: g.grade,
+        grade_points,
+        semester_number: g.semester_number,
+        semester_type: g.semester_type ?? (g.semester_number % 2 === 1 ? 'ganjil' : 'genap'),
+        academic_year: g.academic_year,
+        is_retake: false,
+      })
+
+      existingSet.add(key)
+    }
+
+    let imported = 0
+    if (validRows.length > 0) {
+      const { error: insertError } = await supabase
+        .from('student_grades')
+        .insert(validRows)
+
+      if (insertError) {
+        return NextResponse.json<ApiResponse>({ data: null, error: insertError.message, success: false }, { status: 500 })
+      }
+      imported = validRows.length
     }
 
     return NextResponse.json({ data: { imported, skipped, errors }, error: null, success: true })
-  } catch (err) {
-    console.error('KHS import error:', err)
+  } catch {
     return NextResponse.json<ApiResponse>({ data: null, error: 'Internal server error', success: false }, { status: 500 })
   }
 }

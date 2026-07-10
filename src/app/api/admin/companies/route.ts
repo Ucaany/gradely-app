@@ -31,7 +31,10 @@ export async function GET(request: NextRequest) {
       .range(from, to)
 
     if (search) {
-      query = query.ilike('company_name', `%${search}%`)
+      const safeSearch = search.replace(/[%_\\,.()\[\]]/g, '')
+      if (safeSearch.length > 0) {
+        query = query.ilike('company_name', `%${safeSearch}%`)
+      }
     }
 
     const { data, count, error } = await query

@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
-import { Search, Users, GraduationCap, ExternalLink, ChevronDown, ChevronUp, X, Check, Filter, RefreshCw } from 'lucide-react'
+import { Search, Users, GraduationCap, ChevronDown, ChevronUp, X, Check, Filter, RefreshCw } from 'lucide-react'
 import { LinkPreview } from '@/components/shared/link-preview'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'

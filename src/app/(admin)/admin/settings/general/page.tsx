@@ -34,10 +34,10 @@ export default async function GeneralSettingsPage() {
     .in('key', ['ai_api_key', 'ai_base_url', 'ai_model', 'ai_vision_api_key', 'ai_vision_base_url', 'ai_vision_model'])
 
   const aiMap = Object.fromEntries((aiSettings ?? []).map(r => [r.key, r.value]))
-  const aiApiKey = aiMap['ai_api_key'] ?? ''
+  const aiApiKeyConfigured = !!(aiMap['ai_api_key'])
   const aiBaseUrl = aiMap['ai_base_url'] ?? ''
   const aiModel = aiMap['ai_model'] ?? ''
-  const aiVisionApiKey = aiMap['ai_vision_api_key'] ?? ''
+  const aiVisionApiKeyConfigured = !!(aiMap['ai_vision_api_key'])
   const aiVisionBaseUrl = aiMap['ai_vision_base_url'] ?? ''
   const aiVisionModel = aiMap['ai_vision_model'] ?? ''
 
@@ -136,12 +136,14 @@ export default async function GeneralSettingsPage() {
             <CardContent>
               <AISettingsForm
                 universityId={university?.id ?? ''}
-                defaultApiKey={aiApiKey}
+                defaultApiKey=""
                 defaultBaseUrl={aiBaseUrl}
                 defaultModel={aiModel}
-                defaultVisionApiKey={aiVisionApiKey}
+                defaultVisionApiKey=""
                 defaultVisionBaseUrl={aiVisionBaseUrl}
                 defaultVisionModel={aiVisionModel}
+                apiKeyConfigured={aiApiKeyConfigured}
+                visionApiKeyConfigured={aiVisionApiKeyConfigured}
               />
             </CardContent>
           </Card>

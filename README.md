@@ -3,8 +3,8 @@
 Platform Monitoring Akademik, Perencanaan Kelulusan, Portofolio, dan Career Development Mahasiswa — Institut Seni Indonesia (ISI) Yogyakarta.
 
 **Repository:** https://github.com/Ucaany/gradely-app  
-**Last Updated:** 09 Juli 2026  
-**Phase Saat Ini:** Phase 2 ✅ Selesai → Phase 3 🔄 Berikutnya
+**Last Updated:** 10 Juli 2026  
+**Phase Saat Ini:** Phase 4 ✅ Selesai → Phase 5 🔄 Berikutnya
 
 ---
 
@@ -32,8 +32,8 @@ Platform Monitoring Akademik, Perencanaan Kelulusan, Portofolio, dan Career Deve
 | Role | Kode | Akses |
 |------|------|-------|
 | Mahasiswa | `student` | Dashboard akademik, nilai, portofolio, karier, onboarding |
-| Dosen Wali | `lecturer` | Monitoring mahasiswa bimbingan |
-| Admin Kampus | `admin` | Kelola pengguna, aturan akademik, sistem |
+| Dosen Wali | `lecturer` | Monitoring mahasiswa bimbingan, monitoring risiko |
+| Admin Kampus | `admin` | Kelola pengguna, aturan akademik, sistem, kirim WA ke dosen |
 | Perusahaan | `company` | Talent scouting (dengan consent mahasiswa) |
 
 ---
@@ -61,6 +61,7 @@ NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 NEXT_PUBLIC_SITE_URL=http://localhost:3000
+OPENAI_API_KEY=your-openai-api-key
 ```
 
 ### 3. Database Migration
@@ -76,6 +77,13 @@ Migration files:
 - `004_add_semester_type_users.sql` — Kolom current_semester_type di users
 - `005_add_join_code.sql` — Kolom join_code di users (dosen wali invite)
 - `006_add_onboarding.sql` — Kolom onboarding_completed di users
+- `007_add_student_company_interests.sql` — Tabel minat perusahaan mahasiswa
+- `008_add_skill_industry_options.sql` — Opsi skill & industri
+- `009_add_target_ipk_years.sql` — Target IPK & tahun kelulusan
+- `010_add_graduation_achievements.sql` — Riwayat pencapaian kelulusan
+- `011_portfolio_enhancements.sql` — Enhancement tabel portofolio
+- `012_portfolio_metadata.sql` — Metadata portofolio (skill tags, URL fields)
+- `013_add_company_address.sql` — Kolom alamat perusahaan
 
 ### 4. Jalankan Dev Server
 
@@ -96,7 +104,7 @@ gradely/
 │   │   ├── (auth)/              # Login, Reset Password, Update Password
 │   │   ├── (onboarding)/        # Onboarding mahasiswa (full screen, 3 step)
 │   │   ├── (admin)/admin/       # Panel Admin
-│   │   │   ├── dashboard/       # Dashboard + advisor stats
+│   │   │   ├── dashboard/       # Dashboard + advisor stats + riwayat WA
 │   │   │   ├── account/         # Ubah password admin
 │   │   │   ├── users/
 │   │   │   │   ├── students/    # CRUD Mahasiswa + bulk import
@@ -109,28 +117,41 @@ gradely/
 │   │   ├── (student)/student/   # Dashboard Mahasiswa
 │   │   │   ├── dashboard/       # Dashboard + charts + onboarding banner
 │   │   │   ├── grades/          # Nilai akademik (grid/list) + import KHS
-│   │   │   ├── target/          # Target kelulusan
+│   │   │   ├── target/          # Target kelulusan + AI analysis
+│   │   │   ├── portfolio/       # CRUD portofolio (11 kategori)
+│   │   │   ├── career/          # Minat karier + toggle consent
 │   │   │   ├── profile/         # Profil mahasiswa
 │   │   │   └── settings/        # Pengaturan + invite token
-│   │   ├── (lecturer)/          # Dashboard Dosen (Phase 3)
-│   │   ├── (company)/           # Company Dashboard (Phase 4)
+│   │   ├── (lecturer)/          # Dashboard Dosen Wali
+│   │   │   ├── dashboard/       # Statistik + risiko + aksi cepat
+│   │   │   ├── students/        # Daftar + detail mahasiswa bimbingan
+│   │   │   ├── risk/            # Monitoring risiko akademik
+│   │   │   ├── join-code/       # Generate/copy kode bergabung
+│   │   │   └── profile/         # Profil dosen
+│   │   ├── (company)/           # Company Dashboard
+│   │   │   ├── dashboard/       # Browse mahasiswa + filter
+│   │   │   └── profile/         # Profil perusahaan
 │   │   └── api/
 │   │       ├── admin/           # API routes admin
 │   │       ├── auth/            # signout, change-password
 │   │       ├── lecturer/        # join-code generator
-│   │       └── student/         # grades, profile, target, join-advisor, khs-import, onboarding
+│   │       ├── student/         # grades, profile, target, portfolio, career
+│   │       ├── company/         # students browse, study-programs
+│   │       └── waha/            # send message, notifications
 │   ├── components/
 │   │   ├── ui/                  # shadcn/ui components
 │   │   ├── admin/               # Komponen khusus admin
-│   │   └── student/             # Komponen mahasiswa (charts, grade form)
+│   │   ├── student/             # Komponen mahasiswa (charts, grade form)
+│   │   └── shared/              # Komponen bersama (notification inbox)
 │   ├── lib/
 │   │   ├── supabase/            # Client, server, middleware helpers
 │   │   ├── validations/         # Zod schemas semua entity
-│   │   └── utils/               # Helpers + kalkulasi akademik
+│   │   ├── utils/               # Helpers + kalkulasi akademik
+│   │   └── waha.ts              # WAHA client helper
 │   ├── types/                   # TypeScript types
 │   └── middleware.ts            # Route protection + RBAC + onboarding gate
 ├── supabase/
-│   ├── migrations/              # SQL migration files (006 total)
+│   ├── migrations/              # SQL migration files (013 total)
 │   └── seed.sql                 # Seed data ISI Yogyakarta
 └── docs/                        # Dokumentasi perencanaan
 ```
@@ -157,60 +178,46 @@ settings
 
 ---
 
-## Fitur Phase 1 + Phase 2
+## Fitur Per Phase
 
-### Authentication
+### Phase 1 — Authentication & Admin (✅ Selesai)
 - Login email + password, reset password, update password
 - Role-based redirect otomatis
 - Middleware RBAC + onboarding gate
 - Server-side session via `@supabase/ssr`
-
-### Admin Panel
-- Dashboard statistik + advisor connection stats (total koneksi, dosen aktif, top dosen)
+- Dashboard admin: statistik, advisor connection stats, riwayat WA
 - CRUD Mahasiswa, Dosen Wali, Perusahaan
-- Daftar dosen wali: kolom jumlah mahasiswa + kode join
 - Bulk import CSV drag & drop
 - Kelola Program Studi + Aturan Akademik
-- Konfigurasi WAHA + AI API key (OpenAI untuk KHS import)
-- Akun admin: ubah password
+- Konfigurasi WAHA + AI API key
 
-### Dashboard Mahasiswa
-- Banner onboarding belum selesai (dengan tombol Lanjutkan)
+### Phase 2 — Dashboard Mahasiswa (✅ Selesai)
 - Status akademik dengan icon (Unggul / Sesuai Target / Perlu Perhatian / Butuh Pemulihan / Darurat Akademik)
 - Stat cards: IPK, SKS Lulus, MK Lulus, Prediksi Lulus
 - Grafik IPS per semester (Recharts AreaChart)
-- Progress SKS dengan donut chart (Recharts PieChart) + stats sejajar
-- Aksi Cepat grid 2x3 dengan icon berwarna
-- Mata kuliah mengulang
+- Progress SKS dengan donut chart
+- Nilai akademik: mode list + grid, import KHS via AI (GPT-4o)
+- Target kelulusan + AI analysis riwayat pencapaian
+- Onboarding 3 step: skill, minat, konfirmasi profil
+- Join dosen wali via kode invite 8 karakter
 
-### Nilai Akademik
-- Mode list (tabel per semester) + mode grid (kartu per MK)
-- Toggle grid/list di header
-- Import KHS via AI (GPT-4o baca PDF/gambar, ekstrak MK, SKS, nilai)
-- Badge clean tanpa border untuk nilai dan status
+### Phase 3 — Dashboard Dosen Wali (✅ Selesai)
+- Dashboard: statistik, distribusi status akademik, daftar mahasiswa berisiko
+- Daftar + detail mahasiswa bimbingan (profil, stat cards, grafik IPK/IPS, histori nilai)
+- Monitoring risiko akademik grouped by status (Darurat / Perhatian / Aman)
+- Generate/copy kode bergabung
+- Admin dapat kirim laporan WA ke dosen wali
 
-### Profil Mahasiswa
-- Edit nama, foto (URL), nomor HP, semester aktif
-- Toggle tampil ke perusahaan (bukan publik — hanya company)
-- Tersinkron ke database realtime
+### Phase 4 — Portofolio & Career (✅ Selesai)
+- CRUD portofolio mahasiswa: 11 kategori, skill tags, 6 URL fields (GitHub, Behance, LinkedIn, dll)
+- Career profile: 12 minat karier, toggle consent `profile_visible`
+- Company dashboard: browse mahasiswa dengan filter (prodi, IPK, skill, minat karier, nama)
+- RLS consent enforcement — hanya mahasiswa `profile_visible = true` yang muncul
 
-### Pengaturan Mahasiswa
-- Subheading: Profil Saya + Invite Token
-- Ubah password dengan show/hide
-- Join dosen wali via kode (1x permanent, tidak bisa ganti)
-- Daftar dosen wali terhubung
-
-### Onboarding (3 Step, Full Screen)
-- Step 1: Pilih skill & minat (16 opsi)
-- Step 2: Perusahaan mitra relevan berdasarkan skill
-- Step 3: Konfirmasi profil dari admin
-- Tombol "Isi Nanti" → dashboard dengan banner reminder
-- Hanya tampil sekali, tidak bisa diulang setelah selesai
-
-### Invite System Dosen Wali
-- Dosen wali generate kode unik 8 karakter via `/api/lecturer/join-code`
-- Mahasiswa input kode → bergabung 1x permanent
-- Admin bisa lihat kode join + jumlah mahasiswa per dosen
+### Phase 5 — WAHA & Launch (🟡 Partial)
+- Panel konfigurasi WAHA + test koneksi ✅
+- Riwayat log WhatsApp di dashboard admin ✅
+- API route kirim pesan + notification inbox 🔄
 
 ---
 
@@ -223,15 +230,23 @@ settings
 | GET/PATCH | `/api/student/profile` | Profil mahasiswa |
 | GET/POST | `/api/student/grades` | Nilai akademik |
 | PATCH/DELETE | `/api/student/grades/[id]` | Edit/hapus nilai |
+| GET/POST | `/api/student/target` | Target kelulusan |
+| POST | `/api/student/target/analyze` | AI analysis target |
+| GET/POST | `/api/student/portfolio` | CRUD portofolio |
+| PATCH/DELETE | `/api/student/portfolio/[id]` | Edit/hapus portofolio |
+| GET | `/api/student/portfolio/categories` | Daftar kategori |
+| GET/POST | `/api/student/career` | Minat karier |
 | GET/POST | `/api/student/join-advisor` | Cek / join dosen wali |
 | POST | `/api/student/khs-import/parse` | Parse KHS via AI |
 | POST | `/api/student/khs-import` | Import nilai dari KHS |
-| GET/POST | `/api/student/onboarding/companies` | Companies + complete onboarding |
 | GET/POST | `/api/lecturer/join-code` | Ambil / regenerate kode join |
+| GET | `/api/company/students` | Browse mahasiswa (talent scouting) |
+| GET | `/api/company/study-programs` | Daftar prodi untuk filter |
 | GET | `/api/admin/chart-data` | Data chart IPK/IPS |
 | POST | `/api/admin/import` | Bulk import CSV |
 | GET/POST | `/api/admin/settings` | Simpan konfigurasi |
 | POST | `/api/admin/waha/test` | Test koneksi WAHA |
+| POST | `/api/waha/send` | Kirim pesan WhatsApp |
 
 ---
 
@@ -241,9 +256,9 @@ settings
 |-------|--------|-----------|
 | Phase 1 | ✅ Selesai | Auth, Database, Admin Panel, User Management |
 | Phase 2 | ✅ Selesai | Dashboard Mahasiswa, Nilai, Profil, Onboarding, Invite |
-| Phase 3 | 🔄 Berikutnya | Dashboard Dosen, Monitoring Mahasiswa, Risiko Akademik |
-| Phase 4 | ⏳ Pending | Portofolio, Career Profile, Company Dashboard |
-| Phase 5 | ⏳ Pending | WAHA Notifikasi, Testing, Launch |
+| Phase 3 | ✅ Selesai | Dashboard Dosen, Monitoring Mahasiswa, Risiko Akademik |
+| Phase 4 | ✅ Selesai | Portofolio, Career Profile, Company Dashboard |
+| Phase 5 | 🔄 Berikutnya | WAHA Notifikasi, Testing, Launch |
 
 ---
 

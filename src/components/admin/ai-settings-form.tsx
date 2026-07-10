@@ -18,6 +18,8 @@ interface Props {
   defaultVisionApiKey: string
   defaultVisionBaseUrl: string
   defaultVisionModel: string
+  apiKeyConfigured?: boolean
+  visionApiKeyConfigured?: boolean
 }
 
 function validateUrl(raw: string): boolean {
@@ -52,6 +54,7 @@ function AIConfigSection({
   defaultModel,
   apiKeyPlaceholder,
   modelPlaceholder,
+  isConfigured,
   router,
 }: {
   title: string
@@ -64,6 +67,7 @@ function AIConfigSection({
   defaultModel: string
   apiKeyPlaceholder: string
   modelPlaceholder: string
+  isConfigured: boolean
   router: ReturnType<typeof useRouter>
 }) {
   const keyPrefix = configType === 'vision' ? 'ai_vision_' : 'ai_'
@@ -90,13 +94,12 @@ function AIConfigSection({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          university_id: universityId,
-          settings: {
-            [`${keyPrefix}api_key`]: apiKey.trim(),
-            [`${keyPrefix}base_url`]: baseUrl.trim(),
-            [`${keyPrefix}model`]: model.trim(),
-          },
-        }),
+            settings: {
+              [`${keyPrefix}api_key`]: apiKey.trim(),
+              [`${keyPrefix}base_url`]: baseUrl.trim(),
+              [`${keyPrefix}model`]: model.trim(),
+            },
+          }),
       })
       const result = await res.json()
       if (!res.ok) {
@@ -210,12 +213,12 @@ function AIConfigSection({
           <Badge
             variant="outline"
             className={
-              defaultApiKey
+              isConfigured
                 ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
                 : 'text-muted-foreground'
             }
           >
-            {defaultApiKey ? 'Terkonfigurasi' : 'Belum dikonfigurasi'}
+            {isConfigured ? 'Terkonfigurasi' : 'Belum dikonfigurasi'}
           </Badge>
         </div>
 
@@ -269,6 +272,8 @@ export function AISettingsForm({
   defaultVisionApiKey,
   defaultVisionBaseUrl,
   defaultVisionModel,
+  apiKeyConfigured = false,
+  visionApiKeyConfigured = false,
 }: Props) {
   const router = useRouter()
 
@@ -285,6 +290,7 @@ export function AISettingsForm({
         defaultModel={defaultModel}
         apiKeyPlaceholder="sk-..."
         modelPlaceholder="kr/auto"
+        isConfigured={apiKeyConfigured}
         router={router}
       />
 
@@ -301,6 +307,7 @@ export function AISettingsForm({
         defaultModel={defaultVisionModel}
         apiKeyPlaceholder="sk-..."
         modelPlaceholder="kr/auto"
+        isConfigured={visionApiKeyConfigured}
         router={router}
       />
     </div>

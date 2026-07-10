@@ -42,10 +42,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
     const body = await request.json()
     const serviceClient = createServiceClient()
 
+    const ALLOWED_COMPANY_FIELDS = [
+      'company_name', 'industry', 'description', 'website', 'logo_url',
+      'is_active', 'address', 'postal_code', 'is_verified',
+    ]
+
     // Jika body mengandung categories, update company_categories
     if ('categories' in body) {
       const categories: string[] = body.categories ?? []
-      delete body.categories
 
       // Replace semua kategori
       await serviceClient.from('company_categories').delete().eq('company_id', params.id)
@@ -56,12 +60,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
       }
     }
 
-    // Update kolom companies jika ada field lain
-    const companyFields = Object.keys(body)
-    if (companyFields.length > 0) {
+    // Update kolom companies hanya field yang diizinkan
+    const updateData: Record<string, unknown> = {}
+    for (const field of ALLOWED_COMPANY_FIELDS) {
+      if (field in body) updateData[field] = body[field]
+    }
+
+    if (Object.keys(updateData).length > 0) {
       const { data, error } = await serviceClient
         .from('companies')
-        .update(body)
+        .update(updateData)
         .eq('id', params.id)
         .select()
         .single()

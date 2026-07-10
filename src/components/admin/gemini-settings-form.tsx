@@ -11,12 +11,12 @@ import { Badge } from '@/components/ui/badge'
 
 interface Props {
   universityId: string
-  defaultValue: string
+  isConfigured: boolean
 }
 
-export function GeminiSettingsForm({ universityId, defaultValue }: Props) {
+export function GeminiSettingsForm({ universityId, isConfigured }: Props) {
   const router = useRouter()
-  const [apiKey, setApiKey] = useState(defaultValue)
+  const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
@@ -33,7 +33,6 @@ export function GeminiSettingsForm({ universityId, defaultValue }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          university_id: universityId,
           settings: { gemini_api_key: apiKey.trim() },
         }),
         credentials: 'include',
@@ -58,17 +57,17 @@ export function GeminiSettingsForm({ universityId, defaultValue }: Props) {
     setTestLoading(true)
     setTestResult(null)
     try {
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey.trim()}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: 'ping' }] }],
-            generationConfig: { maxOutputTokens: 5 },
-          }),
-        }
-      )
+      const res = await fetch('/api/admin/ai/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          api_key: apiKey.trim(),
+          base_url: 'https://generativelanguage.googleapis.com/v1beta',
+          model: 'gemini-2.0-flash',
+          type: 'gemini',
+        }),
+        credentials: 'include',
+      })
       if (res.ok) {
         setTestResult('success')
         toast.success('API key valid! Gemini dapat dijangkau.')
@@ -78,7 +77,7 @@ export function GeminiSettingsForm({ universityId, defaultValue }: Props) {
       }
     } catch {
       setTestResult('error')
-      toast.error('Gagal menghubungi Gemini API.')
+      toast.error('Gagal menghubungi server.')
     } finally {
       setTestLoading(false)
     }
@@ -124,12 +123,12 @@ export function GeminiSettingsForm({ universityId, defaultValue }: Props) {
         <Badge
           variant="outline"
           className={
-            defaultValue
+            isConfigured
               ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
               : 'text-muted-foreground'
           }
         >
-          {defaultValue ? 'Terkonfigurasi' : 'Belum dikonfigurasi'}
+          {isConfigured ? 'Terkonfigurasi' : 'Belum dikonfigurasi'}
         </Badge>
       </div>
 

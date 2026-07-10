@@ -31,7 +31,7 @@ export default async function CompanyLayout({ children }: { children: React.Reac
       />
       <SidebarInset>
         <CompanyHeader />
-        <main className="flex flex-1 flex-col">{children}</main>
+        <main className="flex flex-1 flex-col items-center">{children}</main>
       </SidebarInset>
     </SidebarProvider>
   )

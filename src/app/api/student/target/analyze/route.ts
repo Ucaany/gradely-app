@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
       career_goal?: string | null
     }
 
-    if (!target_semester || target_semester < 7 || target_semester > 14) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Target semester tidak valid', success: false }, { status: 400 })
+    if (!target_semester || target_semester < 2 || target_semester > 14) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Target semester tidak valid. Harus antara 2 dan 14.', success: false }, { status: 400 })
     }
 
     const apiKey = process.env.AI_API_KEY ?? ''
@@ -115,6 +115,11 @@ export async function POST(request: NextRequest) {
     }
 
     const currentSemester = profile.current_semester ?? 1
+
+    if (target_semester <= currentSemester) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Target semester harus lebih besar dari semester aktif saat ini.', success: false }, { status: 400 })
+    }
+
     const typedGrades = (grades ?? []) as StudentGrade[]
     const summary = calculateAcademicSummary(typedGrades, currentSemester, target_semester, effectiveRule)
     const semesterSummaries = groupGradesBySemester(typedGrades)
@@ -303,8 +308,7 @@ Analisis secara mendalam kondisi dari semester 1 hingga prediksi lulus. Balas HA
       error: null,
       success: true,
     })
-  } catch (err) {
-    console.error('Target analyze error:', err)
+  } catch {
     return NextResponse.json<ApiResponse>({ data: null, error: 'Internal server error', success: false }, { status: 500 })
   }
 }

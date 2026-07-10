@@ -8,14 +8,22 @@ export async function GET() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('university_id')
+    .select('role, university_id')
     .eq('id', user.id)
     .single()
+
+  if (!profile || profile.role !== 'company') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
+  if (!profile.university_id) {
+    return NextResponse.json({ success: true, data: [] })
+  }
 
   const { data, error } = await supabase
     .from('study_programs')
     .select('id, name, short_name, degree_level')
-    .eq('university_id', profile?.university_id)
+    .eq('university_id', profile.university_id)
     .eq('is_active', true)
     .order('name')
 

@@ -15,12 +15,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
+    const { data: adminProfile } = await supabase
+      .from('users')
+      .select('university_id')
+      .eq('id', user.id)
+      .single()
+
     const body = await request.json()
-    const { rows, university_id, default_password } = body
+    const { rows } = body
 
     if (!Array.isArray(rows) || rows.length === 0) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Data tidak valid', success: false }, { status: 400 })
     }
+
+    const university_id = adminProfile?.university_id ?? null
+    if (!university_id) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'University tidak ditemukan untuk akun admin ini', success: false }, { status: 400 })
+    }
+
+    const default_password = process.env.DEFAULT_IMPORT_PASSWORD ?? 'Gradely@2024'
 
     const serviceClient = createServiceClient()
     const result: ImportResult = { success: 0, failed: 0, errors: [] }
