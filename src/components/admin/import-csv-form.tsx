@@ -19,7 +19,7 @@ interface Props {
 
 const REQUIRED_COLS = ['full_name', 'email', 'role']
 const OPTIONAL_COLS = ['nim', 'phone', 'study_program_id', 'current_semester']
-const VALID_ROLES = ['student', 'lecturer', 'admin']
+const VALID_ROLES = ['student', 'lecturer', 'admin', 'company']
 
 const TEMPLATE_ROWS = [
   { full_name: 'Budi Santoso', email: 'budi@kampus.ac.id', role: 'student', nim: '2021001001', phone: '081234567890', study_program_id: '', current_semester: '3' },

@@ -10,7 +10,6 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import {
   Tooltip,
   TooltipContent,
@@ -33,8 +32,6 @@ import {
   Code2,
   Sparkles,
   Info,
-  Calendar,
-  Award,
 } from 'lucide-react'
 import {
   calculateAcademicSummary,
@@ -76,7 +73,7 @@ export default async function StudentDashboardPage() {
       .maybeSingle(),
     supabase
       .from('career_interests')
-      .select('id', { count: 'exact', head: true })
+      .select('id, interest')
       .eq('student_id', user.id),
   ])
 
@@ -86,7 +83,8 @@ export default async function StudentDashboardPage() {
   const latestAnalysis = latestAnalysisRes.data
 
   // Cek apakah mahasiswa sudah mengisi minat karier dan target industri
-  const hasCareerInterests = (careerRes.count ?? 0) > 0
+  const careerInterests: string[] = (careerRes.data ?? []).map((c: { interest: string }) => c.interest)
+  const hasCareerInterests = careerInterests.length > 0
   const hasTargetIndustries = (target?.target_industries?.length ?? 0) > 0
   const needsOnboarding = !hasCareerInterests || !hasTargetIndustries
 
@@ -251,11 +249,9 @@ export default async function StudentDashboardPage() {
                 : 'Kamu belum memilih industri yang diminati. Lengkapi untuk rekomendasi perusahaan mitra.'}
             </p>
           </div>
-          <Link href="/student/onboarding">
-            <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40">
-              Lengkapi Sekarang
-            </Button>
-          </Link>
+          <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40" asChild>
+            <Link href="/student/onboarding">Lengkapi Sekarang</Link>
+          </Button>
         </div>
       )}
 
@@ -418,17 +414,17 @@ export default async function StudentDashboardPage() {
         </Card>
       )}
 
-      {/* Ringkasan analisis terbaru — medium detail */}
+      {/* Prediksi & Analisis Kelulusan — hanya tampil jika sudah ada analisis */}
       {latestAnalysis && (() => {
         const s = latestAnalysis.analysis?.status
         const statusCfg = s === 'aman'
-          ? { label: 'Aman', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800', dot: 'bg-emerald-500', pct: 85 }
+          ? { label: 'On Track', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800', dot: 'bg-emerald-500' }
           : s === 'perlu_usaha'
-          ? { label: 'Perlu Usaha', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800', dot: 'bg-amber-500', pct: 55 }
-          : { label: 'Perlu Perhatian', color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800', dot: 'bg-orange-500', pct: 25 }
+          ? { label: 'Perlu Usaha', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800', dot: 'bg-amber-500' }
+          : { label: 'Perlu Perhatian', color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800', dot: 'bg-orange-500' }
 
-        const sisaSemester = latestAnalysis.target_semester != null && summary.current_semester != null
-          ? Math.max(0, latestAnalysis.target_semester - summary.current_semester)
+        const sisaSemester = latestAnalysis.target_semester != null
+          ? Math.max(0, latestAnalysis.target_semester - currentSemester)
           : null
 
         return (
@@ -436,19 +432,18 @@ export default async function StudentDashboardPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" />
+                  <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
                   <CardTitle className="text-base">Prediksi & Analisis Kelulusan</CardTitle>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/student/target/history">
-                    Lihat Detail <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                    Lihat Detail <ArrowRight className="h-3.5 w-3.5 ml-1" aria-hidden="true" />
                   </Link>
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
-
-              {/* Status badge + bar */}
+            <CardContent className="space-y-3">
+              {/* Status */}
               <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${statusCfg.bg} ${statusCfg.border}`}>
                 <span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${statusCfg.dot}`} />
                 <div className="flex-1 min-w-0">
@@ -461,115 +456,64 @@ export default async function StudentDashboardPage() {
                 </div>
               </div>
 
-              {/* Info target: semester & IPK */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                    <p className="text-xs text-muted-foreground">Target Lulus</p>
-                  </div>
-                  <p className="text-lg font-bold leading-none tabular-nums">
-                    Semester {latestAnalysis.target_semester ?? '-'}
+              {/* 4 metrik utama dalam grid */}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
+                  <p className="text-xs text-muted-foreground">Target Lulus</p>
+                  <p className="text-base font-bold tabular-nums">
+                    Sem {latestAnalysis.target_semester ?? '-'}
                   </p>
                   {sisaSemester !== null && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {sisaSemester > 0 ? `${sisaSemester} semester lagi` : 'Semester ini'}
+                    <p className="text-xs text-muted-foreground">
+                      {sisaSemester > 0 ? `${sisaSemester} sem lagi` : 'Semester ini'}
                     </p>
                   )}
                 </div>
-                <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-1">
-                  <div className="flex items-center gap-1.5">
-                    <Award className="h-3.5 w-3.5 text-muted-foreground" />
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className="text-xs text-muted-foreground cursor-help underline decoration-dotted">Target IPK</p>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-xs max-w-[200px]">
-                          <p><strong>Indeks Prestasi Kumulatif</strong> yang ingin dicapai saat lulus.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                  <p className="text-lg font-bold leading-none tabular-nums">
+                <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
+                  <p className="text-xs text-muted-foreground">Target IPK</p>
+                  <p className="text-base font-bold tabular-nums">
                     {latestAnalysis.target_ipk != null ? Number(latestAnalysis.target_ipk).toFixed(2) : '-'}
                   </p>
                   {latestAnalysis.analysis?.ipk_minimal_per_semester != null && (
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      Min/semester: {Number(latestAnalysis.analysis.ipk_minimal_per_semester).toFixed(2)}
+                    <p className="text-xs text-muted-foreground">
+                      Min/sem: {Number(latestAnalysis.analysis.ipk_minimal_per_semester).toFixed(2)}
                     </p>
                   )}
                 </div>
-              </div>
-
-              {/* Metrik kebutuhan */}
-              <div className="grid grid-cols-2 gap-3">
                 {latestAnalysis.analysis?.sks_per_semester_dibutuhkan != null && (
-                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-0.5">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className="text-xs text-muted-foreground cursor-help underline decoration-dotted w-fit">SKS per Semester</p>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-xs max-w-[220px]">
-                          <p>Jumlah <strong>Satuan Kredit Semester</strong> yang perlu diambil setiap semester agar lulus tepat waktu sesuai target.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <p className="text-lg font-bold tabular-nums">
+                  <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
+                    <p className="text-xs text-muted-foreground">SKS/Semester</p>
+                    <p className="text-base font-bold tabular-nums">
                       {latestAnalysis.analysis.sks_per_semester_dibutuhkan}
                       <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>
                     </p>
                   </div>
                 )}
                 {latestAnalysis.analysis?.ips_target_semester_depan != null && (
-                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-0.5">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <p className="text-xs text-muted-foreground cursor-help underline decoration-dotted w-fit">Target IPS Depan</p>
-                        </TooltipTrigger>
-                        <TooltipContent className="text-xs max-w-[220px]">
-                          <p><strong>Indeks Prestasi Semester</strong> yang perlu dicapai di semester berikutnya untuk tetap on-track menuju target IPK.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    <p className="text-lg font-bold tabular-nums">
+                  <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
+                    <p className="text-xs text-muted-foreground">Target IPS Depan</p>
+                    <p className="text-base font-bold tabular-nums">
                       {Number(latestAnalysis.analysis.ips_target_semester_depan).toFixed(2)}
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Strategi kelulusan */}
-              {latestAnalysis.analysis?.strategi_kelulusan && (
-                <>
-                  <Separator />
-                  <div className="space-y-1.5">
-                    <p className="text-xs font-semibold text-foreground">Strategi Kelulusan</p>
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      {latestAnalysis.analysis.strategi_kelulusan}
-                    </p>
-                  </div>
-                </>
-              )}
-
-              {/* Rekomendasi utama */}
+              {/* Rekomendasi utama — 1 saja */}
               {latestAnalysis.analysis?.rekomendasi?.[0] && (
-                <div className="flex items-start gap-2.5 rounded-xl bg-primary/5 border border-primary/10 px-4 py-3">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
+                <div className="flex items-start gap-2.5 rounded-xl bg-primary/5 border border-primary/10 px-3 py-2.5">
+                  <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" aria-hidden="true" />
                   <p className="text-xs text-muted-foreground leading-relaxed">
                     {latestAnalysis.analysis.rekomendasi[0]}
                   </p>
                 </div>
               )}
-
             </CardContent>
           </Card>
         )
       })()}
 
-      {/* Prompt to set target when not set */}
+      {/* CTA Atur Target — hanya tampil jika belum ada target */}
       {!target && (
         <div className="rounded-xl border border-dashed border-primary/30 bg-primary/5 px-4 py-4 flex items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -587,14 +531,36 @@ export default async function StudentDashboardPage() {
         </div>
       )}
 
-      {/* Target info: skill & industri */}
-      {target && ((target.target_skills && target.target_skills.length > 0) || (target.target_industries && target.target_industries.length > 0)) && (
+      {/* Minat Karir + Target info: skill & industri */}
+      {(careerInterests.length > 0 || (target && ((target.target_skills && target.target_skills.length > 0) || (target.target_industries && target.target_industries.length > 0)))) && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {target.target_skills && target.target_skills.length > 0 && (
+          {/* Minat Karir — dari career_interests */}
+          {careerInterests.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Code2 className="h-4 w-4 text-primary" />
+                  <Briefcase className="h-4 w-4 text-primary" aria-hidden="true" />
+                  Minat Karir
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="flex flex-wrap gap-1.5">
+                  {careerInterests.map((interest) => (
+                    <Badge key={interest} variant="secondary" className="text-xs">{interest}</Badge>
+                  ))}
+                </div>
+                <Button variant="ghost" size="sm" className="mt-2 h-7 px-2 text-xs text-muted-foreground" asChild>
+                  <Link href="/student/career">Edit Minat</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+          {/* Skill target */}
+          {target && target.target_skills && target.target_skills.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Code2 className="h-4 w-4 text-primary" aria-hidden="true" />
                   Skill yang Ingin Dikuasai
                 </CardTitle>
               </CardHeader>
@@ -607,11 +573,12 @@ export default async function StudentDashboardPage() {
               </CardContent>
             </Card>
           )}
-          {target.target_industries && target.target_industries.length > 0 && (
+          {/* Industri target */}
+          {target && target.target_industries && target.target_industries.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-primary" />
+                  <Briefcase className="h-4 w-4 text-primary" aria-hidden="true" />
                   Industri yang Diminati
                 </CardTitle>
               </CardHeader>
@@ -728,8 +695,10 @@ export default async function StudentDashboardPage() {
           </CardHeader>
           <CardContent>
             {needsRetakeDisplay.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
-                <GraduationCap className="h-8 w-8 text-muted-foreground/40" />
+              <div className="flex flex-col items-center justify-center py-8 gap-3 w-full text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30">
+                  <CheckCircle2 className="h-6 w-6 text-emerald-500" aria-hidden="true" />
+                </div>
                 <p className="text-sm text-muted-foreground">Semua nilai sudah memenuhi syarat</p>
               </div>
             ) : (
