@@ -117,7 +117,7 @@ function GridCard({ rule, programs, universityId }: {
               {Object.entries(rule.grade_scale as unknown as Record<string, number>).map(([g, v]) => (
                 <div key={g} className="flex items-center gap-1 rounded border bg-muted/40 px-2 py-0.5">
                   <span className="text-xs font-semibold">{g}</span>
-                  <span className="text-xs text-muted-foreground">={v.toFixed(1)}</span>
+                  <span className="text-xs text-muted-foreground">={v.toFixed(2)}</span>
                 </div>
               ))}
             </div>

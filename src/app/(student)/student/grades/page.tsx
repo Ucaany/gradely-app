@@ -239,7 +239,7 @@ export default function StudentGradesPage() {
                           </span>
                         </TableCell>
                         <TableCell className="text-center text-sm text-muted-foreground">
-                          {Number(g.grade_points).toFixed(1)}
+                          {Number(g.grade_points).toFixed(2)}
                         </TableCell>
                         <TableCell className="pr-4 sm:pr-6">
                           <GradeActions grade={g} onEdit={handleEdit} onDelete={handleDelete} isDeleting={deletingId === g.id} />
@@ -294,7 +294,7 @@ export default function StudentGradesPage() {
                             <GraduationCap className="h-3 w-3" />
                             {g.credits} SKS
                           </span>
-                          <span>{Number(g.grade_points).toFixed(1)}</span>
+                          <span>{Number(g.grade_points).toFixed(2)}</span>
                         </div>
                         {g.is_retake && (
                           <span className="inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400">
