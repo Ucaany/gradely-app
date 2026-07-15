@@ -355,7 +355,7 @@ function AcademicRuleForm({
                 <FormField
                   key={g}
                   control={form.control}
-                  name={`grade_scale.${g}` as any}
+                  name={`grade_scale.${g}` as `grade_scale.${typeof g}`}
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-xs font-semibold">{g}</FormLabel>
