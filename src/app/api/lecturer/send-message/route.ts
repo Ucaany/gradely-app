@@ -49,23 +49,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Mahasiswa tidak ditemukan', success: false }, { status: 404 })
     }
 
-    // Validasi nomor HP mahasiswa — jika tidak ada, return error dengan keterangan jelas
-    if (!student.phone || student.phone.trim() === '') {
-      return NextResponse.json<ApiResponse>({
-        data: null,
-        error: `Nomor HP mahasiswa ${student.full_name} (${student.nim ?? '-'}) belum diisi. Minta mahasiswa mengisi nomor HP di profil terlebih dahulu.`,
-        success: false,
-      }, { status: 400 })
-    }
-
-    // Validasi format nomor HP
-    const phoneDigits = student.phone.replace(/\D/g, '')
-    if (phoneDigits.length < 9 || phoneDigits.length > 15) {
-      return NextResponse.json<ApiResponse>({
-        data: null,
-        error: `Nomor HP mahasiswa ${student.full_name} tidak valid (${student.phone}). Minta mahasiswa memperbarui nomor HP di profil.`,
-        success: false,
-      }, { status: 400 })
+    // Validasi nomor HP hanya diperlukan saat benar-benar mengirim
+    let phoneDigits = ''
+    if (!preview_only) {
+      if (!student.phone || student.phone.trim() === '') {
+        return NextResponse.json<ApiResponse>({
+          data: null,
+          error: `Nomor HP mahasiswa ${student.full_name} (${student.nim ?? '-'}) belum diisi. Minta mahasiswa mengisi nomor HP di profil terlebih dahulu.`,
+          success: false,
+        }, { status: 400 })
+      }
+      phoneDigits = student.phone.replace(/\D/g, '')
+      if (phoneDigits.length < 9 || phoneDigits.length > 15) {
+        return NextResponse.json<ApiResponse>({
+          data: null,
+          error: `Nomor HP mahasiswa ${student.full_name} tidak valid (${student.phone}). Minta mahasiswa memperbarui nomor HP di profil.`,
+          success: false,
+        }, { status: 400 })
+      }
     }
 
     // Load grades
