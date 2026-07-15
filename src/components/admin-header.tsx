@@ -23,7 +23,7 @@ const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/admin/users/import": [{ label: "Pengguna" }, { label: "Mahasiswa", href: "/admin/users/students" }, { label: "Import CSV" }],
   "/admin/study-programs": [{ label: "Akademik" }, { label: "Program Studi" }],
   "/admin/academic-rules": [{ label: "Akademik" }, { label: "Aturan Akademik" }],
-  "/admin/settings": [{ label: "Konfigurasi" }, { label: "WAHA" }],
+  "/admin/settings": [{ label: "Konfigurasi" }, { label: "Fonnte" }],
   "/admin/settings/general": [{ label: "Konfigurasi" }, { label: "Pengaturan Umum" }],
   "/admin/skills-career": [{ label: "Akademik" }, { label: "Skill & Karir" }],
   "/admin/account": [{ label: "Konfigurasi" }, { label: "Akun Saya" }],

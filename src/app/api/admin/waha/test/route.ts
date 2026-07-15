@@ -20,8 +20,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Token Fonnte diperlukan', success: false }, { status: 400 })
     }
 
-    const res = await fetch('https://api.fonnte.com/validate-token', {
-      method: 'GET',
+    const res = await fetch('https://api.fonnte.com/device', {
+      method: 'POST',
       headers: { Authorization: fonnte_token },
       signal: AbortSignal.timeout(8000),
     })
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    return NextResponse.json<ApiResponse>({ data: { connected: true, device: json.device ?? null }, error: null, success: true })
+    return NextResponse.json<ApiResponse>({ data: { connected: true, device: json.device ?? null, name: json.name ?? null, status: json.device_status ?? null }, error: null, success: true })
   } catch (err) {
     const msg = err instanceof Error ? err.message : 'Koneksi ke Fonnte gagal'
     return NextResponse.json<ApiResponse>({ data: null, error: msg, success: false }, { status: 400 })

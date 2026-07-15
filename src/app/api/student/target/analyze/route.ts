@@ -51,9 +51,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Target semester tidak valid. Harus antara 2 dan 14.', success: false }, { status: 400 })
     }
 
-    const apiKey = process.env.AI_API_KEY ?? ''
-    const baseUrl = process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1'
-    const model = process.env.AI_MODEL ?? 'kr/auto'
+    const { data: aiSettingRows } = await supabase
+      .from('settings')
+      .select('key, value')
+      .eq('university_id', profile.university_id ?? '')
+      .in('key', ['ai_api_key', 'ai_base_url', 'ai_model'])
+
+    const aiSettingsMap = Object.fromEntries((aiSettingRows ?? []).map(r => [r.key, r.value]))
+    const apiKey = aiSettingsMap['ai_api_key'] ?? process.env.AI_API_KEY ?? ''
+    const baseUrl = (aiSettingsMap['ai_base_url'] ?? process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
+    const model = aiSettingsMap['ai_model'] ?? process.env.AI_MODEL ?? 'kr/auto'
 
     if (!apiKey) {
       return NextResponse.json<ApiResponse>(

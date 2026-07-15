@@ -90,7 +90,7 @@ const adminNavKonfigurasi = [
     icon: Bell,
   },
   {
-    title: "Konfigurasi WAHA",
+    title: "Konfigurasi Fonnte",
     url: "/admin/settings",
     icon: MessageSquare,
   },

@@ -211,6 +211,35 @@ export default async function LecturerDashboardPage() {
         </Card>
       )}
 
+      {/* Distribusi Minat Karier */}
+      {careerCounts.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Briefcase className="h-4 w-4 text-muted-foreground" />
+              Distribusi Minat Karier
+            </CardTitle>
+            <CardDescription>Top minat karier mahasiswa bimbingan</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {careerCounts.map(({ name, count }) => (
+              <div key={name} className="flex items-center gap-3">
+                <p className="text-sm flex-1 truncate">{name}</p>
+                <div className="flex items-center gap-2 shrink-0">
+                  <div className="w-24 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary"
+                      style={{ width: `${Math.round((count / careerCounts[0].count) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-xs text-muted-foreground w-6 text-right">{count}</span>
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-2">
         {/* Mahasiswa Berisiko */}
         <Card>

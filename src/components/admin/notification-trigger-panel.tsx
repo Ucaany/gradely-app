@@ -245,7 +245,7 @@ export function NotificationTriggerPanel({ universityId, eligibleStudentCount }:
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li className="flex items-start gap-2">
               <Badge variant="outline" className="shrink-0 mt-0.5 text-xs">1</Badge>
-              Notifikasi dikirim via WhatsApp (WAHA) <span className="font-medium text-foreground">dan</span> masuk ke inbox mahasiswa di aplikasi.
+              Notifikasi dikirim via WhatsApp (Fonnte) <span className="font-medium text-foreground">dan</span> masuk ke inbox mahasiswa di aplikasi.
             </li>
             <li className="flex items-start gap-2">
               <Badge variant="outline" className="shrink-0 mt-0.5 text-xs">2</Badge>

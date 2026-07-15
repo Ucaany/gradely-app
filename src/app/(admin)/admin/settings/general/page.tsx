@@ -160,7 +160,7 @@ export default async function GeneralSettingsPage() {
             </CardHeader>
             <CardContent className="space-y-0">
               {[
-                { label: 'Notifikasi WhatsApp', desc: 'Via WAHA self-hosted', active: true, href: '/admin/settings' },
+                { label: 'Notifikasi WhatsApp', desc: 'Via Fonnte API', active: true, href: '/admin/settings' },
                 { label: 'Notifikasi Email', desc: 'SMTP belum dikonfigurasi', active: false, href: null },
               ].map((item, i, arr) => (
                 <div key={item.label}>
