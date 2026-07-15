@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import type { ApiResponse } from '@/types'
+import { deduplicateRetakes } from '@/lib/utils/academic'
+import type { ApiResponse, StudentGrade } from '@/types'
 
 // GET /api/admin/chart-data — rata-rata IPK & IPS per semester dari mahasiswa universitas admin
 export async function GET() {
@@ -41,7 +42,7 @@ export async function GET() {
 
     const { data: grades, error } = await supabase
       .from('student_grades')
-      .select('semester_number, grade_points, credits, student_id')
+      .select('semester_number, grade_points, credits, student_id, course_name, is_retake')
       .in('student_id', studentIds)
       .order('semester_number', { ascending: true })
 
@@ -51,12 +52,22 @@ export async function GET() {
       return NextResponse.json({ data: [], error: null, success: true })
     }
 
-    const filteredGrades = grades
+    // Deduplikasi per mahasiswa agar mata kuliah ulang tidak dihitung ganda
+    const gradesByStudent = new Map<string, StudentGrade[]>()
+    for (const g of grades) {
+      const list = gradesByStudent.get(g.student_id) ?? []
+      list.push(g as unknown as StudentGrade)
+      gradesByStudent.set(g.student_id, list)
+    }
+
+    const dedupedGrades: StudentGrade[] = Array.from(gradesByStudent.values()).flatMap(
+      (studentGrades) => deduplicateRetakes(studentGrades)
+    )
 
     // Group by semester_number, hitung rata-rata IPS per semester dan IPK kumulatif
     const semesterMap = new Map<number, { totalWeighted: number; totalCredits: number }>()
 
-    for (const g of filteredGrades) {
+    for (const g of dedupedGrades) {
       const sem = g.semester_number
       const existing = semesterMap.get(sem) ?? { totalWeighted: 0, totalCredits: 0 }
       existing.totalWeighted += g.grade_points * g.credits

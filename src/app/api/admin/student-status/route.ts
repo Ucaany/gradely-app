@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { calculateAcademicStatus } from '@/lib/utils/academic'
+import { calculateAcademicStatus, deduplicateRetakes } from '@/lib/utils/academic'
 import type { ApiResponse, AcademicStatus, AcademicRule, StudentGrade, GradeValue } from '@/types'
 
 export async function GET() {
@@ -67,10 +67,11 @@ export async function GET() {
       const studentGrades = gradesByStudent.get(student.id) ?? []
       const rule = (rules ?? []).find((r: AcademicRule) => r.study_program_id === student.study_program_id) ?? defaultRule
 
+      const dedupedGrades = deduplicateRetakes(studentGrades)
       const passingPoints = rule.grade_scale[rule.passing_grade as GradeValue] ?? 0
-      const sksLulus = studentGrades.filter((g) => g.grade_points >= passingPoints).reduce((s, g) => s + g.credits, 0)
-      const totalWeighted = studentGrades.reduce((s, g) => s + g.grade_points * g.credits, 0)
-      const totalCredits = studentGrades.reduce((s, g) => s + g.credits, 0)
+      const sksLulus = dedupedGrades.filter((g) => g.grade_points >= passingPoints).reduce((s, g) => s + g.credits, 0)
+      const totalWeighted = dedupedGrades.reduce((s, g) => s + g.grade_points * g.credits, 0)
+      const totalCredits = dedupedGrades.reduce((s, g) => s + g.credits, 0)
       const ipk = totalCredits > 0 ? Math.round((totalWeighted / totalCredits) * 100) / 100 : 0
       const retakeCount = studentGrades.filter((g) => g.is_retake).length
       const currentSemester = student.current_semester ?? 1

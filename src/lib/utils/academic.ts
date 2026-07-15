@@ -122,11 +122,12 @@ export function calculateAcademicSummary(
   targetSemester: number,
   rule: AcademicRule
 ): AcademicSummary {
-  const passedGrades = grades.filter(
+  const dedupedGrades = deduplicateRetakes(grades)
+  const passedGrades = dedupedGrades.filter(
     (g) => g.grade_points >= (rule.grade_scale[rule.passing_grade as GradeValue] ?? 0)
   )
   const sksLulus = passedGrades.reduce((sum, g) => sum + g.credits, 0)
-  const ipk = calculateIPK(grades)
+  const ipk = calculateIPK(dedupedGrades)
 
   // IPS semester terakhir
   const lastSemGrades = grades.filter(
@@ -165,6 +166,30 @@ export function calculateAcademicSummary(
     courses_passed: passedGrades.length,
     courses_retake: retakeCount,
   }
+}
+
+/**
+ * Deduplikasi mata kuliah yang diulang.
+ * Jika satu mata kuliah muncul lebih dari sekali, hanya nilai terbaik
+ * (grade_points tertinggi) yang digunakan untuk perhitungan IPK & SKS lulus.
+ * Jika grade_points sama, ambil entri dari semester terbaru.
+ */
+export function deduplicateRetakes(grades: StudentGrade[]): StudentGrade[] {
+  const map = new Map<string, StudentGrade>()
+  for (const g of grades) {
+    const key = g.course_name.trim().toLowerCase()
+    const existing = map.get(key)
+    if (!existing) {
+      map.set(key, g)
+    } else if (
+      g.grade_points > existing.grade_points ||
+      (g.grade_points === existing.grade_points &&
+        g.semester_number > existing.semester_number)
+    ) {
+      map.set(key, g)
+    }
+  }
+  return Array.from(map.values())
 }
 
 /**
