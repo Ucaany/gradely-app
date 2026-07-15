@@ -281,7 +281,7 @@ export default async function LecturerStudentDetailPage({
             Batas Pengambilan SKS Semester Berikutnya
           </CardTitle>
           <CardDescription>
-            Berdasarkan IPK
+            Berdasarkan IPS semester terakhir
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -294,7 +294,7 @@ export default async function LecturerStudentDetailPage({
             ) : (
               <div className="space-y-1">
                 <p className="text-sm text-blue-700 dark:text-blue-300">
-                  IPK mahasiswa: <span className="font-semibold">{formatGPA(summary.gpa)}</span>
+                  IPS terakhir: <span className="font-semibold">{formatGPA(summary.last_gpa)}</span>
                 </p>
                 <p className="text-sm text-blue-700 dark:text-blue-300">
                   Boleh mengambil{' '}
@@ -313,7 +313,7 @@ export default async function LecturerStudentDetailPage({
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-muted/50 border-b">
-                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Rentang IPK</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Rentang IPS</th>
                       <th className="text-left px-3 py-2 font-medium text-muted-foreground">SKS yang Diizinkan</th>
                       <th className="text-left px-3 py-2 font-medium text-muted-foreground">Status</th>
                     </tr>
@@ -401,7 +401,7 @@ export default async function LecturerStudentDetailPage({
                           </td>
                           <td className="px-3 py-2 text-center">{g.credits}</td>
                           <td className="px-3 py-2 text-center font-semibold">{g.grade}</td>
-                          <td className="px-3 py-2 text-center text-muted-foreground">{g.grade_points}</td>
+                           <td className="px-3 py-2 text-center text-muted-foreground">{Number(g.grade_points).toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>

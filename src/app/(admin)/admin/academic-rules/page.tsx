@@ -129,7 +129,7 @@ function SKSTiersTable({ sksRules }: { sksRules: SKSRulesByIPK }) {
   return (
     <div>
       <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
-         Batas SKS Berdasarkan IPK
+         Batas SKS Berdasarkan IPS
       </p>
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
@@ -137,12 +137,12 @@ function SKSTiersTable({ sksRules }: { sksRules: SKSRulesByIPK }) {
           <span className="text-sm font-semibold">Maks {sksRules.semester_1_2_max} SKS</span>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground mb-2">Semester 3 ke atas (berdasarkan IPK):</p>
+          <p className="text-xs text-muted-foreground mb-2">Semester 3 ke atas (berdasarkan IPS semester sebelumnya):</p>
           <div className="rounded-lg border overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50 border-b">
-                  <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Rentang IPK</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Rentang IPS</th>
                   <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">SKS yang Diizinkan</th>
                 </tr>
               </thead>
