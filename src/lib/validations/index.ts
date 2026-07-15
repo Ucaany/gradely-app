@@ -230,7 +230,10 @@ export const csvUserRowSchema = z.object({
   role: z.enum(['student', 'lecturer', 'admin', 'company']),
   nim: z.string().optional(),
   phone: z.string().optional(),
-  study_program_id: z.string().optional(),
+  study_program_id: z.preprocess(
+    (val) => (val === '' || val === null || val === undefined ? undefined : val),
+    z.string().optional()
+  ),
   current_semester: z.preprocess(
     (val) => (val === '' || val === null || val === undefined ? undefined : val),
     z.coerce.number().int().min(1).max(14).optional()

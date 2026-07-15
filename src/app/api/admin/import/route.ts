@@ -44,8 +44,31 @@ export async function POST(request: NextRequest) {
     const serviceClient = createServiceClient()
     const result: ImportResult = { success: 0, failed: 0, errors: [] }
 
+    // Cache lookup: nama prodi -> UUID (case-insensitive)
+    const { data: studyPrograms } = await serviceClient
+      .from('study_programs')
+      .select('id, name')
+      .eq('university_id', university_id)
+
+    const studyProgramMap = new Map<string, string>(
+      (studyPrograms ?? []).map((sp: { id: string; name: string }) => [sp.name.toLowerCase(), sp.id])
+    )
+
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i]
+
+      // Resolve study_program_id: jika bukan UUID, coba lookup by name
+      if (row.study_program_id && !/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(row.study_program_id)) {
+        const resolved = studyProgramMap.get(row.study_program_id.toLowerCase())
+        if (resolved) {
+          row.study_program_id = resolved
+        } else {
+          result.failed++
+          result.errors.push({ row: i + 1, email: row.email ?? 'unknown', reason: `Program studi "${row.study_program_id}" tidak ditemukan` })
+          continue
+        }
+      }
+
       const parsed = csvUserRowSchema.safeParse(row)
 
       if (!parsed.success) {
