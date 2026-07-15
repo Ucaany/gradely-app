@@ -43,7 +43,7 @@ export default async function StudentDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileRes, gradesRes, targetRes, latestAnalysisRes] = await Promise.all([
+  const [profileRes, gradesRes, targetRes, latestAnalysisRes, careerRes] = await Promise.all([
     supabase
       .from('users')
       .select('full_name, nim, current_semester, study_program_id, university_id, onboarding_completed, study_programs(name, short_name)')
@@ -66,12 +66,21 @@ export default async function StudentDashboardPage() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('career_interests')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', user.id),
   ])
 
   const profile = profileRes.data
   const grades = (gradesRes.data ?? []) as StudentGrade[]
   const target = targetRes.data
   const latestAnalysis = latestAnalysisRes.data
+
+  // Cek apakah mahasiswa sudah mengisi minat karier dan target industri
+  const hasCareerInterests = (careerRes.count ?? 0) > 0
+  const hasTargetIndustries = (target?.target_industries?.length ?? 0) > 0
+  const needsOnboarding = !hasCareerInterests || !hasTargetIndustries
 
   let rule: AcademicRule | null = null
   if (profile?.university_id) {
@@ -228,13 +237,17 @@ export default async function StudentDashboardPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
       {/* Banner onboarding belum selesai */}
-      {!profile?.onboarding_completed && (
+      {needsOnboarding && (
         <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-3 flex items-center gap-3">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Profil belum lengkap</p>
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Profil karier belum lengkap</p>
             <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-              Lengkapi onboarding untuk mendapatkan rekomendasi karier dan perusahaan mitra yang sesuai.
+              {!hasCareerInterests && !hasTargetIndustries
+                ? 'Kamu belum memilih minat karier dan industri. Lengkapi untuk mendapatkan rekomendasi perusahaan mitra yang sesuai.'
+                : !hasCareerInterests
+                ? 'Kamu belum memilih minat karier. Lengkapi untuk rekomendasi yang lebih akurat.'
+                : 'Kamu belum memilih industri yang diminati. Lengkapi untuk rekomendasi perusahaan mitra.'}
             </p>
           </div>
           <Link href="/student/onboarding">
