@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
@@ -26,6 +26,7 @@ interface Props {
 
 export function WahaSettingsForm({ universityId, defaultValues }: Props) {
   const router = useRouter()
+  const [, startTransition] = useTransition()
   const [isLoading, setIsLoading] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; device?: string } | null>(null)
@@ -54,7 +55,7 @@ export function WahaSettingsForm({ universityId, defaultValues }: Props) {
         return
       }
       toast.success('Konfigurasi Fonnte berhasil disimpan')
-      router.refresh()
+      startTransition(() => router.refresh())
     } finally {
       setIsLoading(false)
     }

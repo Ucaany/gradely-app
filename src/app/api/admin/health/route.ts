@@ -15,37 +15,39 @@ export async function GET() {
 
     const checks = await Promise.allSettled([
       supabase.from('users').select('id', { count: 'exact', head: true }).limit(1),
-      supabase.from('settings').select('key').eq('university_id', profile.university_id).in('key', ['waha_url', 'waha_session']).limit(2),
+      supabase.from('settings').select('key, value').eq('university_id', profile.university_id).eq('key', 'fonnte_token').limit(1),
     ])
 
     const dbOk = checks[0].status === 'fulfilled' && !('error' in checks[0].value && checks[0].value.error)
 
-    const wahaConfigured = checks[1].status === 'fulfilled' &&
-      !(checks[1].value.error) &&
-      ((checks[1].value.data?.length ?? 0) >= 2)
+    // Fonnte: cek apakah fonnte_token sudah tersimpan di settings
+    const fonnteRow = checks[1].status === 'fulfilled' ? (checks[1].value.data ?? []) : []
+    const fonnteToken = fonnteRow.length > 0 ? (fonnteRow[0] as { key: string; value?: string }).value ?? '' : ''
+    const fonnteConfigured = fonnteToken.trim().length > 0
 
-    let wahaOk = false
-    if (wahaConfigured && checks[1].status === 'fulfilled') {
+    // Verifikasi token Fonnte dengan hit /device endpoint
+    let fonnteOk = false
+    if (fonnteConfigured) {
       try {
-        const wahaMap = Object.fromEntries(
-          (checks[1].value.data ?? []).map((s: { key: string; value?: string }) => [s.key, s.value ?? ''])
-        )
-        const wahaUrl = wahaMap['waha_url']
-        if (wahaUrl) {
-          const pingRes = await fetch(`${wahaUrl}/api/version`, {
-            signal: AbortSignal.timeout(5000),
-          })
-          wahaOk = pingRes.ok
+        const pingRes = await fetch('https://api.fonnte.com/device', {
+          method: 'GET',
+          headers: { Authorization: fonnteToken },
+          signal: AbortSignal.timeout(6000),
+        })
+        if (pingRes.ok) {
+          const json = await pingRes.json()
+          // Fonnte returns status true when device is connected
+          fonnteOk = json?.status === true
         }
       } catch {
-        wahaOk = false
+        fonnteOk = false
       }
     }
 
     const data = [
       { label: 'Database', status: dbOk ? 'Aktif' : 'Error', ok: dbOk },
       { label: 'Autentikasi', status: 'Aktif', ok: true },
-      { label: 'Notifikasi WhatsApp', status: wahaConfigured ? (wahaOk ? 'Aktif' : 'Tidak Terjangkau') : 'Belum Dikonfigurasi', ok: wahaOk },
+      { label: 'Notifikasi WhatsApp', status: fonnteConfigured ? (fonnteOk ? 'Aktif' : 'Perangkat Tidak Terhubung') : 'Belum Dikonfigurasi', ok: fonnteOk },
     ]
 
     return NextResponse.json<ApiResponse>({ data, error: null, success: true })

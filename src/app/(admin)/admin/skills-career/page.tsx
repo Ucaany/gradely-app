@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
+import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -85,6 +86,7 @@ function OptionTable({
 
   return (
     <>
+      {/* Add form */}
       <div className="flex gap-2 mb-4">
         <Input
           placeholder={addPlaceholder}
@@ -93,19 +95,20 @@ function OptionTable({
           onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
           className="max-w-sm"
         />
-        <Button onClick={handleAdd} disabled={adding || !newName.trim()} size="sm">
-          {adding ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
+        <Button onClick={handleAdd} disabled={adding || !newName.trim()} size="sm" className="gap-1.5">
+          {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           Tambah
         </Button>
       </div>
 
+      {/* Table */}
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Nama</TableHead>
+              <TableHead className="pl-4">Nama</TableHead>
               <TableHead className="w-28">Status</TableHead>
-              <TableHead className="w-28 text-right">Aksi</TableHead>
+              <TableHead className="w-32 text-right pr-4">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,7 +121,7 @@ function OptionTable({
             ) : (
               items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell>
+                  <TableCell className="pl-4">
                     {editingId === item.id ? (
                       <div className="flex items-center gap-2">
                         <Input
@@ -129,37 +132,43 @@ function OptionTable({
                           autoFocus
                         />
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRename(item.id)} disabled={loadingId === item.id}>
-                          <Check className="h-3.5 w-3.5 text-emerald-600" />
+                          {loadingId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5 text-emerald-600" />}
                         </Button>
                         <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <span className="text-sm font-medium">{item.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{item.name}</span>
+                        {!item.is_active && (
+                          <Badge variant="outline" className="text-[10px] text-muted-foreground">nonaktif</Badge>
+                        )}
+                      </div>
                     )}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={item.is_active}
-                        onCheckedChange={() => handleToggle(item.id, item.is_active)}
-                        disabled={loadingId === item.id}
-                      />
-                      <Badge variant={item.is_active ? "default" : "secondary"} className="text-[10px]">
-                        {item.is_active ? "Aktif" : "Nonaktif"}
-                      </Badge>
-                    </div>
+                    <Switch
+                      checked={item.is_active}
+                      onCheckedChange={() => handleToggle(item.id, item.is_active)}
+                      disabled={loadingId === item.id}
+                    />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right pr-4">
                     <div className="flex items-center justify-end gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8"
-                        onClick={() => { setEditingId(item.id); setEditValue(item.name) }}>
+                      <Button
+                        size="icon" variant="ghost" className="h-7 w-7"
+                        onClick={() => { setEditingId(item.id); setEditValue(item.name) }}
+                        disabled={loadingId === item.id}
+                      >
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteTarget(item)}>
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button
+                        size="icon" variant="ghost" className="h-7 w-7 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => setDeleteTarget(item)}
+                        disabled={loadingId === item.id}
+                      >
+                        {loadingId === item.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                       </Button>
                     </div>
                   </TableCell>
@@ -170,6 +179,7 @@ function OptionTable({
         </Table>
       </div>
 
+      {/* Delete confirm dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
@@ -208,11 +218,16 @@ function MappingPanel({
 
   const activeSkills = skills.filter(s => s.is_active)
   const activeIndustries = industries.filter(i => i.is_active)
+  // Set ID industri yang aktif — untuk filter count badge
+  const activeIndustryIds = new Set(activeIndustries.map(i => i.id))
 
   React.useEffect(() => {
     if (selectedSkillId !== null) {
-      setDraft(mapping[selectedSkillId] ?? [])
+      // Hanya load draft dari industri yang AKTIF agar tidak ada state stale
+      const rawDraft = mapping[selectedSkillId] ?? []
+      setDraft(rawDraft.filter(id => activeIndustryIds.has(id)))
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSkillId, mapping])
 
   function toggleIndustry(id: string) {
@@ -224,7 +239,6 @@ function MappingPanel({
     setSaving(true)
     try {
       await onSave(selectedSkillId, draft)
-      // draft sudah sesuai, tidak perlu reset — mapping parent sudah diupdate via fetch server
     } finally {
       setSaving(false)
     }
@@ -243,24 +257,31 @@ function MappingPanel({
   }
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-6 lg:grid-cols-2">
+      {/* Kiri — pilih skill */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pilih Skill</p>
-        <div className="rounded-md border max-h-80 overflow-y-auto divide-y">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Pilih Skill</p>
+        <div className="rounded-md border divide-y overflow-hidden max-h-[400px] overflow-y-auto">
           {activeSkills.map((skill) => {
-            const count = (mapping[skill.id] ?? []).length
+            // FIX BUG: hanya hitung industri yang AKTIF
+            const count = (mapping[skill.id] ?? []).filter(id => activeIndustryIds.has(id)).length
             const selected = selectedSkillId === skill.id
             return (
               <button
                 key={skill.id}
                 type="button"
                 onClick={() => setSelectedSkillId(skill.id)}
-                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
-                  selected ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'
+                className={`w-full flex items-center justify-between px-4 py-3 text-sm text-left transition-colors ${
+                  selected
+                    ? 'bg-primary/8 text-primary font-medium'
+                    : 'hover:bg-muted/50 text-foreground'
                 }`}
               >
-                <span className="font-medium">{skill.name}</span>
-                <Badge variant={count > 0 ? 'default' : 'secondary'} className="text-[10px]">
+                <span className="truncate">{skill.name}</span>
+                <Badge
+                  variant={count > 0 ? 'default' : 'secondary'}
+                  className="text-[10px] shrink-0 ml-2"
+                >
                   {count} industri
                 </Badge>
               </button>
@@ -269,19 +290,20 @@ function MappingPanel({
         </div>
       </div>
 
-      <div className="space-y-3">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+      {/* Kanan — pilih industri */}
+      <div className="space-y-2">
+        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
           {selectedSkillId
             ? `Industri untuk: ${activeSkills.find(s => s.id === selectedSkillId)?.name ?? ''}`
             : 'Pilih skill di kiri'}
         </p>
         {!selectedSkillId ? (
-          <div className="rounded-lg border border-dashed py-16 text-center text-xs text-muted-foreground">
-            Pilih skill untuk mengatur industri terkait
+          <div className="rounded-lg border border-dashed h-[400px] flex items-center justify-center">
+            <p className="text-sm text-muted-foreground">Pilih skill untuk mengatur industri terkait</p>
           </div>
         ) : (
-          <>
-            <div className="flex flex-wrap gap-2 rounded-md border p-3 min-h-[200px] content-start">
+          <div className="space-y-3">
+            <div className="rounded-md border divide-y overflow-hidden max-h-[400px] overflow-y-auto">
               {activeIndustries.map((ind) => {
                 const selected = draft.includes(ind.id)
                 return (
@@ -289,22 +311,30 @@ function MappingPanel({
                     key={ind.id}
                     type="button"
                     onClick={() => toggleIndustry(ind.id)}
-                    className={`rounded-full border px-3 py-1.5 text-xs transition-all ${
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm text-left transition-colors ${
                       selected
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'border-border hover:border-primary/60'
+                        ? 'bg-primary/8 text-primary font-medium'
+                        : 'hover:bg-muted/50 text-foreground'
                     }`}
                   >
-                    {ind.name}
+                    <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border-2 transition-all ${
+                      selected ? 'border-primary bg-primary' : 'border-muted-foreground/25'
+                    }`}>
+                      {selected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                    </div>
+                    <span className="truncate">{ind.name}</span>
                   </button>
                 )
               })}
             </div>
-            <Button size="sm" onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
-              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
-              Simpan Mapping
-            </Button>
-          </>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">{draft.length} industri dipilih</p>
+              <Button size="sm" onClick={handleSave} disabled={saving} className="gap-1.5">
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                Simpan Mapping
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>
@@ -423,6 +453,8 @@ export default function SkillsCareerPage() {
     toast.success('Mapping skill–industri disimpan')
   }
 
+  const activeIndustryIds = new Set(industries.filter(i => i.is_active).map(i => i.id))
+
   const sections = [
     {
       key: "skills" as Section,
@@ -431,7 +463,7 @@ export default function SkillsCareerPage() {
       iconClass: "text-violet-500",
       count: skills.filter(s => s.is_active).length,
       total: skills.length,
-      description: "Skill yang bisa dipilih mahasiswa saat onboarding dan di halaman target. Nonaktifkan untuk menyembunyikan tanpa menghapus.",
+      description: "Skill yang bisa dipilih mahasiswa saat onboarding. Nonaktifkan untuk menyembunyikan tanpa menghapus.",
     },
     {
       key: "industries" as Section,
@@ -447,7 +479,8 @@ export default function SkillsCareerPage() {
       label: "Mapping",
       icon: Link2,
       iconClass: "text-emerald-500",
-      count: Object.values(mapping).filter(ids => ids.length > 0).length,
+      // FIX BUG: hanya hitung mapping dengan industri yang AKTIF
+      count: Object.values(mapping).filter(ids => ids.some(id => activeIndustryIds.has(id))).length,
       total: skills.filter(s => s.is_active).length,
       description: "Hubungkan skill ke industri. Digunakan untuk merekomendasikan perusahaan yang relevan saat onboarding.",
     },
@@ -458,19 +491,20 @@ export default function SkillsCareerPage() {
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Skill & Karir</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Skill &amp; Karir</h1>
         <p className="text-sm text-muted-foreground">
           Kelola skill, industri, dan mapping yang tampil di onboarding mahasiswa
         </p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20">
+        <div className="flex items-center justify-center py-24">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap gap-3">
+          {/* Tab navigation — clean, sejajar, konsisten */}
+          <div className="flex items-center gap-1 rounded-lg border bg-muted/30 p-1 w-fit">
             {sections.map((s) => {
               const Icon = s.icon
               const isActive = active === s.key
@@ -479,28 +513,43 @@ export default function SkillsCareerPage() {
                   key={s.key}
                   type="button"
                   onClick={() => setActive(s.key)}
-                  className={`flex items-center gap-2.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                  className={`flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     isActive
-                      ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border bg-card text-foreground hover:border-primary/40'
+                      ? 'bg-background text-foreground shadow-sm border border-border'
+                      : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? '' : s.iconClass}`} />
+                  <Icon className={`h-4 w-4 ${isActive ? s.iconClass : 'text-muted-foreground'}`} />
                   <span>{s.label}</span>
-                  <Badge variant={isActive ? 'secondary' : 'outline'} className="text-[10px]">
-                    {s.count}/{s.total}
+                  <Badge
+                    variant={isActive ? 'secondary' : 'outline'}
+                    className="text-[10px] min-w-[20px] text-center"
+                  >
+                    {s.count}
                   </Badge>
                 </button>
               )
             })}
           </div>
 
+          {/* Content card */}
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">{current.label}</CardTitle>
-              <CardDescription>{current.description}</CardDescription>
+            <CardHeader className="pb-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    {React.createElement(current.icon, { className: `h-4 w-4 ${current.iconClass}` })}
+                    {current.label}
+                    <Badge variant="secondary" className="text-xs">
+                      {current.count}/{current.total} aktif
+                    </Badge>
+                  </CardTitle>
+                  <CardDescription className="mt-1">{current.description}</CardDescription>
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <Separator />
+            <CardContent className="pt-5">
               {active === "skills" ? (
                 <OptionTable
                   items={skills}

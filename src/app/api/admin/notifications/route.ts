@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { sendAndLog, messageTemplates } from '@/lib/waha'
+import { sendAndLog, messageTemplates } from '@/lib/fonnte'
 import type { ApiResponse } from '@/types'
 
 async function insertNotification(userId: string, title: string, message: string) {
@@ -97,14 +97,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (type === 'semester_reminder') {
-      const { semester, academic_year } = body
-      if (!semester || !academic_year) {
-        return NextResponse.json<ApiResponse>(
-          { data: null, error: 'semester dan academic_year diperlukan untuk semester_reminder', success: false },
-          { status: 400 }
-        )
-      }
-
       const { data: students } = await supabase
         .from('users')
         .select('id, full_name, phone, current_semester')
@@ -119,23 +111,26 @@ export async function POST(request: NextRequest) {
 
       const results = await Promise.allSettled(
         students.map(async (s) => {
+          const semesterLabel = s.current_semester ? `Semester ${s.current_semester}` : 'semester aktif'
+          const msg = messageTemplates.semesterReminder
+            ? messageTemplates.semesterReminder(s.full_name, s.current_semester ?? 1)
+            : `Halo ${s.full_name}, ini adalah pengingat akademik untuk ${semesterLabel} kamu. Pastikan kamu telah mengisi KRS dan memperbarui data akademik di Gradely.`
           await sendAndLog(uniId, {
             phone: s.phone!,
-            message: messageTemplates.semesterReminder(s.full_name, semester, academic_year),
+            message: msg,
             recipientId: s.id,
           })
           await insertNotification(
             s.id,
-            `Pengingat Semester ${semester}`,
-            `Semester ${semester} tahun ajaran ${academic_year} segera dimulai. Pastikan kamu telah mengisi KRS dan memperbarui data akademik di Gradely.`
+            'Pengingat Akademik',
+            `Pengingat untuk ${semesterLabel}: Pastikan kamu telah mengisi KRS dan memperbarui data akademik di Gradely.`
           )
         })
       )
 
       const sent = results.filter((r) => r.status === 'fulfilled').length
       const failed = results.filter((r) => r.status === 'rejected').length
-      const skipped = 0
-      return NextResponse.json<ApiResponse>({ data: { sent, skipped, failed }, error: null, success: true })
+      return NextResponse.json<ApiResponse>({ data: { sent, failed }, error: null, success: true })
     }
 
     if (type === 'test') {

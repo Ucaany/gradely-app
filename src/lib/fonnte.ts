@@ -1,11 +1,11 @@
+// Fonnte WhatsApp API integration
+// https://fonnte.com
+
 import { createServiceClient } from '@/lib/supabase/server'
 
 export interface FonnteSettings {
   fonnte_token: string
 }
-
-/** @deprecated use FonnteSettings */
-export type WahaSettings = FonnteSettings
 
 export interface SendMessagePayload {
   phone: string
@@ -18,8 +18,7 @@ export interface SendMessageResult {
   error?: string
 }
 
-/** @deprecated use getFonnteSettings */
-export async function getWahaSettings(universityId: string): Promise<FonnteSettings | null> {
+export async function getFonnteSettings(universityId: string): Promise<FonnteSettings | null> {
   const supabase = createServiceClient()
   const { data } = await supabase
     .from('settings')
@@ -95,7 +94,7 @@ export async function sendAndLog(
   universityId: string,
   payload: SendMessagePayload
 ): Promise<SendMessageResult> {
-  const settings = await getWahaSettings(universityId)
+  const settings = await getFonnteSettings(universityId)
   if (!settings) {
     const err = 'Konfigurasi Fonnte belum diatur'
     await logWhatsAppMessage(payload.recipientId ?? null, payload.phone, payload.message, { success: false, error: err }, universityId)
@@ -114,8 +113,8 @@ export const messageTemplates = {
   graduationTarget: (studentName: string, targetSemester: number, remainingSks: number) =>
     `Halo ${studentName},\n\nTarget kelulusan kamu adalah semester ${targetSemester}. Sisa SKS yang perlu ditempuh: ${remainingSks} SKS.\n\nSemangat!\n\n_Pesan otomatis dari Gradely_`,
 
-  semesterReminder: (studentName: string, semester: number, academicYear: string) =>
-    `Halo ${studentName},\n\nPengingat: Semester ${semester} tahun ajaran ${academicYear} segera dimulai. Pastikan kamu telah mengisi KRS dan memperbarui data akademik di Gradely.\n\n_Pesan otomatis dari Gradely_`,
+  semesterReminder: (studentName: string, semester: number) =>
+    `Halo ${studentName},\n\nIni adalah pengingat akademik untuk Semester ${semester} kamu. Pastikan kamu telah mengisi KRS dan memperbarui data akademik di Gradely.\n\nSemangat!\n\n_Pesan otomatis dari Gradely_`,
 
   testMessage: () =>
     `Halo! Ini adalah pesan uji coba dari Gradely.\n\nKoneksi Fonnte berhasil!\n\n_Gradely Academic Monitoring_`,

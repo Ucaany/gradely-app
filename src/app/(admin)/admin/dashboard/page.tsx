@@ -41,13 +41,20 @@ import { SendLecturerDialog } from '@/components/admin/send-lecturer-dialog'
 import { SystemStatusCard } from '@/components/admin/system-status-card'
 import { formatDate, getInitials } from '@/lib/utils'
 import type { WhatsappLog } from '@/types'
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination'
 
 type Period = '24h' | '1w' | 'all'
 
 export default async function AdminDashboardPage({
   searchParams,
 }: {
-  searchParams: { period?: string }
+  searchParams: { period?: string; s_page?: string; w_page?: string; l_page?: string }
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -56,6 +63,14 @@ export default async function AdminDashboardPage({
   const VALID_PERIODS = ['24h', '1w', 'all'] as const
   const rawPeriod = searchParams.period ?? '24h'
   const period: Period = (VALID_PERIODS as readonly string[]).includes(rawPeriod) ? (rawPeriod as Period) : '24h'
+
+  // Pagination state dari URL
+  const PAGE_SIZE_STUDENTS = 5
+  const PAGE_SIZE_WAHA = 10
+  const PAGE_SIZE_LECTURERS = 8
+  const sPage = Math.max(1, parseInt(searchParams.s_page ?? '1', 10))
+  const wPage = Math.max(1, parseInt(searchParams.w_page ?? '1', 10))
+  const lPage = Math.max(1, parseInt(searchParams.l_page ?? '1', 10))
 
   const now = new Date()
   const periodStart =
@@ -75,16 +90,17 @@ export default async function AdminDashboardPage({
     studentsLastMonth, lecturersLastMonth, companiesLastMonth,
     studentsThisMonth, lecturersThisMonth, companiesThisMonth,
     lecturersListRes,
+    totalStudentsCount, totalWahaCount, totalLecturersCount,
   ] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').eq('is_active', true),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').eq('is_active', true),
       supabase.from('study_programs').select('id', { count: 'exact', head: true }).eq('is_active', true),
-      supabase.from('users').select('id, full_name, email, nim, is_active, avatar_url, created_at').eq('role', 'student').order('created_at', { ascending: false }).limit(5),
+      supabase.from('users').select('id, full_name, email, nim, is_active, avatar_url, created_at').eq('role', 'student').order('created_at', { ascending: false }).range((sPage - 1) * PAGE_SIZE_STUDENTS, sPage * PAGE_SIZE_STUDENTS - 1),
       periodStart
-        ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).limit(50)
-        : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(50),
+        ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).range((wPage - 1) * PAGE_SIZE_WAHA, wPage * PAGE_SIZE_WAHA - 1)
+        : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).range((wPage - 1) * PAGE_SIZE_WAHA, wPage * PAGE_SIZE_WAHA - 1),
       supabase.from('advisor_students').select('lecturer_id'),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
@@ -92,7 +108,13 @@ export default async function AdminDashboardPage({
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', thisMonthStart),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', thisMonthStart),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', thisMonthStart),
-      supabase.from('users').select('id, full_name, email, phone, avatar_url').eq('role', 'lecturer').eq('is_active', true).order('full_name', { ascending: true }),
+      supabase.from('users').select('id, full_name, email, phone, avatar_url').eq('role', 'lecturer').eq('is_active', true).order('full_name', { ascending: true }).range((lPage - 1) * PAGE_SIZE_LECTURERS, lPage * PAGE_SIZE_LECTURERS - 1),
+      // Count queries untuk pagination
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').order('created_at', { ascending: false }),
+      periodStart
+        ? supabase.from('whatsapp_logs').select('id', { count: 'exact', head: true }).gte('created_at', periodStart)
+        : supabase.from('whatsapp_logs').select('id', { count: 'exact', head: true }),
+      supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').eq('is_active', true),
     ])
 
   function calcTrend(thisMonth: number, lastMonth: number): string {
@@ -124,6 +146,14 @@ export default async function AdminDashboardPage({
 
   const students = recentStudentsRes.data ?? []
   const wahaLogs = (wahaLogsRes.data ?? []) as WhatsappLog[]
+
+  // Pagination calc
+  const totalStudents = totalStudentsCount.count ?? 0
+  const totalWaha = totalWahaCount.count ?? 0
+  const totalLecturers = totalLecturersCount.count ?? 0
+  const totalSPages = Math.max(1, Math.ceil(totalStudents / PAGE_SIZE_STUDENTS))
+  const totalWPages = Math.max(1, Math.ceil(totalWaha / PAGE_SIZE_WAHA))
+  const totalLPages = Math.max(1, Math.ceil(totalLecturers / PAGE_SIZE_LECTURERS))
 
   // Advisor stats
   const advisorRows = advisorRes.data ?? []
@@ -304,6 +334,33 @@ export default async function AdminDashboardPage({
                 )}
               </TableBody>
             </Table>
+            {totalSPages > 1 && (
+              <div className="flex items-center justify-between border-t px-4 py-3">
+                <p className="text-xs text-muted-foreground">
+                  Hal {sPage} dari {totalSPages} · {totalStudents} mahasiswa
+                </p>
+                <Pagination className="w-auto mx-0">
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious
+                        href={`?period=${period}&s_page=${sPage - 1}&w_page=${wPage}&l_page=${lPage}`}
+                        text="Prev"
+                        aria-disabled={sPage <= 1}
+                        className={sPage <= 1 ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                    <PaginationItem>
+                      <PaginationNext
+                        href={`?period=${period}&s_page=${sPage + 1}&w_page=${wPage}&l_page=${lPage}`}
+                        text="Next"
+                        aria-disabled={sPage >= totalSPages}
+                        className={sPage >= totalSPages ? 'pointer-events-none opacity-50' : ''}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -335,7 +392,7 @@ export default async function AdminDashboardPage({
                   className="h-7 px-3 text-xs"
                   asChild
                 >
-                  <Link href={`?period=${p}`}>
+                  <Link href={`?period=${p}&s_page=${sPage}&w_page=1&l_page=${lPage}`}>
                     {p === '24h' ? '24 Jam' : p === '1w' ? '1 Minggu' : 'Semua'}
                   </Link>
                 </Button>
@@ -401,6 +458,33 @@ export default async function AdminDashboardPage({
               </TableBody>
             </Table>
           </div>
+          {totalWPages > 1 && (
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Hal {wPage} dari {totalWPages} · {totalWaha} pesan
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href={`?period=${period}&s_page=${sPage}&w_page=${wPage - 1}&l_page=${lPage}`}
+                      text="Prev"
+                      aria-disabled={wPage <= 1}
+                      className={wPage <= 1 ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      href={`?period=${period}&s_page=${sPage}&w_page=${wPage + 1}&l_page=${lPage}`}
+                      text="Next"
+                      aria-disabled={wPage >= totalWPages}
+                      className={wPage >= totalWPages ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
       </div>
@@ -454,16 +538,14 @@ export default async function AdminDashboardPage({
                             <AvatarFallback className="text-xs">{getInitials(lec.full_name)}</AvatarFallback>
                           </Avatar>
                           <div className="min-w-0">
-                            <p className="font-medium text-sm leading-tight truncate max-w-[160px]">{lec.full_name}</p>
-                            <p className="text-xs text-muted-foreground truncate max-w-[160px]">{lec.email}</p>
+                            <p className="font-medium text-sm leading-tight truncate max-w-[140px]">{lec.full_name}</p>
+                            <p className="text-xs text-muted-foreground truncate max-w-[140px]">{lec.email}</p>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell>
                         {noPhone ? (
-                          <Badge variant="outline" className="text-xs text-destructive border-destructive/30 bg-destructive/5 whitespace-nowrap">
-                            <XCircle className="h-3 w-3 mr-1" />Belum diisi
-                          </Badge>
+                          <span className="text-xs text-muted-foreground italic">Belum diisi</span>
                         ) : (
                           <span className="text-sm font-mono">{lec.phone}</span>
                         )}
@@ -491,6 +573,33 @@ export default async function AdminDashboardPage({
               )}
             </TableBody>
           </Table>
+          {totalLPages > 1 && (
+            <div className="flex items-center justify-between border-t px-4 py-3">
+              <p className="text-xs text-muted-foreground">
+                Hal {lPage} dari {totalLPages} · {totalLecturers} dosen
+              </p>
+              <Pagination className="w-auto mx-0">
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious
+                      href={`?period=${period}&s_page=${sPage}&w_page=${wPage}&l_page=${lPage - 1}`}
+                      text="Prev"
+                      aria-disabled={lPage <= 1}
+                      className={lPage <= 1 ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                  <PaginationItem>
+                    <PaginationNext
+                      href={`?period=${period}&s_page=${sPage}&w_page=${wPage}&l_page=${lPage + 1}`}
+                      text="Next"
+                      aria-disabled={lPage >= totalLPages}
+                      className={lPage >= totalLPages ? 'pointer-events-none opacity-50' : ''}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
+          )}
         </CardContent>
       </Card>
 

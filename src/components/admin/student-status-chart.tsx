@@ -22,9 +22,10 @@ export function StudentStatusChart() {
       try {
         const res = await fetch('/api/admin/student-status', { credentials: 'include' })
         const result = await res.json()
-        if (result.success && result.data?.length > 0) {
-          setData(result.data.filter((d: StatusDataItem) => d.count > 0))
+        if (result.success) {
           setTotal(result.total ?? 0)
+          const filtered = (result.data ?? []).filter((d: StatusDataItem) => d.count > 0)
+          setData(filtered)
         }
       } finally {
         setIsLoading(false)
@@ -51,9 +52,16 @@ export function StudentStatusChart() {
           <div className="flex items-center justify-center h-[220px]">
             <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
+        ) : data.length === 0 && total === 0 ? (
+          <div className="flex flex-col items-center justify-center h-[220px] gap-2 text-sm text-muted-foreground">
+            <Users className="h-8 w-8 opacity-30" />
+            <span>Belum ada mahasiswa aktif terdaftar</span>
+          </div>
         ) : data.length === 0 ? (
-          <div className="flex items-center justify-center h-[220px] text-sm text-muted-foreground">
-            Data akan muncul setelah mahasiswa menginput nilai
+          <div className="flex flex-col items-center justify-center h-[220px] gap-2 text-sm text-muted-foreground">
+            <Users className="h-8 w-8 opacity-30" />
+            <span className="font-medium text-foreground">{total} mahasiswa aktif</span>
+            <span>Distribusi status akan muncul setelah mahasiswa menginput nilai</span>
           </div>
         ) : (
           <ResponsiveContainer width="100%" height={220}>

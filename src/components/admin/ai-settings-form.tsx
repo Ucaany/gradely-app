@@ -108,6 +108,7 @@ function AIConfigSection({
         return
       }
       toast.success(`Konfigurasi ${title} berhasil disimpan`)
+      // Soft refresh: update server state tanpa full page reload
       router.refresh()
     } finally {
       setIsLoading(false)

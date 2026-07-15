@@ -266,8 +266,6 @@ export const fonnteSettingsSchema = z.object({
     .regex(/^[\x20-\x7E]+$/, 'Token mengandung karakter tidak valid'),
 })
 
-export const wahaSettingsSchema = fonnteSettingsSchema
-
 // Type exports
 export type LoginInput = z.infer<typeof loginSchema>
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>
@@ -285,4 +283,3 @@ export type PortfolioLinkInput = z.infer<typeof portfolioLinkSchema>
 export type CreatePortfolioInput = z.infer<typeof createPortfolioSchema>
 export type UpdatePortfolioInput = z.infer<typeof updatePortfolioSchema>
 export type FonnteSettingsInput = z.infer<typeof fonnteSettingsSchema>
-export type WahaSettingsInput = FonnteSettingsInput

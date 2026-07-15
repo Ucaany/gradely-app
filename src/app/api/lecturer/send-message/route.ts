@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { calculateAcademicSummary, groupGradesBySemester } from '@/lib/utils/academic'
-import { sendAndLog } from '@/lib/waha'
+import { sendAndLog } from '@/lib/fonnte'
 import type { ApiResponse, AcademicRule, StudentGrade } from '@/types'
 
 export async function POST(request: NextRequest) {
