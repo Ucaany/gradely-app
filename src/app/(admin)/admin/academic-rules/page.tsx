@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { AcademicRuleActions } from '@/components/admin/academic-rule-actions'
 import { AcademicRulesView } from '@/components/admin/academic-rules-view'
 import { BookOpen } from 'lucide-react'
+import type { SKSRulesByIPK } from '@/types'
 
 export default async function AcademicRulesPage() {
   const supabase = await createClient()
@@ -68,6 +69,15 @@ export default async function AcademicRulesPage() {
                   <Badge variant="secondary" className="text-xs font-semibold w-fit">{defaultRule.passing_grade}</Badge>
                 } />
               </div>
+
+              {/* Tabel Batas SKS Berdasarkan IPK */}
+              {defaultRule.sks_rules_by_ipk && (
+                <>
+                  <Separator />
+                  <SKSTiersTable sksRules={defaultRule.sks_rules_by_ipk as SKSRulesByIPK} />
+                </>
+              )}
+
               {defaultRule.grade_scale && (
                 <>
                   <Separator />
@@ -114,3 +124,41 @@ function RuleItem({ label, value }: { label: string; value: React.ReactNode }) {
     </div>
   )
 }
+
+function SKSTiersTable({ sksRules }: { sksRules: SKSRulesByIPK }) {
+  return (
+    <div>
+      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+         Batas SKS Berdasarkan IPK
+      </p>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+          <span className="text-xs text-muted-foreground">Semester 1 &amp; 2 (sistem paket):</span>
+          <span className="text-sm font-semibold">Maks {sksRules.semester_1_2_max} SKS</span>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground mb-2">Semester 3 ke atas (berdasarkan IPK):</p>
+          <div className="rounded-lg border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">Rentang IPK</th>
+                  <th className="text-left px-3 py-2 text-xs font-medium text-muted-foreground">SKS yang Diizinkan</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sksRules.tiers.map((tier, i) => (
+                  <tr key={i} className={i < sksRules.tiers.length - 1 ? 'border-b' : ''}>
+                    <td className="px-3 py-2 font-medium text-sm">{tier.ipk_min.toFixed(2)} – {tier.ipk_max.toFixed(2)}</td>
+                    <td className="px-3 py-2 text-sm">{tier.sks_min} – {tier.sks_max} SKS</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+

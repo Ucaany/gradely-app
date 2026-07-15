@@ -14,6 +14,8 @@ import {
   calculateAcademicSummary,
   groupGradesBySemester,
   ACADEMIC_STATUS_CONFIG,
+  autoDetectSemester,
+  DEFAULT_SKS_RULES_BY_IPK,
 } from '@/lib/utils/academic'
 import { StudentIPKChart } from '@/components/student/student-ipk-chart'
 import { SendMessageDialog } from '@/components/lecturer/send-message-dialog'
@@ -76,10 +78,12 @@ export default async function LecturerStudentDetailPage({
     min_gpa: 2.0, max_sks_per_semester: 24, min_sks_per_semester: 12,
     passing_grade: 'D',
     grade_scale: { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 },
+    sks_rules_by_ipk: DEFAULT_SKS_RULES_BY_IPK,
     created_at: '', updated_at: '',
   }
 
-  const currentSemester = student.current_semester ?? 1
+  // Auto-detect semester dari data nilai (semester tertinggi yang ada)
+  const currentSemester = autoDetectSemester(grades, student.current_semester ?? 1)
   const summary = calculateAcademicSummary(grades, currentSemester, effectiveRule.normal_semester, effectiveRule)
   const semesterSummaries = groupGradesBySemester(grades)
   const cfg = ACADEMIC_STATUS_CONFIG[summary.academic_status]
@@ -266,6 +270,76 @@ export default async function LecturerStudentDetailPage({
               </div>
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      {/* Batas SKS Semester Berikutnya */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-blue-500" />
+            Batas Pengambilan SKS Semester Berikutnya
+          </CardTitle>
+          <CardDescription>
+            Berdasarkan IPK
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="rounded-xl border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 px-4 py-3">
+            {currentSemester <= 2 ? (
+              <p className="text-sm text-blue-700 dark:text-blue-300">
+                Semester 1–2 menggunakan <span className="font-semibold">sistem paket</span>.
+                Maks <span className="font-semibold">{effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20} SKS</span> per semester.
+              </p>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  IPK mahasiswa: <span className="font-semibold">{formatGPA(summary.gpa)}</span>
+                </p>
+                <p className="text-sm text-blue-700 dark:text-blue-300">
+                  Boleh mengambil{' '}
+                  <span className="font-bold text-base">{summary.allowed_sks_min}–{summary.allowed_sks_max} SKS</span>{' '}
+                  di semester berikutnya.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Tabel tier SKS lengkap */}
+          {effectiveRule.sks_rules_by_ipk?.tiers && effectiveRule.sks_rules_by_ipk.tiers.length > 0 && (
+            <div className="mt-3">
+              <p className="text-xs text-muted-foreground font-medium mb-2">Tabel aturan lengkap (Sem 3+):</p>
+              <div className="rounded-lg border overflow-hidden">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-muted/50 border-b">
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Rentang IPK</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">SKS yang Diizinkan</th>
+                      <th className="text-left px-3 py-2 font-medium text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {effectiveRule.sks_rules_by_ipk.tiers.map((tier, i) => {
+                      const isActive = summary.gpa >= tier.ipk_min && summary.gpa <= tier.ipk_max && currentSemester > 2
+                      return (
+                        <tr key={i} className={`${i < effectiveRule.sks_rules_by_ipk.tiers.length - 1 ? 'border-b' : ''} ${isActive ? 'bg-blue-50 dark:bg-blue-950/20' : ''}`}>
+                          <td className="px-3 py-2 font-medium">{tier.ipk_min.toFixed(2)} – {tier.ipk_max.toFixed(2)}</td>
+                          <td className="px-3 py-2">{tier.sks_min} – {tier.sks_max} SKS</td>
+                          <td className="px-3 py-2">
+                            {isActive && (
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                                Berlaku
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 

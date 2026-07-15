@@ -36,7 +36,7 @@ export async function GET() {
   }
 }
 
-// POST /api/student/target — upsert target kelulusan
+// POST /api/student/target — upsert target kelulusan beserta skill & industri
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -72,6 +72,8 @@ export async function POST(request: NextRequest) {
           target_years: parsed.data.target_years ?? null,
           career_goal: parsed.data.career_goal ?? null,
           notes: parsed.data.notes ?? null,
+          target_skills: parsed.data.target_skills ?? [],
+          target_industries: parsed.data.target_industries ?? [],
         },
         { onConflict: 'student_id' }
       )

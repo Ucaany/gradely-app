@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { calculateAcademicSummary, groupGradesBySemester } from '@/lib/utils/academic'
+import { calculateAcademicSummary, groupGradesBySemester, autoDetectSemester, DEFAULT_SKS_RULES_BY_IPK } from '@/lib/utils/academic'
 import type { ApiResponse, AcademicRule, StudentGrade } from '@/types'
 
 // GET /api/student/summary — hitung academic summary mahasiswa yang login
@@ -29,10 +29,10 @@ export async function GET() {
 
     if (gradesError) return NextResponse.json<ApiResponse>({ data: null, error: gradesError.message, success: false }, { status: 500 })
 
-    // Ambil target kelulusan
+    // Ambil target kelulusan (termasuk skill & industri)
     const { data: target } = await supabase
       .from('student_targets')
-      .select('target_semester, career_goal')
+      .select('target_semester, career_goal, target_ipk, target_years, target_skills, target_industries')
       .eq('student_id', user.id)
       .single()
 
@@ -72,13 +72,17 @@ export async function GET() {
       min_sks_per_semester: 12,
       passing_grade: 'D',
       grade_scale: { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 },
+      sks_rules_by_ipk: DEFAULT_SKS_RULES_BY_IPK,
       created_at: '',
       updated_at: '',
     }
 
-    const currentSemester = profile.current_semester ?? 1
-    const targetSemester = target?.target_semester ?? effectiveRule.normal_semester
     const typedGrades = (grades ?? []) as StudentGrade[]
+
+    // Auto-detect semester dari semester tertinggi di data nilai,
+    // fallback ke current_semester di profil jika belum ada nilai
+    const currentSemester = autoDetectSemester(typedGrades, profile.current_semester ?? 1)
+    const targetSemester = target?.target_semester ?? effectiveRule.normal_semester
 
     const summary = calculateAcademicSummary(typedGrades, currentSemester, targetSemester, effectiveRule)
     const semesterSummaries = groupGradesBySemester(typedGrades)

@@ -10,6 +10,7 @@ const DEFAULT_RULE: AcademicRule = {
   min_gpa: 2.0, max_sks_per_semester: 24, min_sks_per_semester: 12,
   passing_grade: 'D',
   grade_scale: { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 },
+  sks_rules_by_ipk: { semester_1_2_max: 20, tiers: [{ ipk_min: 3.00, ipk_max: 4.00, sks_min: 22, sks_max: 24 }, { ipk_min: 2.50, ipk_max: 2.99, sks_min: 20, sks_max: 22 }, { ipk_min: 2.00, ipk_max: 2.49, sks_min: 16, sks_max: 20 }, { ipk_min: 1.50, ipk_max: 1.99, sks_min: 12, sks_max: 16 }, { ipk_min: 0.00, ipk_max: 1.49, sks_min: 2, sks_max: 12 }] },
   created_at: '', updated_at: '',
 }
 

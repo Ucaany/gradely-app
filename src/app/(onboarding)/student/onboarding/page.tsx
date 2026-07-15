@@ -13,6 +13,7 @@ import {
   Loader2,
   Check,
   SearchX,
+  Factory,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -46,6 +47,7 @@ interface ProfileData {
 
 const STEPS = [
   { label: 'Skill & Minat', icon: Sparkles },
+  { label: 'Industri', icon: Factory },
   { label: 'Perusahaan', icon: Building2 },
   { label: 'Profil Kamu', icon: User },
 ]
@@ -56,6 +58,8 @@ export default function OnboardingPage() {
   const [availableSkills, setAvailableSkills] = useState<string[]>([])
   const [selectedSkills, setSelectedSkills] = useState<string[]>([])
   const [skillNotFound, setSkillNotFound] = useState(false)
+  const [availableIndustries, setAvailableIndustries] = useState<{ name: string; description: string | null }[]>([])
+  const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [industries, setIndustries] = useState<string[]>([])
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
@@ -67,8 +71,11 @@ export default function OnboardingPage() {
     fetch('/api/student/profile').then(r => r.json()).then(r => {
       if (r.success) setProfile(r.data)
     })
-    fetch('/api/admin/skills').then(r => r.json()).then(r => {
-      if (r.success) setAvailableSkills((r.data as { name: string; is_active: boolean }[]).filter(s => s.is_active).map(s => s.name))
+    fetch('/api/student/skills').then(r => r.json()).then(r => {
+      if (r.success) setAvailableSkills((r.data as { name: string }[]).map(s => s.name))
+    })
+    fetch('/api/student/industries').then(r => r.json()).then(r => {
+      if (r.success) setAvailableIndustries(r.data ?? [])
     })
   }, [])
 
@@ -100,6 +107,12 @@ export default function OnboardingPage() {
     })
   }
 
+  function toggleIndustry(name: string) {
+    setSelectedIndustries(prev =>
+      prev.includes(name) ? prev.filter(i => i !== name) : [...prev, name]
+    )
+  }
+
   function toggleCompany(id: string) {
     setSelectedCompanies(prev =>
       prev.includes(id) ? prev.filter(c => c !== id) : [...prev, id]
@@ -112,16 +125,18 @@ export default function OnboardingPage() {
         toast.error('Pilih minimal 1 skill atau centang "Saya tidak menemukan skill"')
         return
       }
+      setStep(1)
+    } else if (step === 1) {
+      // Step industri — lanjut ke perusahaan, load berdasarkan skill
       if (skillNotFound) {
-        setStep(1)
         setCompanies([])
         setIndustries([])
       } else {
         await loadCompanies(selectedSkills)
-        setStep(1)
       }
-    } else if (step === 1) {
       setStep(2)
+    } else if (step === 2) {
+      setStep(3)
     } else {
       await handleComplete()
     }
@@ -145,6 +160,7 @@ export default function OnboardingPage() {
           skills: skillNotFound ? [] : selectedSkills,
           interested_company_ids: selectedCompanies,
           skill_not_found: skillNotFound,
+          selected_industries: selectedIndustries,
         }),
       })
       const result = await res.json()
@@ -427,8 +443,70 @@ export default function OnboardingPage() {
               <Progress value={((step + 1) / STEPS.length) * 100} className="h-1 w-40" />
             </div>
 
-            {/* STEP 2 — Companies */}
+            {/* STEP 2 — Industri */}
             {step === 1 && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h1 className="text-2xl font-semibold tracking-tight">Industri yang kamu minati</h1>
+                  <p className="text-sm text-muted-foreground mt-1.5 max-w-md mx-auto">
+                    Pilih industri yang ingin kamu masuki setelah lulus. Ini membantu kami menyesuaikan saran karier untukmu.
+                  </p>
+                </div>
+
+                {availableIndustries.length === 0 ? (
+                  <Card className="border-dashed">
+                    <CardContent className="flex flex-col items-center justify-center py-14 gap-3 text-center">
+                      <Factory className="h-10 w-10 text-muted-foreground/25" />
+                      <div>
+                        <p className="text-sm font-medium">Belum ada opsi industri</p>
+                        <p className="text-xs text-muted-foreground mt-1">Kamu bisa lewati langkah ini.</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {availableIndustries.map((ind) => {
+                      const selected = selectedIndustries.includes(ind.name)
+                      return (
+                        <button
+                          key={ind.name}
+                          type="button"
+                          onClick={() => toggleIndustry(ind.name)}
+                          className={`flex items-center gap-3 rounded-xl border px-4 py-3.5 text-sm font-medium text-left transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${
+                            selected
+                              ? 'border-primary bg-primary/8 text-primary shadow-sm ring-1 ring-primary/20'
+                              : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent/50'
+                          }`}
+                        >
+                          <div className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 transition-all ${
+                            selected ? 'border-primary bg-primary' : 'border-muted-foreground/25'
+                          }`}>
+                            {selected && <Check className="h-2.5 w-2.5 text-primary-foreground" />}
+                          </div>
+                          <span className="leading-tight truncate">{ind.name}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {selectedIndustries.length > 0 && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="py-3 px-4">
+                      <p className="text-xs font-medium text-primary mb-2">{selectedIndustries.length} industri dipilih</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedIndustries.map(name => (
+                          <Badge key={name} variant="secondary" className="text-xs">{name}</Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* STEP 3 — Companies */}
+            {step === 2 && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h1 className="text-2xl font-semibold tracking-tight">Perusahaan & industri relevan</h1>
@@ -518,8 +596,8 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* STEP 3 — Profile */}
-            {step === 2 && (
+            {/* STEP 4 — Profile */}
+            {step === 3 && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h1 className="text-2xl font-semibold tracking-tight">Konfirmasi profil kamu</h1>
@@ -593,6 +671,8 @@ export default function OnboardingPage() {
                       <CardContent className="px-4 pb-4">
                         {skillNotFound ? (
                           <p className="text-sm text-muted-foreground italic">Skill tidak ditemukan dalam daftar</p>
+                        ) : selectedSkills.length === 0 ? (
+                          <p className="text-sm text-muted-foreground italic">Belum ada skill dipilih</p>
                         ) : (
                           <div className="flex flex-wrap gap-1.5">
                             {selectedSkills.map(s => (
@@ -602,6 +682,21 @@ export default function OnboardingPage() {
                         )}
                       </CardContent>
                     </Card>
+
+                    {selectedIndustries.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2 pt-4 px-4">
+                          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Industri yang Diminati</CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4">
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedIndustries.map(name => (
+                              <Badge key={name} variant="outline" className="text-xs">{name}</Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 )}
               </div>

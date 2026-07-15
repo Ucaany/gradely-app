@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { calculateAcademicSummary } from '@/lib/utils/academic'
+import { calculateAcademicSummary, autoDetectSemester, DEFAULT_SKS_RULES_BY_IPK } from '@/lib/utils/academic'
 import type { AcademicRule, StudentGrade } from '@/types'
 
 const DEFAULT_RULE: AcademicRule = {
@@ -8,6 +8,7 @@ const DEFAULT_RULE: AcademicRule = {
   min_gpa: 2.0, max_sks_per_semester: 24, min_sks_per_semester: 12,
   passing_grade: 'D',
   grade_scale: { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 },
+  sks_rules_by_ipk: DEFAULT_SKS_RULES_BY_IPK,
   created_at: '', updated_at: '',
 }
 
@@ -104,7 +105,8 @@ export async function getLecturerStudentData(
 
   const studentSummaries: LecturerStudentSummary[] = students.map((s) => {
     const grades = gradesByStudent.get(s.id) ?? []
-    const currentSemester = s.current_semester ?? 1
+    // Auto-detect semester dari data nilai (semester tertinggi yang ada)
+    const currentSemester = autoDetectSemester(grades, s.current_semester ?? 1)
     const summary = calculateAcademicSummary(grades, currentSemester, effectiveRule.normal_semester, effectiveRule)
     return { student: s, summary }
   })

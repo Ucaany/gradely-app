@@ -86,6 +86,21 @@ export const updateStudyProgramSchema = z.object({
 // ============================================================
 // Academic Rules
 // ============================================================
+
+// Satu tier aturan SKS berdasarkan rentang IPK
+const sksTierSchema = z.object({
+  ipk_min: z.number().min(0).max(4),
+  ipk_max: z.number().min(0).max(4),
+  sks_min: z.number().int().min(0).max(30),
+  sks_max: z.number().int().min(0).max(30),
+})
+
+// Aturan batas SKS per semester berdasarkan IPK
+const sksRulesByIpkSchema = z.object({
+  semester_1_2_max: z.number().int().min(1).max(30),
+  tiers: z.array(sksTierSchema).min(1).max(10),
+})
+
 export const gradeScaleSchema = z.object({
   A: z.number().min(0).max(4),
   'A-': z.number().min(0).max(4),
@@ -109,6 +124,7 @@ export const createAcademicRuleSchema = z.object({
   min_sks_per_semester: z.number().int().min(1).max(24),
   passing_grade: z.enum(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']),
   grade_scale: gradeScaleSchema,
+  sks_rules_by_ipk: sksRulesByIpkSchema,
 })
 
 export const updateAcademicRuleSchema = z.object({
@@ -121,6 +137,7 @@ export const updateAcademicRuleSchema = z.object({
   min_sks_per_semester: z.number().int().min(1).max(24).optional(),
   passing_grade: z.enum(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']).optional(),
   grade_scale: gradeScaleSchema.optional(),
+  sks_rules_by_ipk: sksRulesByIpkSchema.optional(),
 })
 
 // ============================================================
@@ -155,6 +172,8 @@ export const studentTargetSchema = z.object({
   target_years: z.number().int().min(1).max(7).optional().nullable(),
   career_goal: z.string().max(200).optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
+  target_skills: z.array(z.string().max(100)).max(20).optional().nullable(),
+  target_industries: z.array(z.string().max(100)).max(20).optional().nullable(),
 })
 
 export const studentAchievementSchema = z.object({

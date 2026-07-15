@@ -3,9 +3,77 @@ import type {
   AcademicStatus,
   AcademicSummary,
   GradeValue,
+  SKSRulesByIPK,
   SemesterSummary,
   StudentGrade,
 } from '@/types'
+
+/**
+ * Default aturan SKS berdasarkan IPK.
+ * Digunakan sebagai fallback jika rule belum dikonfigurasi.
+ */
+export const DEFAULT_SKS_RULES_BY_IPK: SKSRulesByIPK = {
+  semester_1_2_max: 20,
+  tiers: [
+    { ipk_min: 3.00, ipk_max: 4.00, sks_min: 22, sks_max: 24 },
+    { ipk_min: 2.50, ipk_max: 2.99, sks_min: 20, sks_max: 22 },
+    { ipk_min: 2.00, ipk_max: 2.49, sks_min: 16, sks_max: 20 },
+    { ipk_min: 1.50, ipk_max: 1.99, sks_min: 12, sks_max: 16 },
+    { ipk_min: 0.00, ipk_max: 1.49, sks_min: 2,  sks_max: 12 },
+  ],
+}
+
+/**
+ * Deteksi otomatis semester aktif dari data nilai.
+ * Mengambil semester_number tertinggi dari semua nilai yang ada.
+ * Jika belum ada nilai, fallback ke current_semester dari profil.
+ */
+export function autoDetectSemester(
+  grades: StudentGrade[],
+  fallbackSemester: number
+): number {
+  if (grades.length === 0) return fallbackSemester
+  const maxFromGrades = Math.max(...grades.map((g) => g.semester_number))
+  return maxFromGrades > 0 ? maxFromGrades : fallbackSemester
+}
+
+/**
+ * Hitung batas SKS yang boleh diambil pada semester berikutnya
+ * berdasarkan IPK dan semester aktif saat ini.
+ *
+ * Aturan:
+ * - Semester 1 & 2: sistem paket, maks sesuai semester_1_2_max
+ * - Semester 3+: berdasarkan IPK semester sebelumnya
+ *
+ * Mengembalikan { sks_min, sks_max } yang boleh diambil.
+ */
+export function calculateAllowedSKS(
+  ipk: number,
+  currentSemester: number,
+  rule: AcademicRule
+): { sks_min: number; sks_max: number } {
+  const sksRules = rule.sks_rules_by_ipk ?? DEFAULT_SKS_RULES_BY_IPK
+
+  // Semester 1 & 2: sistem paket
+  if (currentSemester <= 2) {
+    return { sks_min: 0, sks_max: sksRules.semester_1_2_max }
+  }
+
+  // Semester 3+: cari tier yang sesuai IPK
+  const matchedTier = sksRules.tiers.find(
+    (tier) => ipk >= tier.ipk_min && ipk <= tier.ipk_max
+  )
+
+  if (matchedTier) {
+    return { sks_min: matchedTier.sks_min, sks_max: matchedTier.sks_max }
+  }
+
+  // Fallback ke batas global dari aturan akademik
+  return {
+    sks_min: rule.min_sks_per_semester,
+    sks_max: rule.max_sks_per_semester,
+  }
+}
 
 /**
  * Hitung grade points dari nilai huruf berdasarkan grade_scale di academic rules.
@@ -150,6 +218,9 @@ export function calculateAcademicSummary(
     rule
   )
 
+  // Hitung batas SKS yang boleh diambil semester berikutnya
+  const allowedSKS = calculateAllowedSKS(ipk, currentSemester, rule)
+
   return {
     total_sks_earned: sksLulus,
     total_sks_required: rule.total_sks_graduation,
@@ -165,6 +236,8 @@ export function calculateAcademicSummary(
     predicted_graduation_semester: predictedSemester,
     courses_passed: passedGrades.length,
     courses_retake: retakeCount,
+    allowed_sks_min: allowedSKS.sks_min,
+    allowed_sks_max: allowedSKS.sks_max,
   }
 }
 

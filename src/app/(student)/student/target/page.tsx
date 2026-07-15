@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import {
   Loader2, Sparkles, ChevronRight, ChevronLeft, Save,
   CheckCircle2, TrendingUp,
-  GraduationCap, Briefcase, Code2, Building2, Info,
+  GraduationCap, Briefcase, Code2, Building2, Info, BookOpen,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -106,7 +106,7 @@ function AIProgress({ aiStep }: { aiStep: number }) {
 }
 
 export default function StudentTargetPage() {
-  const [, setSummaryData] = useState<SummaryData | null>(null)
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
   const [userName, setUserName] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
@@ -143,7 +143,13 @@ export default function StudentTargetPage() {
         if (summaryResult.success && summaryResult.data) {
           setSummaryData(summaryResult.data)
           const t = summaryResult.data.target as StudentTarget | null
-          if (t) { setTargetSemester(t.target_semester); setTargetIpk(t.target_ipk ?? null); setTargetYears(t.target_years ?? null) }
+          if (t) {
+            setTargetSemester(t.target_semester)
+            setTargetIpk(t.target_ipk ?? null)
+            setTargetYears(t.target_years ?? null)
+            if (t.target_skills && t.target_skills.length > 0) setSelectedSkills(t.target_skills)
+            if (t.target_industries && t.target_industries.length > 0) setSelectedIndustries(t.target_industries)
+          }
         }
         if (skillsResult.success) setSkillOptions(skillsResult.data ?? [])
         if (industriesResult.success) setIndustryOptions(industriesResult.data ?? [])
@@ -169,7 +175,14 @@ export default function StudentTargetPage() {
       const res = await fetch('/api/student/target/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_semester: targetSemester, target_ipk: targetIpk, target_years: targetYears }),
+        body: JSON.stringify({
+          target_semester: targetSemester,
+          target_ipk: targetIpk,
+          target_years: targetYears,
+          target_skills: selectedSkills,
+          target_industries: selectedIndustries,
+          career_goal: pengalaman || null,
+        }),
       })
       const result = await res.json()
       setAiStep(AI_STEPS.length - 1)
@@ -183,7 +196,14 @@ export default function StudentTargetPage() {
     try {
       const res = await fetch('/api/student/target', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_semester: targetSemester, target_ipk: targetIpk, target_years: targetYears }),
+        body: JSON.stringify({
+          target_semester: targetSemester,
+          target_ipk: targetIpk,
+          target_years: targetYears,
+          target_skills: selectedSkills,
+          target_industries: selectedIndustries,
+          career_goal: pengalaman || null,
+        }),
       })
       const result = await res.json()
       if (!res.ok) { toast.error(result.error ?? 'Gagal menyimpan target'); return }
@@ -224,6 +244,28 @@ export default function StudentTargetPage() {
             {userName ? `Halo, ${userName}! ` : ''}Atur target dan dapatkan analisis dari Asisten Gradely.
           </p>
         </div>
+
+        {/* Info batas SKS semester berikutnya */}
+        {summaryData && (
+          <div className="rounded-xl border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 px-4 py-3 flex items-start gap-3">
+            <BookOpen className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">
+                Batas SKS Semester Berikutnya
+              </p>
+              {summaryData.summary.current_semester <= 2 ? (
+                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+                  Semester 1–2 menggunakan sistem paket. Maks <span className="font-semibold">{summaryData.summary.allowed_sks_max} SKS</span>.
+                </p>
+              ) : (
+                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+                  IPK kamu <span className="font-semibold">{summaryData.summary.gpa.toFixed(2)}</span> — kamu boleh mengambil{' '}
+                  <span className="font-semibold">{summaryData.summary.allowed_sks_min}–{summaryData.summary.allowed_sks_max} SKS</span> di semester berikutnya.
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Form + step */}
         <div className="space-y-5">

@@ -63,6 +63,20 @@ export interface GradeScale {
   E: number
 }
 
+// Satu tier aturan SKS berdasarkan rentang IPK
+export interface SKSTier {
+  ipk_min: number   // IPK minimum (inklusif)
+  ipk_max: number   // IPK maksimum (inklusif)
+  sks_min: number   // SKS minimum yang boleh diambil
+  sks_max: number   // SKS maksimum yang boleh diambil
+}
+
+// Aturan batas pengambilan SKS per semester
+export interface SKSRulesByIPK {
+  semester_1_2_max: number  // Maks SKS untuk semester 1 & 2 (sistem paket)
+  tiers: SKSTier[]          // Tier SKS untuk semester 3 ke atas, berdasarkan IPK
+}
+
 export interface AcademicRule {
   id: string
   university_id: string
@@ -75,6 +89,7 @@ export interface AcademicRule {
   min_sks_per_semester: number
   passing_grade: GradeValue
   grade_scale: GradeScale
+  sks_rules_by_ipk: SKSRulesByIPK  // Aturan batas SKS berdasarkan IPK
   created_at: string
   updated_at: string
 }
@@ -195,6 +210,8 @@ export interface StudentTarget {
   target_years: number | null
   career_goal: string | null
   notes: string | null
+  target_skills: string[] | null       // Skill yang ingin dikuasai
+  target_industries: string[] | null   // Industri yang diminati
   achievement_title: string | null
   achievement_description: string | null
   achievement_ipk_target: number | null
@@ -430,6 +447,8 @@ export interface AcademicSummary {
   predicted_graduation_semester: number
   courses_passed: number
   courses_retake: number
+  allowed_sks_min: number     // Batas bawah SKS yang boleh diambil semester ini
+  allowed_sks_max: number     // Batas atas SKS yang boleh diambil semester ini
 }
 
 export interface SemesterSummary {
