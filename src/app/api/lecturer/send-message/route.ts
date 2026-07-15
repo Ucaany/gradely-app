@@ -281,28 +281,22 @@ Aturan format:
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.65,
         max_tokens: 1024,
-        stream: true,
+        stream: false,
       }),
       signal: AbortSignal.timeout(60000),
     })
 
+    if (!aiRes.ok) {
+      const errText = await aiRes.text().catch(() => aiRes.status.toString())
+      return NextResponse.json<ApiResponse>({ data: null, error: `AI error (${aiRes.status}): ${errText.slice(0, 200)}`, success: false }, { status: 502 })
+    }
+
     let messageText = ''
-    if (aiRes.ok) {
-      const rawText = await aiRes.text()
-      const lines = rawText.split('\n').filter(l => l.startsWith('data: ') && !l.includes('[DONE]'))
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line.replace('data: ', ''))
-          const delta = json.choices?.[0]?.delta?.content
-          if (delta) messageText += delta
-        } catch { /* skip */ }
-      }
-      if (!messageText) {
-        try {
-          const jsonResp = JSON.parse(rawText)
-          messageText = jsonResp.choices?.[0]?.message?.content ?? ''
-        } catch { /* not JSON */ }
-      }
+    try {
+      const json = await aiRes.json()
+      messageText = json.choices?.[0]?.message?.content ?? ''
+    } catch {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Gagal parse respons AI', success: false }, { status: 502 })
     }
 
     if (!messageText) {
