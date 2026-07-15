@@ -27,6 +27,10 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return NextResponse.next()
+  }
+
   const { supabaseResponse, user, supabase } = await updateSession(request)
 
   const isAuthPage = pathname === '/login' || pathname === '/reset-password' || pathname === '/update-password'
