@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2, Trash2, ToggleLeft, ToggleRight, Plus, X } from 'lucide-react'
@@ -15,22 +15,52 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 
 interface Props {
   companyId: string
   userId: string
   isActive: boolean
+  initialIndustry?: string | null
   initialCategories: { id: string; category: string }[]
 }
 
-export function CompanyDetailActions({ companyId, userId, isActive, initialCategories }: Props) {
+export function CompanyDetailActions({
+  companyId,
+  userId,
+  isActive,
+  initialIndustry = null,
+  initialCategories,
+}: Props) {
   const router = useRouter()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [categories, setCategories] = useState<{ id: string; category: string }[]>(initialCategories)
   const [newCategory, setNewCategory] = useState('')
   const [isSavingCategories, setIsSavingCategories] = useState(false)
+  const [industry, setIndustry] = useState(initialIndustry ?? '')
+  const [industryOptions, setIndustryOptions] = useState<{ id: string; name: string }[]>([])
+  const [isSavingIndustry, setIsSavingIndustry] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/admin/industries')
+      .then(r => r.json())
+      .then(r => {
+        if (r.success) {
+          setIndustryOptions((r.data as { id: string; name: string; is_active: boolean }[])
+            .filter(i => i.is_active)
+            .map(i => ({ id: i.id, name: i.name })))
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   async function handleToggleActive() {
     setIsLoading(true)
@@ -69,6 +99,27 @@ export function CompanyDetailActions({ companyId, userId, isActive, initialCateg
     }
   }
 
+  async function saveIndustry() {
+    setIsSavingIndustry(true)
+    try {
+      const res = await fetch(`/api/admin/companies/${companyId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ industry: industry || null }),
+        credentials: 'include',
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        toast.error(result.error ?? 'Gagal menyimpan industri')
+        return
+      }
+      toast.success('Industri perusahaan disimpan')
+      router.refresh()
+    } finally {
+      setIsSavingIndustry(false)
+    }
+  }
+
   function addCategory() {
     const val = newCategory.trim()
     if (!val) return
@@ -76,12 +127,12 @@ export function CompanyDetailActions({ companyId, userId, isActive, initialCateg
       toast.error('Kategori sudah ada')
       return
     }
-    setCategories((prev) => [...prev, { id: `new-${Date.now()}`, category: val }])
+    setCategories(prev => [...prev, { id: crypto.randomUUID(), category: val }])
     setNewCategory('')
   }
 
-  function removeCategory(category: string) {
-    setCategories((prev) => prev.filter((c) => c.category !== category))
+  function removeCategory(id: string) {
+    setCategories(prev => prev.filter(c => c.id !== id))
   }
 
   async function saveCategories() {
@@ -153,6 +204,34 @@ export function CompanyDetailActions({ companyId, userId, isActive, initialCateg
       </div>
 
       <div className="border rounded-lg p-4 space-y-3">
+        <p className="text-sm font-medium">Industri Perusahaan</p>
+        <p className="text-xs text-muted-foreground">
+          Harus cocok dengan opsi industri di Skill &amp; Karir agar matching onboarding akurat.
+        </p>
+        <Select value={industry || undefined} onValueChange={setIndustry}>
+          <SelectTrigger className="w-full h-9 text-sm">
+            <SelectValue placeholder="Pilih industri..." />
+          </SelectTrigger>
+          <SelectContent>
+            {industryOptions.map((ind) => (
+              <SelectItem key={ind.id} value={ind.name}>
+                {ind.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {industry && !industryOptions.some(i => i.name === industry) && (
+          <p className="text-[11px] text-amber-600">
+            Nilai saat ini: &ldquo;{industry}&rdquo; (tidak ada di opsi admin — pilih ulang agar matching bekerja)
+          </p>
+        )}
+        <Button size="sm" onClick={saveIndustry} disabled={isSavingIndustry} className="w-full">
+          {isSavingIndustry && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Simpan Industri
+        </Button>
+      </div>
+
+      <div className="border rounded-lg p-4 space-y-3">
         <p className="text-sm font-medium">Kategori Perusahaan</p>
         <p className="text-xs text-muted-foreground">
           Digunakan untuk mencocokkan perusahaan dengan minat karier mahasiswa.
@@ -163,14 +242,10 @@ export function CompanyDetailActions({ companyId, userId, isActive, initialCateg
             <p className="text-xs text-muted-foreground italic">Belum ada kategori</p>
           ) : (
             categories.map((c) => (
-              <Badge key={c.category} variant="secondary" className="gap-1 text-xs">
+              <Badge key={c.id} variant="secondary" className="gap-1 pr-1">
                 {c.category}
-                <button
-                  type="button"
-                  onClick={() => removeCategory(c.category)}
-                  className="hover:text-destructive"
-                >
-                  <X className="h-2.5 w-2.5" />
+                <button type="button" onClick={() => removeCategory(c.id)} className="ml-0.5 rounded-full hover:bg-muted p-0.5">
+                  <X className="h-3 w-3" />
                 </button>
               </Badge>
             ))

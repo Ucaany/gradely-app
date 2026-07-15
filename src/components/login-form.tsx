@@ -131,9 +131,12 @@ function LoginFormInner({ className }: { className?: string }) {
         const selectedLabel = roleLabels[selectedRole] ?? selectedRole
         const actualLabel = roleLabels[profile.role] ?? profile.role
         toast.error(`Akun ini terdaftar sebagai ${actualLabel}, bukan ${selectedLabel}.`, {
-          description: `Kamu akan diarahkan ke dashboard ${actualLabel}.`,
+          description: `Silakan login menggunakan tab ${actualLabel}.`,
           duration: 4000,
         })
+        await supabase.auth.signOut()
+        window.location.href = '/login'
+        return
       } else {
         toast.success('Login berhasil!')
       }

@@ -1,13 +1,12 @@
 "use client"
 
 import * as React from "react"
-import { Plus, Pencil, Trash2, Check, X, Sparkles, Briefcase, Loader2 } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, X, Sparkles, Briefcase, Loader2, Link2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
@@ -80,82 +79,64 @@ function OptionTable({
   async function handleDelete() {
     if (!deleteTarget) return
     setLoadingId(deleteTarget.id)
-    try { await onDelete(deleteTarget.id) }
-    finally { setLoadingId(null); setDeleteTarget(null) }
+    try { await onDelete(deleteTarget.id); setDeleteTarget(null) }
+    finally { setLoadingId(null) }
   }
-
-  const activeCount = items.filter(i => i.is_active).length
-  const inactiveCount = items.filter(i => !i.is_active).length
 
   return (
     <>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
-        <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); handleAdd() }}>
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder={addPlaceholder}
-            className="w-64"
-            disabled={adding}
-          />
-          <Button type="submit" size="sm" disabled={adding || !newName.trim()}>
-            {adding
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Plus className="h-4 w-4" />
-            }
-            <span className="ml-1.5">Tambah</span>
-          </Button>
-        </form>
-        <p className="text-xs text-muted-foreground shrink-0">
-          {activeCount} aktif · {inactiveCount} nonaktif
-        </p>
+      <div className="flex gap-2 mb-4">
+        <Input
+          placeholder={addPlaceholder}
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd() } }}
+          className="max-w-sm"
+        />
+        <Button onClick={handleAdd} disabled={adding || !newName.trim()} size="sm">
+          {adding ? <Loader2 className="h-4 w-4 animate-spin mr-1.5" /> : <Plus className="h-4 w-4 mr-1.5" />}
+          Tambah
+        </Button>
       </div>
 
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="pl-4 w-full">Nama</TableHead>
-              <TableHead className="w-[130px]">Status</TableHead>
-              <TableHead className="w-[100px] pr-4 text-right">Aksi</TableHead>
+              <TableHead>Nama</TableHead>
+              <TableHead className="w-28">Status</TableHead>
+              <TableHead className="w-28 text-right">Aksi</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {items.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-12">
+                <TableCell colSpan={3} className="text-center text-sm text-muted-foreground py-10">
                   {emptyText}
                 </TableCell>
               </TableRow>
             ) : (
               items.map((item) => (
                 <TableRow key={item.id}>
-                  <TableCell className="pl-4">
+                  <TableCell>
                     {editingId === item.id ? (
                       <div className="flex items-center gap-2">
                         <Input
                           value={editValue}
                           onChange={(e) => setEditValue(e.target.value)}
-                          className="h-8 text-sm max-w-[280px]"
+                          onKeyDown={(e) => { if (e.key === 'Enter') handleRename(item.id) }}
+                          className="h-8 max-w-xs"
                           autoFocus
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleRename(item.id)
-                            if (e.key === 'Escape') setEditingId(null)
-                          }}
                         />
-                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0 text-emerald-600"
-                          onClick={() => handleRename(item.id)} disabled={loadingId === item.id}>
-                          <Check className="h-3.5 w-3.5" />
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleRename(item.id)} disabled={loadingId === item.id}>
+                          <Check className="h-3.5 w-3.5 text-emerald-600" />
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0"
-                          onClick={() => setEditingId(null)}>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setEditingId(null)}>
                           <X className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     ) : (
-                      <span className={`text-sm font-medium ${!item.is_active ? 'line-through text-muted-foreground' : ''}`}>
-                        {item.name}
-                      </span>
+                      <span className="text-sm font-medium">{item.name}</span>
                     )}
                   </TableCell>
                   <TableCell>
@@ -165,14 +146,12 @@ function OptionTable({
                         onCheckedChange={() => handleToggle(item.id, item.is_active)}
                         disabled={loadingId === item.id}
                       />
-                      <Badge variant="outline" className={`text-xs ${item.is_active
-                        ? 'text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800'
-                        : 'text-muted-foreground'}`}>
-                        {item.is_active ? 'Aktif' : 'Nonaktif'}
+                      <Badge variant={item.is_active ? "default" : "secondary"} className="text-[10px]">
+                        {item.is_active ? "Aktif" : "Nonaktif"}
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell className="pr-4 text-right">
+                  <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8"
                         onClick={() => { setEditingId(item.id); setEditValue(item.name) }}>
@@ -212,21 +191,143 @@ function OptionTable({
   )
 }
 
-type Section = "skills" | "industries"
+function MappingPanel({
+  skills,
+  industries,
+  mapping,
+  onSave,
+}: {
+  skills: Option[]
+  industries: Option[]
+  mapping: Record<string, string[]>
+  onSave: (skillId: string, industryIds: string[]) => Promise<void>
+}) {
+  const [selectedSkillId, setSelectedSkillId] = React.useState<string | null>(null)
+  const [draft, setDraft] = React.useState<string[]>([])
+  const [saving, setSaving] = React.useState(false)
+
+  const activeSkills = skills.filter(s => s.is_active)
+  const activeIndustries = industries.filter(i => i.is_active)
+
+  React.useEffect(() => {
+    if (selectedSkillId) {
+      setDraft(mapping[selectedSkillId] ?? [])
+    }
+  }, [selectedSkillId, mapping])
+
+  function toggleIndustry(id: string) {
+    setDraft(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+  }
+
+  async function handleSave() {
+    if (!selectedSkillId) return
+    setSaving(true)
+    try {
+      await onSave(selectedSkillId, draft)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (activeSkills.length === 0 || activeIndustries.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed py-14 text-center">
+        <Link2 className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+        <p className="text-sm font-medium">Belum bisa mengatur mapping</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          Pastikan ada skill dan industri aktif terlebih dahulu.
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pilih Skill</p>
+        <div className="rounded-md border max-h-80 overflow-y-auto divide-y">
+          {activeSkills.map((skill) => {
+            const count = (mapping[skill.id] ?? []).length
+            const selected = selectedSkillId === skill.id
+            return (
+              <button
+                key={skill.id}
+                type="button"
+                onClick={() => setSelectedSkillId(skill.id)}
+                className={`w-full flex items-center justify-between px-3 py-2.5 text-sm text-left transition-colors ${
+                  selected ? 'bg-primary/10 text-primary' : 'hover:bg-muted/50'
+                }`}
+              >
+                <span className="font-medium">{skill.name}</span>
+                <Badge variant={count > 0 ? 'default' : 'secondary'} className="text-[10px]">
+                  {count} industri
+                </Badge>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+          {selectedSkillId
+            ? `Industri untuk: ${activeSkills.find(s => s.id === selectedSkillId)?.name ?? ''}`
+            : 'Pilih skill di kiri'}
+        </p>
+        {!selectedSkillId ? (
+          <div className="rounded-lg border border-dashed py-16 text-center text-xs text-muted-foreground">
+            Pilih skill untuk mengatur industri terkait
+          </div>
+        ) : (
+          <>
+            <div className="flex flex-wrap gap-2 rounded-md border p-3 min-h-[200px] content-start">
+              {activeIndustries.map((ind) => {
+                const selected = draft.includes(ind.id)
+                return (
+                  <button
+                    key={ind.id}
+                    type="button"
+                    onClick={() => toggleIndustry(ind.id)}
+                    className={`rounded-full border px-3 py-1.5 text-xs transition-all ${
+                      selected
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'border-border hover:border-primary/60'
+                    }`}
+                  >
+                    {ind.name}
+                  </button>
+                )
+              })}
+            </div>
+            <Button size="sm" onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
+              {saving && <Loader2 className="h-4 w-4 animate-spin mr-1.5" />}
+              Simpan Mapping
+            </Button>
+          </>
+        )}
+      </div>
+    </div>
+  )
+}
+
+type Section = "skills" | "industries" | "mapping"
 
 export default function SkillsCareerPage() {
   const [active, setActive] = React.useState<Section>("skills")
   const [skills, setSkills] = React.useState<Option[]>([])
   const [industries, setIndustries] = React.useState<Option[]>([])
+  const [mapping, setMapping] = React.useState<Record<string, string[]>>({})
   const [loading, setLoading] = React.useState(true)
 
   React.useEffect(() => {
     Promise.all([
       fetch('/api/admin/skills').then(r => r.json()),
       fetch('/api/admin/industries').then(r => r.json()),
-    ]).then(([s, i]) => {
+      fetch('/api/admin/skill-industry-map').then(r => r.json()),
+    ]).then(([s, i, m]) => {
       if (s.success) setSkills(s.data)
       if (i.success) setIndustries(i.data)
+      if (m.success) setMapping(m.data ?? {})
     }).finally(() => setLoading(false))
   }, [])
 
@@ -259,6 +360,11 @@ export default function SkillsCareerPage() {
     const result = await res.json()
     if (!result.success) { toast.error(result.error ?? 'Gagal menghapus skill'); return }
     setSkills(prev => prev.filter(s => s.id !== id))
+    setMapping(prev => {
+      const next = { ...prev }
+      delete next[id]
+      return next
+    })
     toast.success('Skill dihapus')
   }
 
@@ -291,7 +397,26 @@ export default function SkillsCareerPage() {
     const result = await res.json()
     if (!result.success) { toast.error(result.error ?? 'Gagal menghapus industri'); return }
     setIndustries(prev => prev.filter(i => i.id !== id))
+    setMapping(prev => {
+      const next: Record<string, string[]> = {}
+      for (const [skillId, ids] of Object.entries(prev)) {
+        next[skillId] = ids.filter(x => x !== id)
+      }
+      return next
+    })
     toast.success('Industri dihapus')
+  }
+
+  async function saveMapping(skillId: string, industryIds: string[]) {
+    const res = await fetch('/api/admin/skill-industry-map', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ skill_id: skillId, industry_ids: industryIds }),
+    })
+    const result = await res.json()
+    if (!result.success) { toast.error(result.error ?? 'Gagal menyimpan mapping'); return }
+    setMapping(prev => ({ ...prev, [skillId]: industryIds }))
+    toast.success('Mapping skill–industri disimpan')
   }
 
   const sections = [
@@ -302,16 +427,25 @@ export default function SkillsCareerPage() {
       iconClass: "text-violet-500",
       count: skills.filter(s => s.is_active).length,
       total: skills.length,
-      description: "Skill yang bisa dipilih mahasiswa saat onboarding dan di halaman karir. Nonaktifkan untuk menyembunyikan tanpa menghapus.",
+      description: "Skill yang bisa dipilih mahasiswa saat onboarding dan di halaman target. Nonaktifkan untuk menyembunyikan tanpa menghapus.",
     },
     {
       key: "industries" as Section,
-      label: "Industri & Bidang Pekerjaan",
+      label: "Industri",
       icon: Briefcase,
       iconClass: "text-blue-500",
       count: industries.filter(i => i.is_active).length,
       total: industries.length,
-      description: "Industri digunakan untuk mengelompokkan perusahaan dan mencocokkan skill mahasiswa saat onboarding.",
+      description: "Industri digunakan di onboarding mahasiswa dan harus cocok dengan field industri perusahaan mitra.",
+    },
+    {
+      key: "mapping" as Section,
+      label: "Mapping",
+      icon: Link2,
+      iconClass: "text-emerald-500",
+      count: Object.values(mapping).filter(ids => ids.length > 0).length,
+      total: skills.filter(s => s.is_active).length,
+      description: "Hubungkan skill ke industri. Digunakan untuk merekomendasikan perusahaan yang relevan saat onboarding.",
     },
   ]
 
@@ -322,7 +456,7 @@ export default function SkillsCareerPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Skill & Karir</h1>
         <p className="text-sm text-muted-foreground">
-          Kelola daftar skill dan industri yang tampil di onboarding mahasiswa dan halaman karir
+          Kelola skill, industri, dan mapping yang tampil di onboarding mahasiswa
         </p>
       </div>
 
@@ -332,7 +466,7 @@ export default function SkillsCareerPage() {
         </div>
       ) : (
         <>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             {sections.map((s) => {
               const Icon = s.icon
               const isActive = active === s.key
@@ -344,16 +478,13 @@ export default function SkillsCareerPage() {
                   className={`flex items-center gap-2.5 rounded-lg border px-4 py-2.5 text-sm font-medium transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
                     isActive
                       ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                      : 'border-border bg-card text-foreground hover:bg-accent hover:border-accent-foreground/20'
+                      : 'border-border bg-card text-foreground hover:border-primary/40'
                   }`}
                 >
-                  <Icon className={`h-4 w-4 ${isActive ? 'text-primary-foreground' : s.iconClass}`} />
-                  {s.label}
-                  <Badge
-                    variant={isActive ? "secondary" : "outline"}
-                    className={`ml-0.5 text-xs ${isActive ? 'bg-primary-foreground/20 text-primary-foreground border-transparent' : ''}`}
-                  >
-                    {s.count}
+                  <Icon className={`h-4 w-4 ${isActive ? '' : s.iconClass}`} />
+                  <span>{s.label}</span>
+                  <Badge variant={isActive ? 'secondary' : 'outline'} className="text-[10px]">
+                    {s.count}/{s.total}
                   </Badge>
                 </button>
               )
@@ -361,15 +492,11 @@ export default function SkillsCareerPage() {
           </div>
 
           <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center gap-2">
-                <current.icon className={`h-4 w-4 ${current.iconClass}`} />
-                <CardTitle className="text-base">{current.label}</CardTitle>
-              </div>
+            <CardHeader>
+              <CardTitle className="text-base">{current.label}</CardTitle>
               <CardDescription>{current.description}</CardDescription>
             </CardHeader>
-            <Separator />
-            <CardContent className="pt-4">
+            <CardContent>
               {active === "skills" ? (
                 <OptionTable
                   items={skills}
@@ -380,7 +507,7 @@ export default function SkillsCareerPage() {
                   addPlaceholder="Nama skill baru, contoh: 3D Modeling"
                   emptyText="Belum ada skill. Tambahkan skill pertama di atas."
                 />
-              ) : (
+              ) : active === "industries" ? (
                 <OptionTable
                   items={industries}
                   onAdd={addIndustry}
@@ -389,6 +516,13 @@ export default function SkillsCareerPage() {
                   onDelete={deleteIndustry}
                   addPlaceholder="Nama industri baru, contoh: Pendidikan"
                   emptyText="Belum ada industri. Tambahkan industri pertama di atas."
+                />
+              ) : (
+                <MappingPanel
+                  skills={skills}
+                  industries={industries}
+                  mapping={mapping}
+                  onSave={saveMapping}
                 />
               )}
             </CardContent>

@@ -117,6 +117,7 @@ export async function POST(request: NextRequest) {
         user_id: authData.user.id,
         university_id: universityId,
         company_name: data.full_name,
+        industry: data.company_industry?.trim() || null,
         is_active: true,
       })
       if (companyError) {

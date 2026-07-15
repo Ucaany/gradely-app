@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
@@ -50,6 +50,7 @@ export function CreateUserForm({
 }: CreateUserFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [industryOptions, setIndustryOptions] = useState<{ id: string; name: string }[]>([])
 
   const form = useForm<CreateUserInput>({
     resolver: zodResolver(createUserSchema),
@@ -63,10 +64,25 @@ export function CreateUserForm({
       nim: '',
       study_program_id: '',
       current_semester_type: 'ganjil',
+      company_industry: '',
     },
   })
 
   const selectedRole = form.watch('role')
+
+  useEffect(() => {
+    if (selectedRole !== 'company' && defaultRole !== 'company') return
+    fetch('/api/admin/industries')
+      .then(r => r.json())
+      .then(r => {
+        if (r.success) {
+          setIndustryOptions((r.data as { id: string; name: string; is_active: boolean }[])
+            .filter(i => i.is_active)
+            .map(i => ({ id: i.id, name: i.name })))
+        }
+      })
+      .catch(() => {})
+  }, [selectedRole, defaultRole])
 
   async function onSubmit(data: CreateUserInput) {
     setIsLoading(true)
@@ -95,7 +111,6 @@ export function CreateUserForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-6">
-        {/* Informasi Akun */}
         <Card>
           <CardHeader>
             <CardTitle>Informasi Akun</CardTitle>
@@ -157,7 +172,6 @@ export function CreateUserForm({
           </CardContent>
         </Card>
 
-        {/* Informasi Akademik */}
         <Card>
           <CardHeader>
             <CardTitle>Informasi Akademik</CardTitle>
@@ -251,9 +265,8 @@ export function CreateUserForm({
                           max={14}
                           placeholder="1–14"
                           disabled={isLoading}
-                          {...field}
-                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
                           value={field.value ?? ''}
+                          onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))}
                         />
                       </FormControl>
                       <FormMessage />
@@ -287,10 +300,46 @@ export function CreateUserForm({
                 />
               </>
             )}
+
+            {selectedRole === 'company' && (
+              <>
+                <Separator className="col-span-full" />
+                <FormField
+                  control={form.control}
+                  name="company_industry"
+                  render={({ field }) => (
+                    <FormItem className="sm:col-span-2">
+                      <FormLabel>Industri Perusahaan</FormLabel>
+                      <Select
+                        value={field.value ?? ''}
+                        onValueChange={field.onChange}
+                        disabled={isLoading}
+                      >
+                        <FormControl>
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="Pilih industri dari daftar admin" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {industryOptions.map((ind) => (
+                            <SelectItem key={ind.id} value={ind.name}>
+                              {ind.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-muted-foreground">
+                        Harus sama dengan opsi industri di Skill &amp; Karir agar matching onboarding bekerja.
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
           </CardContent>
         </Card>
 
-        {/* Sticky footer */}
         <div className="flex justify-end gap-3 pt-2">
           <Button
             type="button"

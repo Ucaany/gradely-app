@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useEffect, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -122,8 +122,8 @@ export default function StudentTargetPage() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [pengalaman, setPengalaman] = useState('')
   const [activeInfo, setActiveInfo] = useState<{ label: string; text: string } | null>(null)
-  const [skillOptions, setSkillOptions] = useState<{ name: string; description: string }[]>([])
-  const [industryOptions, setIndustryOptions] = useState<{ name: string; description: string }[]>([])
+  const [skillOptions, setSkillOptions] = useState<{ name: string }[]>([])
+  const [industryOptions, setIndustryOptions] = useState<{ name: string }[]>([])
   const aiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -341,7 +341,7 @@ export default function StudentTargetPage() {
                     <p className="text-xs font-medium mb-2.5 text-muted-foreground">Pilih skill yang ingin dikuasai (opsional)</p>
                     <div className="flex flex-wrap gap-2">
                       {skillOptions.map(s => (
-                        <button key={s.name} onClick={() => { toggleSkill(s.name); setActiveInfo({ label: s.name, text: s.description ?? '' }) }}
+                        <button key={s.name} onClick={() => { toggleSkill(s.name); setActiveInfo({ label: s.name, text: 'Skill yang ingin dikuasai' }) }}
                           className={`rounded-full border px-3 py-1.5 text-xs transition-all ${selectedSkills.includes(s.name)?'bg-primary text-primary-foreground border-primary':'border-border hover:border-primary/60'}`}>
                           {s.name}
                         </button>
@@ -359,7 +359,7 @@ export default function StudentTargetPage() {
                     <p className="text-xs font-medium mb-2.5 text-muted-foreground">Industri yang diminati (opsional)</p>
                     <div className="flex flex-wrap gap-2">
                       {industryOptions.map(ind => (
-                        <button key={ind.name} onClick={() => { toggleIndustry(ind.name); setActiveInfo({ label: ind.name, text: ind.description ?? '' }) }}
+                        <button key={ind.name} onClick={() => { toggleIndustry(ind.name); setActiveInfo({ label: ind.name, text: 'Industri yang diminati' }) }}
                           className={`rounded-full border px-3 py-1.5 text-xs transition-all ${selectedIndustries.includes(ind.name)?'bg-primary text-primary-foreground border-primary':'border-border hover:border-primary/60'}`}>
                           {ind.name}
                         </button>

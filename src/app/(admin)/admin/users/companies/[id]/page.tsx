@@ -101,6 +101,7 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
             companyId={company.id}
             userId={account?.id ?? ''}
             isActive={company.is_active}
+            initialIndustry={company.industry}
             initialCategories={categories}
           />
         </div>

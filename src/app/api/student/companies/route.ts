@@ -27,13 +27,23 @@ export async function GET() {
 
     const interestedIds = (interestedCompanies ?? []).map(c => c.company_id)
 
-    let relevantIndustries: string[] = []
+    const { data: target } = await supabase
+      .from('student_targets')
+      .select('target_skills, target_industries')
+      .eq('student_id', user.id)
+      .maybeSingle()
 
-    if (interests.length > 0) {
+    const targetSkills = (target?.target_skills ?? []) as string[]
+    const targetIndustries = (target?.target_industries ?? []) as string[]
+
+    const industriesSet = new Set<string>(targetIndustries.filter(Boolean))
+
+    // Map skills → industries via skill_industry_map
+    if (targetSkills.length > 0) {
       const { data: skillRows } = await supabase
         .from('skill_options')
         .select('id')
-        .in('name', interests)
+        .in('name', targetSkills)
         .eq('is_active', true)
 
       if (skillRows && skillRows.length > 0) {
@@ -43,18 +53,19 @@ export async function GET() {
           .select('industry_options(name)')
           .in('skill_id', skillIds)
 
-        const industriesSet = new Set<string>()
         for (const row of mapRows ?? []) {
           const ind = (Array.isArray(row.industry_options) ? row.industry_options[0] : row.industry_options) as { name: string } | null
           if (ind?.name) industriesSet.add(ind.name)
         }
-        relevantIndustries = Array.from(industriesSet)
       }
     }
 
+    const relevantIndustries = Array.from(industriesSet)
+    const selectFields = 'id, company_name, industry, description, website, logo_url, company_categories(category)'
+
     let companiesQuery = supabase
       .from('companies')
-      .select('id, company_name, industry, description, website, logo_url, company_categories(category)')
+      .select(selectFields)
       .eq('is_active', true)
 
     if (relevantIndustries.length > 0) {
@@ -63,25 +74,30 @@ export async function GET() {
 
     const { data: companies } = await companiesQuery.order('company_name').limit(50)
 
-    // Jika tidak ada hasil dari filter industri, tampilkan semua perusahaan aktif
+    // Fallback: show all active companies if no industry match
     let finalCompanies = companies ?? []
     if (finalCompanies.length === 0) {
       const { data: allCompanies } = await supabase
         .from('companies')
-        .select('id, company_name, industry, description, website, logo_url, company_categories(category)')
+        .select(selectFields)
         .eq('is_active', true)
         .order('company_name')
         .limit(50)
       finalCompanies = allCompanies ?? []
     }
 
-    const result = (finalCompanies).map(c => ({
+    const result = finalCompanies.map(c => ({
       ...c,
       is_interested: interestedIds.includes(c.id),
     }))
 
     return NextResponse.json<ApiResponse>({
-      data: { companies: result, interests, relevant_industries: relevantIndustries },
+      data: {
+        companies: result,
+        interests,
+        skills: targetSkills,
+        relevant_industries: relevantIndustries,
+      },
       error: null,
       success: true,
     })

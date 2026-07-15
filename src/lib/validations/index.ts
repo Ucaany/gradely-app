@@ -51,6 +51,7 @@ export const createUserSchema = z.object({
   phone: phoneSchema,
   current_semester: z.number().int().min(1).max(14).optional().nullable(),
   current_semester_type: z.enum(['ganjil', 'genap']).optional().nullable(),
+  company_industry: z.string().max(100).optional().nullable(),
 })
 
 export const updateUserSchema = z.object({
