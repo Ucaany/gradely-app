@@ -10,9 +10,7 @@ const ALLOWED_SETTING_KEYS = new Set([
   'ai_vision_base_url',
   'ai_vision_model',
   'gemini_api_key',
-  'waha_url',
-  'waha_session',
-  'waha_api_key',
+  'fonnte_token',
   'notification_enabled',
 ])
 

@@ -199,13 +199,19 @@ export const portfolioLinkSchema = z.object({
   url: z.string().url('URL tidak valid'),
 })
 
+const dateOrNull = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((val) => (val === '' ? null : val ?? null))
+
 export const createPortfolioSchema = z.object({
   category_id: z.string().uuid('Kategori tidak valid'),
   title: z.string().min(2, 'Judul minimal 2 karakter').max(200),
   description: z.string().max(1000).optional().nullable(),
   skills: z.array(z.string().max(50)).default([]),
-  start_date: z.string().optional().nullable(),
-  end_date: z.string().optional().nullable(),
+  start_date: dateOrNull,
+  end_date: dateOrNull,
   status: z.enum(['completed', 'ongoing']).default('completed'),
   is_public: z.boolean().default(true),
   links: z.array(portfolioLinkSchema).default([]),
@@ -249,13 +255,17 @@ export const updateStudentProfileSchema = z.object({
 export type UpdateStudentProfileInput = z.infer<typeof updateStudentProfileSchema>
 
 // ============================================================
-// WAHA / Settings
+// Fonnte / Settings
 // ============================================================
-export const wahaSettingsSchema = z.object({
-  waha_url: z.string().url('WAHA URL tidak valid'),
-  waha_session: z.string().min(1, 'Session name diperlukan'),
-  waha_api_key: z.string().optional(),
+export const fonnteSettingsSchema = z.object({
+  fonnte_token: z
+    .string()
+    .min(1, 'Token Fonnte diperlukan')
+    .max(256, 'Token terlalu panjang')
+    .regex(/^[\x20-\x7E]+$/, 'Token mengandung karakter tidak valid'),
 })
+
+export const wahaSettingsSchema = fonnteSettingsSchema
 
 // Type exports
 export type LoginInput = z.infer<typeof loginSchema>
@@ -273,4 +283,5 @@ export type StudentTargetInput = z.infer<typeof studentTargetSchema>
 export type PortfolioLinkInput = z.infer<typeof portfolioLinkSchema>
 export type CreatePortfolioInput = z.infer<typeof createPortfolioSchema>
 export type UpdatePortfolioInput = z.infer<typeof updatePortfolioSchema>
-export type WahaSettingsInput = z.infer<typeof wahaSettingsSchema>
+export type FonnteSettingsInput = z.infer<typeof fonnteSettingsSchema>
+export type WahaSettingsInput = FonnteSettingsInput

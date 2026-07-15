@@ -10,9 +10,12 @@ import {
   FileText,
   X,
   Sparkles,
+  Pencil,
+  Check,
 } from 'lucide-react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Card,
   CardContent,
@@ -29,6 +32,14 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Label } from '@/components/ui/label'
 import { GRADE_COLORS } from '@/components/student/grade-form-dialog'
 
 interface ParsedGrade {
@@ -46,6 +57,14 @@ interface ImportResult {
   errors: string[]
 }
 
+const VALID_GRADES = ['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']
+
+const SEMESTER_TYPE: Record<number, string> = {
+  1: 'ganjil', 2: 'genap', 3: 'ganjil', 4: 'genap', 5: 'ganjil',
+  6: 'genap', 7: 'ganjil', 8: 'genap', 9: 'ganjil', 10: 'genap',
+  11: 'ganjil', 12: 'genap', 13: 'ganjil', 14: 'genap',
+}
+
 export default function ImportKHSPage() {
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -53,12 +72,15 @@ export default function ImportKHSPage() {
   const [isImporting, setIsImporting] = useState(false)
   const [parsedGrades, setParsedGrades] = useState<ParsedGrade[] | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
+  const [editingIndex, setEditingIndex] = useState<number | null>(null)
+  const [editRow, setEditRow] = useState<ParsedGrade | null>(null)
+  const [overrideSemester, setOverrideSemester] = useState<string>('')
   const inputRef = useRef<HTMLInputElement>(null)
 
   function handleFile(selected: File) {
-    const allowed = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+    const allowed = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
     if (!allowed.includes(selected.type)) {
-      toast.error('Format tidak didukung. Gunakan PDF, PNG, JPG, atau WebP.')
+      toast.error('Format tidak didukung. Gunakan PNG, JPG, atau WebP.')
       return
     }
     if (selected.size > 10 * 1024 * 1024) {
@@ -68,6 +90,7 @@ export default function ImportKHSPage() {
     setFile(selected)
     setParsedGrades(null)
     setResult(null)
+    setOverrideSemester('')
   }
 
   function handleDrop(e: React.DragEvent) {
@@ -103,14 +126,54 @@ export default function ImportKHSPage() {
     }
   }
 
+  function applyOverrideSemester(grades: ParsedGrade[], semNum: number): ParsedGrade[] {
+    return grades.map((g) => ({
+      ...g,
+      semester_number: semNum,
+      semester_type: SEMESTER_TYPE[semNum] ?? (semNum % 2 === 1 ? 'ganjil' : 'genap'),
+    }))
+  }
+
+  function handleStartEdit(index: number) {
+    if (!parsedGrades) return
+    setEditingIndex(index)
+    setEditRow({ ...parsedGrades[index] })
+  }
+
+  function handleSaveEdit() {
+    if (editingIndex === null || !editRow || !parsedGrades) return
+    const updated = [...parsedGrades]
+    updated[editingIndex] = {
+      ...editRow,
+      semester_type: SEMESTER_TYPE[editRow.semester_number] ?? (editRow.semester_number % 2 === 1 ? 'ganjil' : 'genap'),
+    }
+    setParsedGrades(updated)
+    setEditingIndex(null)
+    setEditRow(null)
+  }
+
+  function handleCancelEdit() {
+    setEditingIndex(null)
+    setEditRow(null)
+  }
+
+  function handleDeleteRow(index: number) {
+    if (!parsedGrades) return
+    setParsedGrades(parsedGrades.filter((_, i) => i !== index))
+  }
+
   async function handleImport() {
     if (!parsedGrades?.length) return
+    let gradesToImport = parsedGrades
+    if (overrideSemester) {
+      gradesToImport = applyOverrideSemester(parsedGrades, parseInt(overrideSemester))
+    }
     setIsImporting(true)
     try {
       const res = await fetch('/api/student/khs-import', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ grades: parsedGrades }),
+        body: JSON.stringify({ grades: gradesToImport }),
       })
       const data = await res.json()
       if (!res.ok) {
@@ -128,6 +191,9 @@ export default function ImportKHSPage() {
     setFile(null)
     setParsedGrades(null)
     setResult(null)
+    setEditingIndex(null)
+    setEditRow(null)
+    setOverrideSemester('')
     if (inputRef.current) inputRef.current.value = ''
   }
 
@@ -136,7 +202,7 @@ export default function ImportKHSPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Import KHS</h1>
         <p className="text-sm text-muted-foreground">
-          Upload dokumen KHS dan AI akan mengekstrak data nilai secara otomatis
+          Upload foto KHS dan AI akan mengekstrak data nilai secara otomatis
         </p>
       </div>
 
@@ -187,10 +253,10 @@ export default function ImportKHSPage() {
             <CardHeader>
               <CardTitle className="text-base flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-violet-500" />
-                Upload Dokumen KHS
+                Upload Foto KHS
               </CardTitle>
               <CardDescription>
-                Mendukung file PDF, PNG, JPG, WebP — maksimal 10 MB
+                Mendukung file PNG, JPG, WebP — maksimal 10 MB
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -210,14 +276,14 @@ export default function ImportKHSPage() {
                     <FileUp className="h-6 w-6" />
                   </div>
                   <div>
-                    <p className="font-medium text-sm">Klik atau seret file ke sini</p>
-                    <p className="text-xs text-muted-foreground mt-1">PDF, PNG, JPG, WebP · Maks. 10 MB</p>
+                    <p className="font-medium text-sm">Klik atau seret foto ke sini</p>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG, WebP · Maks. 10 MB</p>
                   </div>
                   <input
                     ref={inputRef}
                     type="file"
                     className="hidden"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp"
+                    accept=".png,.jpg,.jpeg,.webp"
                     onChange={(e) => {
                       const f = e.target.files?.[0]
                       if (f) handleFile(f)
@@ -246,7 +312,7 @@ export default function ImportKHSPage() {
                   {isParsing ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      AI sedang membaca dokumen...
+                      AI sedang membaca foto...
                     </>
                   ) : (
                     <>
@@ -265,44 +331,148 @@ export default function ImportKHSPage() {
                 <div>
                   <CardTitle className="text-base">Hasil Ekstraksi AI</CardTitle>
                   <CardDescription>
-                    {parsedGrades.length} mata kuliah ditemukan — periksa sebelum mengimpor
+                    {parsedGrades.length} mata kuliah ditemukan — periksa dan edit sebelum mengimpor
                   </CardDescription>
                 </div>
                 <Badge variant="outline" className="shrink-0 text-violet-600 border-violet-300 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-400">
                   {parsedGrades.length} MK
                 </Badge>
               </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
+
+              <CardContent className="space-y-4 pt-0">
+                <div className="rounded-lg border bg-muted/30 p-4 space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-sm font-medium">Semester KHS ini untuk semester berapa?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Opsional. Jika diisi, semua baris akan diset ke semester yang dipilih.
+                    </p>
+                  </div>
+                  <Select value={overrideSemester} onValueChange={setOverrideSemester}>
+                    <SelectTrigger className="w-full sm:w-64">
+                      <SelectValue placeholder="Gunakan semester dari AI (default)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">Gunakan semester dari AI (default)</SelectItem>
+                      {Array.from({ length: 14 }, (_, i) => i + 1).map((s) => (
+                        <SelectItem key={s} value={String(s)}>
+                          Semester {s} ({SEMESTER_TYPE[s]})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="overflow-x-auto rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="pl-4 sm:pl-6">Mata Kuliah</TableHead>
+                        <TableHead className="pl-4">Mata Kuliah</TableHead>
                         <TableHead className="w-14 text-center">SKS</TableHead>
-                        <TableHead className="w-16 text-center">Nilai</TableHead>
-                        <TableHead className="w-20 text-center">Semester</TableHead>
-                        <TableHead className="pr-4 sm:pr-6 w-28">Tahun Ajaran</TableHead>
+                        <TableHead className="w-20 text-center">Nilai</TableHead>
+                        <TableHead className="w-24 text-center">Semester</TableHead>
+                        <TableHead className="w-28">Tahun Ajaran</TableHead>
+                        <TableHead className="w-20 pr-4 text-center">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {parsedGrades.map((g, i) => (
                         <TableRow key={i}>
-                          <TableCell className="pl-4 sm:pl-6 text-sm font-medium">{g.course_name}</TableCell>
-                          <TableCell className="text-center text-sm">{g.credits}</TableCell>
-                          <TableCell className="text-center">
-                            <Badge variant="outline" className={`text-xs font-semibold ${GRADE_COLORS[g.grade] ?? ''}`}>
-                              {g.grade}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-center text-sm text-muted-foreground">{g.semester_number}</TableCell>
-                          <TableCell className="pr-4 sm:pr-6 text-sm text-muted-foreground">{g.academic_year}</TableCell>
+                          {editingIndex === i && editRow ? (
+                            <>
+                              <TableCell className="pl-4">
+                                <Input
+                                  value={editRow.course_name}
+                                  onChange={(e) => setEditRow({ ...editRow, course_name: e.target.value })}
+                                  className="h-7 text-xs"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={6}
+                                  value={editRow.credits}
+                                  onChange={(e) => setEditRow({ ...editRow, credits: parseInt(e.target.value) || 1 })}
+                                  className="h-7 text-xs w-14 text-center mx-auto"
+                                />
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Select value={editRow.grade} onValueChange={(v) => setEditRow({ ...editRow, grade: v })}>
+                                  <SelectTrigger className="h-7 text-xs w-16 mx-auto">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {VALID_GRADES.map((gr) => (
+                                      <SelectItem key={gr} value={gr}>{gr}</SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={14}
+                                  value={overrideSemester ? parseInt(overrideSemester) : editRow.semester_number}
+                                  onChange={(e) => {
+                                    if (!overrideSemester) setEditRow({ ...editRow, semester_number: parseInt(e.target.value) || 1 })
+                                  }}
+                                  disabled={!!overrideSemester}
+                                  className="h-7 text-xs w-16 text-center mx-auto disabled:opacity-50"
+                                  title={overrideSemester ? 'Semester dikontrol oleh pilihan override di atas' : undefined}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <Input
+                                  value={editRow.academic_year}
+                                  onChange={(e) => setEditRow({ ...editRow, academic_year: e.target.value })}
+                                  className="h-7 text-xs w-24"
+                                />
+                              </TableCell>
+                              <TableCell className="pr-4">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-emerald-600" onClick={handleSaveEdit}>
+                                    <Check className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCancelEdit}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </>
+                          ) : (
+                            <>
+                              <TableCell className="pl-4 text-sm font-medium">{g.course_name}</TableCell>
+                              <TableCell className="text-center text-sm">{g.credits}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className={`text-xs font-semibold ${GRADE_COLORS[g.grade] ?? ''}`}>
+                                  {g.grade}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center text-sm text-muted-foreground">
+                                {overrideSemester ? parseInt(overrideSemester) : g.semester_number}
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">{g.academic_year}</TableCell>
+                              <TableCell className="pr-4">
+                                <div className="flex items-center justify-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleStartEdit(i)}>
+                                    <Pencil className="h-3 w-3" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive" onClick={() => handleDeleteRow(i)}>
+                                    <X className="h-3 w-3" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
                 </div>
-                <div className="flex gap-2 p-4 border-t">
-                  <Button onClick={handleImport} disabled={isImporting}>
+
+                <div className="flex gap-2">
+                  <Button onClick={handleImport} disabled={isImporting || editingIndex !== null}>
                     {isImporting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -312,6 +482,7 @@ export default function ImportKHSPage() {
                       <>
                         <CheckCircle2 className="mr-2 h-4 w-4" />
                         Import {parsedGrades.length} Nilai
+                        {overrideSemester ? ` ke Semester ${overrideSemester}` : ''}
                       </>
                     )}
                   </Button>
@@ -331,10 +502,10 @@ export default function ImportKHSPage() {
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Cara penggunaan</p>
                     <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-                       <li>Upload file KHS dalam format PDF atau gambar</li>
-                       <li>AI akan membaca dan mengekstrak data mata kuliah, SKS, dan nilai</li>
-                       <li>Periksa hasil ekstraksi sebelum mengimpor ke sistem</li>
-                     </ul>
+                      <li>Upload foto KHS dalam format PNG, JPG, atau WebP</li>
+                      <li>AI akan membaca dan mengekstrak data mata kuliah, SKS, dan nilai</li>
+                      <li>Pilih semester yang sesuai, edit data jika perlu, lalu konfirmasi import</li>
+                    </ul>
                   </div>
                 </div>
               </CardContent>

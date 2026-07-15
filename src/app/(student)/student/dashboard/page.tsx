@@ -210,9 +210,9 @@ export default async function StudentDashboardPage() {
       color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400',
     },
     {
-      label: 'Portofolio',
-      href: '/student/portfolio',
-      desc: 'Kelola portofolio kamu',
+      label: 'Tambah Portofolio',
+      href: '/student/portfolio/new',
+      desc: 'Tambah portofolio baru',
       icon: Briefcase,
       color: 'text-pink-600 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-400',
     },

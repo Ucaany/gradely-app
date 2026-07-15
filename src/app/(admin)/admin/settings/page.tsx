@@ -20,7 +20,7 @@ export default async function AdminSettingsPage() {
     .from('settings')
     .select('key, value')
     .eq('university_id', universityId)
-    .in('key', ['waha_url', 'waha_session', 'waha_api_key'])
+    .in('key', ['fonnte_token'])
 
   const settingsMap = Object.fromEntries(
     (settings ?? []).map((s) => [s.key, s.value])
@@ -34,19 +34,17 @@ export default async function AdminSettingsPage() {
             <MessageSquare className="h-5 w-5 text-muted-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Konfigurasi WAHA</h1>
+            <h1 className="text-2xl font-semibold tracking-tight">Konfigurasi Fonnte</h1>
             <p className="text-sm text-muted-foreground">
-              Atur koneksi WhatsApp HTTP API untuk notifikasi otomatis
+              Atur koneksi WhatsApp via Fonnte API untuk notifikasi otomatis
             </p>
           </div>
         </div>
-        
+
         <WahaSettingsForm
           universityId={universityId}
           defaultValues={{
-            waha_url: settingsMap['waha_url'] ?? '',
-            waha_session: settingsMap['waha_session'] ?? '',
-            waha_api_key: settingsMap['waha_api_key'] ?? '',
+            fonnte_token: settingsMap['fonnte_token'] ?? '',
           }}
         />
       </div>

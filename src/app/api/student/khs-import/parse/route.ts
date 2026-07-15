@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
-const SUPPORTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
+const SUPPORTED_TYPES = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_SIZE = 10 * 1024 * 1024
-const VALID_GRADES = new Set(['A', 'AB', 'B', 'BC', 'C', 'D', 'E'])
+const VALID_GRADES = new Set(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E'])
 
 function isValidPublicHttpsUrl(raw: string): boolean {
   try {
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const file = formData.get('file') as File | null
     if (!file) return NextResponse.json<ApiResponse>({ data: null, error: 'File tidak ditemukan', success: false }, { status: 400 })
     if (!SUPPORTED_TYPES.includes(file.type)) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Format file tidak didukung. Gunakan PDF, PNG, JPG, atau WebP.', success: false }, { status: 400 })
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Format file tidak didukung. Gunakan PNG, JPG, atau WebP.', success: false }, { status: 400 })
     }
     if (file.size > MAX_SIZE) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Ukuran file melebihi 10 MB', success: false }, { status: 400 })
@@ -81,7 +81,6 @@ export async function POST(request: NextRequest) {
     const bytes = await file.arrayBuffer()
     const base64 = Buffer.from(bytes).toString('base64')
     const mimeType = file.type
-    const isPdf = mimeType === 'application/pdf'
 
     const prompt = `Kamu adalah parser dokumen KHS (Kartu Hasil Studi) mahasiswa Indonesia.
 Ekstrak semua mata kuliah dari dokumen ini dan kembalikan HANYA JSON array dengan format berikut:
@@ -96,7 +95,7 @@ Ekstrak semua mata kuliah dari dokumen ini dan kembalikan HANYA JSON array denga
   }
 ]
 Aturan:
-- grade harus salah satu dari: A, AB, B, BC, C, D, E
+- grade harus salah satu dari: A, A-, BA, B+, B, B-, C, D, E
 - semester_type harus "ganjil" atau "genap" (ganjil = semester ganjil 1,3,5,7,9, genap = semester genap 2,4,6,8,10)
 - credits harus angka integer 1-6
 - semester_number harus angka integer 1-14
@@ -104,19 +103,13 @@ Aturan:
 - Jika informasi tahun ajaran tidak ada, gunakan "2024/2025"
 - Kembalikan HANYA JSON array, tidak ada teks lain sama sekali`
 
-    const contentParts: object[] = [{ type: 'text', text: prompt }]
-
-    if (isPdf) {
-      contentParts.push({
-        type: 'text',
-        text: `[File PDF terlampir sebagai base64 — ukuran: ${Math.round(file.size / 1024)} KB. Ekstrak semua data nilai dari dokumen KHS ini.]\nData base64 PDF: data:application/pdf;base64,${base64}`,
-      })
-    } else {
-      contentParts.push({
+    const contentParts: object[] = [
+      { type: 'text', text: prompt },
+      {
         type: 'image_url',
         image_url: { url: `data:${mimeType};base64,${base64}` },
-      })
-    }
+      },
+    ]
 
     const aiUrl = `${rawBaseUrl}/chat/completions`
     const controller = new AbortController()

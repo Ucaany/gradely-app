@@ -69,31 +69,37 @@ export async function GET(request: Request) {
   const studentIds = (students ?? []).map((s) => s.id)
   let filteredStudents: typeof students = students ?? []
 
-  // GPA filter — kolom aktual: grade_points, credits (sesuai migration 001)
-  if (min_gpa && studentIds.length > 0) {
-    const minGpa = parseFloat(min_gpa)
-    if (!isNaN(minGpa) && minGpa > 0) {
-      const { data: grades } = await supabase
-        .from('student_grades')
-        .select('student_id, grade_points, credits')
-        .in('student_id', studentIds)
+  // Always fetch GPA for all returned students
+  const gpaMap = new Map<string, number>()
+  if (studentIds.length > 0) {
+    const { data: grades } = await supabase
+      .from('student_grades')
+      .select('student_id, grade_points, credits')
+      .in('student_id', studentIds)
 
-      const gpaMap = new Map<string, number>()
-      if (grades) {
-        const grouped = new Map<string, { points: number; credits: number }>()
-        for (const g of grades) {
-          const prev = grouped.get(g.student_id) ?? { points: 0, credits: 0 }
-          grouped.set(g.student_id, {
-            points: prev.points + (g.grade_points ?? 0) * (g.credits ?? 0),
-            credits: prev.credits + (g.credits ?? 0),
-          })
-        }
-        grouped.forEach((val, sid) => {
-          gpaMap.set(sid, val.credits > 0 ? Math.round((val.points / val.credits) * 100) / 100 : 0)
+    if (grades) {
+      const grouped = new Map<string, { points: number; credits: number }>()
+      for (const g of grades) {
+        const prev = grouped.get(g.student_id) ?? { points: 0, credits: 0 }
+        grouped.set(g.student_id, {
+          points: prev.points + (g.grade_points ?? 0) * (g.credits ?? 0),
+          credits: prev.credits + (g.credits ?? 0),
         })
       }
+      grouped.forEach((val, sid) => {
+        gpaMap.set(sid, val.credits > 0 ? Math.round((val.points / val.credits) * 100) / 100 : 0)
+      })
+    }
+  }
+
+  // Attach GPA to all students
+  filteredStudents = filteredStudents.map((s) => ({ ...s, gpa: gpaMap.get(s.id) ?? 0 }))
+
+  // GPA filter
+  if (min_gpa) {
+    const minGpa = parseFloat(min_gpa)
+    if (!isNaN(minGpa) && minGpa > 0) {
       filteredStudents = filteredStudents.filter((s) => (gpaMap.get(s.id) ?? 0) >= minGpa)
-      filteredStudents = filteredStudents.map((s) => ({ ...s, gpa: gpaMap.get(s.id) ?? 0 }))
     }
   }
 

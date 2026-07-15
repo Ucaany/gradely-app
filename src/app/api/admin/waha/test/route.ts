@@ -2,27 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import type { ApiResponse } from '@/types'
 
-function isValidPublicHttpsUrl(raw: string): boolean {
-  try {
-    const parsed = new URL(raw)
-    if (parsed.protocol !== 'https:') return false
-    const h = parsed.hostname
-    if (
-      h === 'localhost' ||
-      /^127\./.test(h) ||
-      /^10\./.test(h) ||
-      /^192\.168\./.test(h) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(h) ||
-      h === '169.254.169.254' ||
-      h.endsWith('.internal') ||
-      h.endsWith('.local')
-    ) return false
-    return true
-  } catch {
-    return false
-  }
-}
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createClient()
@@ -35,42 +14,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { waha_url, waha_session, waha_api_key } = body
+    const { fonnte_token } = body
 
-    if (!waha_url || !waha_session) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'WAHA URL dan Session diperlukan', success: false }, { status: 400 })
+    if (!fonnte_token) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Token Fonnte diperlukan', success: false }, { status: 400 })
     }
 
-    if (!isValidPublicHttpsUrl(waha_url)) {
-      return NextResponse.json<ApiResponse>(
-        { data: null, error: 'WAHA URL tidak valid. Gunakan HTTPS dan pastikan bukan alamat jaringan lokal.', success: false },
-        { status: 400 }
-      )
-    }
-
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    }
-    if (waha_api_key) {
-      headers['X-Api-Key'] = waha_api_key
-    }
-
-    // Test WAHA connection
-    const res = await fetch(`${waha_url}/api/sessions/${waha_session}`, {
-      headers,
-      signal: AbortSignal.timeout(5000),
+    const res = await fetch('https://api.fonnte.com/validate-token', {
+      method: 'GET',
+      headers: { Authorization: fonnte_token },
+      signal: AbortSignal.timeout(8000),
     })
 
-    if (!res.ok) {
+    const json = await res.json().catch(() => ({}))
+
+    if (!res.ok || json.status === false) {
       return NextResponse.json<ApiResponse>(
-        { data: null, error: `WAHA merespons dengan status ${res.status}`, success: false },
+        { data: null, error: json.reason ?? json.message ?? 'Token tidak valid', success: false },
         { status: 400 }
       )
     }
 
-    return NextResponse.json<ApiResponse>({ data: { connected: true }, error: null, success: true })
+    return NextResponse.json<ApiResponse>({ data: { connected: true, device: json.device ?? null }, error: null, success: true })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : 'Koneksi ke WAHA gagal'
+    const msg = err instanceof Error ? err.message : 'Koneksi ke Fonnte gagal'
     return NextResponse.json<ApiResponse>({ data: null, error: msg, success: false }, { status: 400 })
   }
 }
