@@ -227,6 +227,24 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
+      {/* Banner onboarding belum selesai */}
+      {!profile?.onboarding_completed && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Profil belum lengkap</p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+              Lengkapi onboarding untuk mendapatkan rekomendasi karier dan perusahaan mitra yang sesuai.
+            </p>
+          </div>
+          <Link href="/student/onboarding">
+            <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40">
+              Lengkapi Sekarang
+            </Button>
+          </Link>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">

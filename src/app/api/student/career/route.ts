@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { CAREER_OPTIONS } from '@/lib/constants/career'
 
 export async function GET() {
   const supabase = await createClient()
@@ -35,28 +34,42 @@ export async function POST(request: Request) {
   const body = await request.json()
   const { interests } = body as { interests: string[] }
 
-  if (!Array.isArray(interests) || interests.length === 0) {
-    return NextResponse.json({ error: 'Minimal pilih 1 minat karier' }, { status: 400 })
+  // Allow empty array (user selected "tidak ada")
+  if (!Array.isArray(interests)) {
+    return NextResponse.json({ error: 'Format data tidak valid' }, { status: 400 })
   }
 
   if (interests.length > 20) {
     return NextResponse.json({ error: 'Maksimal 20 minat karier' }, { status: 400 })
   }
 
-  const validOptions = new Set(CAREER_OPTIONS)
-  const invalidInterests = interests.filter((i) => !validOptions.has(i))
-  if (invalidInterests.length > 0) {
-    return NextResponse.json({ error: 'Terdapat pilihan minat karier yang tidak valid' }, { status: 400 })
+  // Validate against DB (skill_options) if interests provided
+  if (interests.length > 0) {
+    const { data: validSkills } = await supabase
+      .from('skill_options')
+      .select('name')
+      .in('name', interests)
+      .eq('is_active', true)
+
+    const validNames = new Set((validSkills ?? []).map(s => s.name))
+    const invalidInterests = interests.filter(i => !validNames.has(i))
+    if (invalidInterests.length > 0) {
+      return NextResponse.json({ error: 'Terdapat pilihan minat karier yang tidak valid' }, { status: 400 })
+    }
   }
 
   await supabase.from('career_interests').delete().eq('student_id', user.id)
 
-  const rows = interests.map((interest) => ({ student_id: user.id, interest }))
-  const { data, error } = await supabase
-    .from('career_interests')
-    .insert(rows)
-    .select()
+  if (interests.length > 0) {
+    const rows = interests.map((interest) => ({ student_id: user.id, interest }))
+    const { data, error } = await supabase
+      .from('career_interests')
+      .insert(rows)
+      .select()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ success: true, data })
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true, data })
+  }
+
+  return NextResponse.json({ success: true, data: [] })
 }

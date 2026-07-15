@@ -2,14 +2,18 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Loader2, Briefcase, Check, X } from 'lucide-react'
+import { Loader2, Check, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 
-import { CAREER_OPTIONS } from '@/lib/constants/career'
+interface SkillOption {
+  id: string
+  name: string
+}
 
 export default function StudentCareerPage() {
+  const [availableSkills, setAvailableSkills] = useState<SkillOption[]>([])
   const [selectedInterests, setSelectedInterests] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isSaving, setIsSaving] = useState(false)
@@ -17,10 +21,15 @@ export default function StudentCareerPage() {
   const fetchData = useCallback(async () => {
     setIsLoading(true)
     try {
-      const res = await fetch('/api/student/career')
-      const data = await res.json()
-      if (data.success) {
-        setSelectedInterests((data.data ?? []).map((c: { interest: string }) => c.interest))
+      const [careerRes, skillsRes] = await Promise.all([
+        fetch('/api/student/career').then(r => r.json()),
+        fetch('/api/student/skills').then(r => r.json()),
+      ])
+      if (careerRes.success) {
+        setSelectedInterests((careerRes.data ?? []).map((c: { interest: string }) => c.interest))
+      }
+      if (skillsRes.success) {
+        setAvailableSkills(skillsRes.data ?? [])
       }
     } finally {
       setIsLoading(false)
@@ -72,39 +81,42 @@ export default function StudentCareerPage() {
 
       <Card className="max-w-2xl">
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-            Minat Karier
-          </CardTitle>
+          <CardTitle className="text-base">Minat Karier</CardTitle>
           <CardDescription>
-            Pilih bidang karier yang kamu minati. Perusahaan yang relevan akan ditampilkan berdasarkan pilihan ini.
+            Pilih karier yang sesuai dengan minat dan kemampuanmu
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-2">
-            {CAREER_OPTIONS.map((option) => {
-              const selected = selectedInterests.includes(option)
-              return (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => toggleInterest(option)}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium border transition-colors ${
-                    selected
-                      ? 'bg-primary text-primary-foreground border-primary'
-                      : 'bg-background text-foreground border-border hover:bg-muted'
-                  }`}
-                >
-                  {selected && <Check className="h-3.5 w-3.5" />}
-                  {option}
-                </button>
-              )
-            })}
-          </div>
+          {availableSkills.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              Belum ada pilihan karier yang tersedia. Hubungi admin untuk menambahkan pilihan.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableSkills.map((skill) => {
+                const selected = selectedInterests.includes(skill.name)
+                return (
+                  <button
+                    key={skill.id}
+                    type="button"
+                    onClick={() => toggleInterest(skill.name)}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer ${
+                      selected
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-background text-foreground border-border hover:bg-muted'
+                    }`}
+                  >
+                    {selected && <Check className="h-3.5 w-3.5" />}
+                    {skill.name}
+                  </button>
+                )
+              })}
+            </div>
+          )}
 
           {selectedInterests.length > 0 && (
-            <div className="pt-2">
-              <p className="text-xs text-muted-foreground mb-2">Terpilih ({selectedInterests.length}):</p>
+            <div className="pt-2 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">{selectedInterests.length} minat dipilih:</p>
               <div className="flex flex-wrap gap-1.5">
                 {selectedInterests.map((interest) => (
                   <Badge key={interest} variant="secondary" className="gap-1 pr-1">
