@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { calculateAcademicSummary, groupGradesBySemester } from '@/lib/utils/academic'
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { sendAndLog } from '@/lib/waha'
 import type { ApiResponse, AcademicRule, StudentGrade } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -47,8 +50,8 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    const phoneDigits = lecturer.phone.replace(/\D/g, '')
-    if (phoneDigits.length < 9 || phoneDigits.length > 15) {
+    const phoneDigitCount = lecturer.phone.replace(/\D/g, '').length
+    if (phoneDigitCount < 9 || phoneDigitCount > 15) {
       return NextResponse.json<ApiResponse>({
         data: null,
         error: `Nomor HP dosen ${lecturer.full_name} tidak valid (${lecturer.phone}). Minta dosen memperbarui nomor HP di profil.`,
@@ -152,29 +155,18 @@ export async function POST(request: NextRequest) {
       ? `${adminUser.phone}${adminUser.email ? ` / ${adminUser.email}` : ''}`
       : adminUser.email ?? '-'
 
-    // Load WAHA settings
-    const { data: wahaSettings } = await supabase
+    const { data: aiSettingRows } = await supabase
       .from('settings')
       .select('key, value')
       .eq('university_id', adminUser.university_id ?? '')
-      .in('key', ['waha_url', 'waha_session', 'waha_api_key'])
+      .in('key', ['ai_api_key', 'ai_base_url', 'ai_model'])
 
     const settingsMap: Record<string, string> = {}
-    for (const s of (wahaSettings ?? [])) settingsMap[s.key] = s.value
+    for (const s of (aiSettingRows ?? [])) settingsMap[s.key] = s.value
 
-    const wahaUrl = settingsMap['waha_url']
-    const wahaSession = settingsMap['waha_session']
-    const wahaApiKey = settingsMap['waha_api_key']
-
-    if (!wahaUrl || !wahaSession) {
-      if (!preview_only) {
-        return NextResponse.json<ApiResponse>({ data: null, error: 'Konfigurasi WAHA belum diatur. Hubungi admin kampus.', success: false }, { status: 503 })
-      }
-    }
-
-    const apiKey = process.env.AI_API_KEY ?? ''
-    const baseUrl = (process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
-    const model = process.env.AI_MODEL ?? 'kr/auto'
+    const apiKey = settingsMap['ai_api_key'] ?? process.env.AI_API_KEY ?? ''
+    const baseUrl = (settingsMap['ai_base_url'] ?? process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
+    const model = settingsMap['ai_model'] ?? process.env.AI_MODEL ?? 'kr/auto'
     if (!apiKey) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Layanan AI belum tersedia', success: false }, { status: 503 })
     }
@@ -296,42 +288,15 @@ ATURAN FORMAT
       return NextResponse.json<ApiResponse>({ data: { message: messageText }, error: null, success: true })
     }
 
-    // Format nomor HP dosen ke format WhatsApp
-    const chatId = phoneDigits.startsWith('0')
-      ? `62${phoneDigits.slice(1)}@c.us`
-      : phoneDigits.startsWith('62')
-        ? `${phoneDigits}@c.us`
-        : `62${phoneDigits}@c.us`
-
-    const wahaHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (wahaApiKey) wahaHeaders['X-Api-Key'] = wahaApiKey
-
-    const wahaRes = await fetch(`${wahaUrl}/api/sendText`, {
-      method: 'POST',
-      headers: wahaHeaders,
-      body: JSON.stringify({ session: wahaSession, chatId, text: messageText }),
-      signal: AbortSignal.timeout(10000),
-    })
-
-    if (!wahaRes.ok) {
-      const errText = await wahaRes.text()
-      await supabase.from('whatsapp_logs').insert({
-        recipient_id: lecturer_id,
-        phone_number: lecturer.phone,
-        message: messageText,
-        status: 'failed',
-        error_message: `WAHA error: ${wahaRes.status} ${errText}`,
-      })
-      return NextResponse.json<ApiResponse>({ data: null, error: `Gagal mengirim via WAHA: ${wahaRes.status}`, success: false }, { status: 502 })
-    }
-
-    await supabase.from('whatsapp_logs').insert({
-      recipient_id: lecturer_id,
-      phone_number: lecturer.phone,
+    const sendResult = await sendAndLog(adminUser.university_id ?? '', {
+      phone: lecturer.phone,
       message: messageText,
-      status: 'sent',
-      sent_at: new Date().toISOString(),
+      recipientId: lecturer_id,
     })
+
+    if (!sendResult.success) {
+      return NextResponse.json<ApiResponse>({ data: null, error: sendResult.error ?? 'Gagal mengirim pesan', success: false }, { status: 502 })
+    }
 
     return NextResponse.json<ApiResponse>({ data: { message: messageText }, error: null, success: true })
   } catch (err) {
