@@ -46,7 +46,6 @@ export default function StudentGradesPage() {
   const [grades, setGrades] = useState<StudentGrade[]>([])
   const [semesterGroups, setSemesterGroups] = useState<SemesterGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isRefreshing, setIsRefreshing] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editGrade, setEditGrade] = useState<StudentGrade | null>(null)
@@ -55,11 +54,7 @@ export default function StudentGradesPage() {
   const [passingGradePoints, setPassingGradePoints] = useState<number>(1.0)
 
   const fetchGrades = useCallback(async (silent = false) => {
-    if (silent) {
-      setIsRefreshing(true)
-    } else {
-      setIsLoading(true)
-    }
+    if (!silent) setIsLoading(true)
     setFetchError(null)
     try {
       const [gradesRes, ruleRes] = await Promise.all([
@@ -104,7 +99,6 @@ export default function StudentGradesPage() {
       setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
     } finally {
       setIsLoading(false)
-      setIsRefreshing(false)
     }
   }, [])
 
