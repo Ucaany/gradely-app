@@ -128,11 +128,13 @@ export default function StudentPortfolioPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Semua Kategori</SelectItem>
-            {categories.map((cat) => (
-              <SelectItem key={cat.id} value={cat.id}>
-                {CATEGORY_LABEL[cat.code] ?? cat.name}
-              </SelectItem>
-            ))}
+            {categories
+              .filter((cat) => items.some((i) => i.category_id === cat.id))
+              .map((cat) => (
+                <SelectItem key={cat.id} value={cat.id}>
+                  {CATEGORY_LABEL[cat.code] ?? cat.name}
+                </SelectItem>
+              ))}
           </SelectContent>
         </Select>
 
