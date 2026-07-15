@@ -65,13 +65,14 @@ export async function POST(request: NextRequest) {
       )
     )
 
-    // Validasi dan siapkan baris yang valid
+    // Validasi SEMUA baris dulu sebelum insert apapun (Opsi A: rollback total)
     const validRows: object[] = []
     let skipped = 0
     const errors: string[] = []
 
     for (const g of grades) {
       if (!g.course_name?.trim() || !VALID_GRADES.has(g.grade)) {
+        errors.push(`${g.course_name ?? '(tanpa nama)'}: nilai "${g.grade}" tidak valid, dilewati`)
         skipped++
         continue
       }
@@ -99,18 +100,27 @@ export async function POST(request: NextRequest) {
       existingSet.add(key)
     }
 
-    let imported = 0
-    if (validRows.length > 0) {
-      const { error: insertError } = await supabase
-        .from('student_grades')
-        .insert(validRows)
-
-      if (insertError) {
-        return NextResponse.json<ApiResponse>({ data: null, error: insertError.message, success: false }, { status: 500 })
-      }
-      imported = validRows.length
+    // Jika tidak ada baris valid sama sekali, return error tanpa insert apapun
+    if (validRows.length === 0) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: `Tidak ada data valid untuk diimpor. ${errors.length > 0 ? errors[0] : ''}`, success: false },
+        { status: 422 }
+      )
     }
 
+    // Insert semua sekaligus — jika gagal, tidak ada yang masuk (atomic)
+    const { error: insertError } = await supabase
+      .from('student_grades')
+      .insert(validRows)
+
+    if (insertError) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: `Gagal menyimpan data: ${insertError.message}`, success: false },
+        { status: 500 }
+      )
+    }
+
+    const imported = validRows.length
     return NextResponse.json({ data: { imported, skipped, errors }, error: null, success: true })
   } catch {
     return NextResponse.json<ApiResponse>({ data: null, error: 'Internal server error', success: false }, { status: 500 })

@@ -30,7 +30,7 @@ import {
 import Link from 'next/link'
 import { GradeFormDialog, GradeActions, GRADE_COLORS } from '@/components/student/grade-form-dialog'
 import { formatGPA } from '@/lib/utils'
-import { calculateIPS } from '@/lib/utils/academic'
+import { calculateIPS, deduplicateRetakes } from '@/lib/utils/academic'
 import type { StudentGrade } from '@/types'
 
 interface SemesterGroup {
@@ -46,6 +46,7 @@ export default function StudentGradesPage() {
   const [grades, setGrades] = useState<StudentGrade[]>([])
   const [semesterGroups, setSemesterGroups] = useState<SemesterGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editGrade, setEditGrade] = useState<StudentGrade | null>(null)
@@ -53,8 +54,12 @@ export default function StudentGradesPage() {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
   const [passingGradePoints, setPassingGradePoints] = useState<number>(1.0)
 
-  const fetchGrades = useCallback(async () => {
-    setIsLoading(true)
+  const fetchGrades = useCallback(async (silent = false) => {
+    if (silent) {
+      setIsRefreshing(true)
+    } else {
+      setIsLoading(true)
+    }
     setFetchError(null)
     try {
       const [gradesRes, ruleRes] = await Promise.all([
@@ -99,6 +104,7 @@ export default function StudentGradesPage() {
       setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
     } finally {
       setIsLoading(false)
+      setIsRefreshing(false)
     }
   }, [])
 
@@ -114,16 +120,22 @@ export default function StudentGradesPage() {
       const result = await res.json()
       if (!res.ok) { toast.error(result.error ?? 'Gagal menghapus nilai'); return }
       toast.success('Nilai berhasil dihapus')
-      fetchGrades()
+      fetchGrades(true) // silent refresh — jaga scroll position
     } finally {
       setDeletingId(null)
     }
   }
 
-  const totalSks = grades.reduce((s, g) => s + g.credits, 0)
-  const ipk = grades.length > 0
-    ? Math.round(grades.reduce((s, g) => s + g.grade_points * g.credits, 0) / (totalSks || 1) * 100) / 100
+  // Deduplikasi MK mengulang — pakai nilai terbaik per MK untuk perhitungan IPK
+  // (jika MK sama diambil di 2 semester berbeda, ambil grade_points tertinggi)
+  const dedupedForIPK = deduplicateRetakes(grades)
+  const totalSksForIPK = dedupedForIPK.reduce((s, g) => s + g.credits, 0)
+  const ipk = dedupedForIPK.length > 0
+    ? Math.round(dedupedForIPK.reduce((s, g) => s + g.grade_points * g.credits, 0) / (totalSksForIPK || 1) * 100) / 100
     : 0
+
+  // Total SKS tampilan (semua entri termasuk yang mengulang, untuk info)
+  const totalSks = grades.reduce((s, g) => s + g.credits, 0)
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
@@ -176,7 +188,7 @@ export default function StudentGradesPage() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
             <p className="text-sm text-destructive">{fetchError}</p>
-            <Button variant="outline" size="sm" onClick={fetchGrades}>Coba Lagi</Button>
+            <Button variant="outline" size="sm" onClick={() => fetchGrades()}>Coba Lagi</Button>
           </CardContent>
         </Card>
       ) : semesterGroups.length === 0 ? (
@@ -328,7 +340,7 @@ export default function StudentGradesPage() {
         open={dialogOpen}
         onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditGrade(null) }}
         editGrade={editGrade}
-        onSuccess={fetchGrades}
+        onSuccess={() => fetchGrades(true)}
         existingGrades={grades}
         passingGradePoints={passingGradePoints}
       />

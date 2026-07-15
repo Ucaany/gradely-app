@@ -10,6 +10,13 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   BookOpen,
   Target,
@@ -23,9 +30,11 @@ import {
   CheckCircle2,
   AlertTriangle,
   Briefcase,
-  ClipboardList,
   Code2,
   Sparkles,
+  Info,
+  Calendar,
+  Award,
 } from 'lucide-react'
 import {
   calculateAcademicSummary,
@@ -35,7 +44,6 @@ import {
 import { formatGPA } from '@/lib/utils'
 import type { AcademicRule, StudentGrade } from '@/types'
 import { StudentIPKChart } from '@/components/student/student-ipk-chart'
-import { StudentSKSChart } from '@/components/student/student-sks-chart'
 import { StudentTargetChart } from '@/components/student/student-target-chart'
 
 export default async function StudentDashboardPage() {
@@ -127,7 +135,14 @@ export default async function StudentDashboardPage() {
   const summary = calculateAcademicSummary(grades, currentSemester, targetSemester, effectiveRule)
   const semesterSummaries = groupGradesBySemester(grades)
 
-  const retakeCourses = grades.filter((g) => g.is_retake)
+  // MK yang perlu diulang: sudah ditandai is_retake ATAU nilainya di bawah passing grade (Opsi B)
+  const passingGradePoints = effectiveRule.passing_grade
+    ? (effectiveRule.grade_scale?.[effectiveRule.passing_grade] ?? 1.0)
+    : 1.0
+  const needsRetakeDisplay = grades.filter(
+    (g) => g.is_retake || g.grade_points < passingGradePoints
+  )
+
   const studyProgramName =
     profile?.study_programs && typeof profile.study_programs === 'object' && !Array.isArray(profile.study_programs)
       ? (profile.study_programs as { name: string; short_name: string | null }).name
@@ -193,14 +208,14 @@ export default async function StudentDashboardPage() {
     {
       label: 'Input Nilai Baru',
       href: '/student/grades',
-      desc: 'Tambah nilai mata kuliah',
+      desc: 'Tambah nilai mata kuliah baru',
       icon: Plus,
       color: 'text-blue-600 bg-blue-50 dark:bg-blue-950/40 dark:text-blue-400',
     },
     {
       label: 'Import KHS',
       href: '/student/grades/import',
-      desc: 'Upload dokumen KHS',
+      desc: 'Upload foto Kartu Hasil Studi',
       icon: FileUp,
       color: 'text-violet-600 bg-violet-50 dark:bg-violet-950/40 dark:text-violet-400',
     },
@@ -212,25 +227,11 @@ export default async function StudentDashboardPage() {
       color: 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-400',
     },
     {
-      label: 'Lihat Semua Nilai',
-      href: '/student/grades',
-      desc: 'Riwayat nilai per semester',
-      icon: ClipboardList,
-      color: 'text-orange-600 bg-orange-50 dark:bg-orange-950/40 dark:text-orange-400',
-    },
-    {
       label: 'Tambah Portofolio',
       href: '/student/portfolio/new',
-      desc: 'Tambah portofolio baru',
+      desc: 'Tambah proyek ke portofolio',
       icon: Briefcase,
       color: 'text-pink-600 bg-pink-50 dark:bg-pink-950/40 dark:text-pink-400',
-    },
-    {
-      label: 'Nilai Akademik',
-      href: '/student/grades',
-      desc: 'Detail transkrip nilai',
-      icon: BookOpen,
-      color: 'text-teal-600 bg-teal-50 dark:bg-teal-950/40 dark:text-teal-400',
     },
   ]
 
@@ -287,71 +288,101 @@ export default async function StudentDashboardPage() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">IPK</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{formatGPA(summary.gpa)}</div>
-            <p className="text-xs text-muted-foreground mt-1">IPS Terakhir: {formatGPA(summary.last_gpa)}</p>
-          </CardContent>
-        </Card>
+      <TooltipProvider>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {/* IPK */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-sm font-medium">IPK</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                    <p><strong>Indeks Prestasi Kumulatif</strong> — rata-rata nilai berbobot SKS dari seluruh semester yang sudah ditempuh.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{formatGPA(summary.gpa)}</div>
+              <div className="flex items-center gap-1 mt-1">
+                <p className="text-xs text-muted-foreground">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span className="cursor-help underline decoration-dotted">IPS</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="max-w-[220px] text-xs">
+                      <p><strong>Indeks Prestasi Semester</strong> — nilai rata-rata hanya untuk semester terakhir yang ditempuh.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  {' '}Terakhir: {formatGPA(summary.last_gpa)}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">SKS Lulus</CardTitle>
-            <BookOpen className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{summary.total_sks_earned}</div>
-            <p className="text-xs text-muted-foreground mt-1">dari {summary.total_sks_required} SKS</p>
-            <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${summary.sks_percentage}%` }} />
-            </div>
-          </CardContent>
-        </Card>
+          {/* Mata Kuliah Lulus */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-sm font-medium">Mata Kuliah Lulus</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                    <p>Jumlah mata kuliah yang sudah lulus dengan nilai memenuhi batas kelulusan yang ditetapkan.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{summary.courses_passed}</div>
+              <p className="text-xs text-muted-foreground mt-1">
+                {summary.courses_retake > 0
+                  ? `${summary.courses_retake} mata kuliah perlu diulang`
+                  : 'Tidak ada mata kuliah mengulang'}
+              </p>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">MK Lulus</CardTitle>
-            <GraduationCap className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{summary.courses_passed}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              {summary.courses_retake > 0
-                ? `${summary.courses_retake} MK mengulang`
-                : 'Tidak ada MK mengulang'}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prediksi Lulus</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">Sem {summary.predicted_graduation_semester}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Target: Semester {targetSemester}
-              {summary.predicted_graduation_semester <= targetSemester ? (
-                <CheckCircle2 className="inline ml-1 h-3 w-3 text-emerald-500" />
-              ) : (
-                <AlertTriangle className="inline ml-1 h-3 w-3 text-yellow-500" />
+          {/* Prediksi Lulus */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-sm font-medium">Prediksi Lulus</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[240px] text-xs">
+                    <p>Estimasi semester kelulusan berdasarkan rata-rata <strong>SKS</strong> (Satuan Kredit Semester) yang ditempuh per semester saat ini.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">Sem {summary.predicted_graduation_semester}</div>
+              <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                Target: Semester {targetSemester}
+                {summary.predicted_graduation_semester <= targetSemester ? (
+                  <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                ) : (
+                  <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                )}
+              </p>
+              {target?.target_ipk && (
+                <p className="text-xs text-muted-foreground mt-0.5">Target IPK: {target.target_ipk.toFixed(2)}</p>
               )}
-            </p>
-            {target?.target_ipk && (
-              <p className="text-xs text-muted-foreground mt-0.5">Target IPK: {target.target_ipk.toFixed(2)}</p>
-            )}
-            {target?.target_years && (
-              <p className="text-xs text-muted-foreground mt-0.5">Target: {target.target_years} tahun</p>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </div>
+      </TooltipProvider>
 
       {/* Target Progress Chart — shown when target is set */}
       {target && (
@@ -387,20 +418,18 @@ export default async function StudentDashboardPage() {
         </Card>
       )}
 
-      {/* Ringkasan analisis terbaru */}
+      {/* Ringkasan analisis terbaru — medium detail */}
       {latestAnalysis && (() => {
         const s = latestAnalysis.analysis?.status
         const statusCfg = s === 'aman'
-          ? { label: 'Aman', color: 'text-emerald-700 dark:text-emerald-400', dot: 'bg-emerald-500', pct: 85 }
+          ? { label: 'Aman', color: 'text-emerald-700 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-950/30', border: 'border-emerald-200 dark:border-emerald-800', dot: 'bg-emerald-500', pct: 85 }
           : s === 'perlu_usaha'
-          ? { label: 'Perlu Usaha', color: 'text-amber-700 dark:text-amber-400', dot: 'bg-amber-500', pct: 50 }
-          : { label: 'Perlu Perhatian', color: 'text-orange-700 dark:text-orange-400', dot: 'bg-orange-500', pct: 25 }
+          ? { label: 'Perlu Usaha', color: 'text-amber-700 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-950/30', border: 'border-amber-200 dark:border-amber-800', dot: 'bg-amber-500', pct: 55 }
+          : { label: 'Perlu Perhatian', color: 'text-orange-700 dark:text-orange-400', bg: 'bg-orange-50 dark:bg-orange-950/30', border: 'border-orange-200 dark:border-orange-800', dot: 'bg-orange-500', pct: 25 }
 
-        const metrics = [
-          { label: 'SKS/Sem', value: latestAnalysis.analysis?.sks_per_semester_dibutuhkan ?? '-', unit: latestAnalysis.analysis?.sks_per_semester_dibutuhkan ? 'SKS' : '' },
-          { label: 'IPK Min', value: latestAnalysis.analysis?.ipk_minimal_per_semester != null ? Number(latestAnalysis.analysis.ipk_minimal_per_semester).toFixed(2) : '-', unit: '' },
-          { label: 'Target IPS', value: latestAnalysis.analysis?.ips_target_semester_depan != null ? Number(latestAnalysis.analysis.ips_target_semester_depan).toFixed(2) : '-', unit: '' },
-        ]
+        const sisaSemester = latestAnalysis.target_semester != null && summary.current_semester != null
+          ? Math.max(0, latestAnalysis.target_semester - summary.current_semester)
+          : null
 
         return (
           <Card>
@@ -408,54 +437,133 @@ export default async function StudentDashboardPage() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary" />
-                  <CardTitle className="text-base">Analisis Target Kelulusan</CardTitle>
+                  <CardTitle className="text-base">Prediksi & Analisis Kelulusan</CardTitle>
                 </div>
                 <Button variant="ghost" size="sm" asChild>
                   <Link href="/student/target/history">
-                    Detail <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                    Lihat Detail <ArrowRight className="h-3.5 w-3.5 ml-1" />
                   </Link>
                 </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Status + progress */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className={`inline-block h-2.5 w-2.5 rounded-full ${statusCfg.dot}`} />
-                  <span className={`text-sm font-semibold ${statusCfg.color}`}>{statusCfg.label}</span>
+
+              {/* Status badge + bar */}
+              <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${statusCfg.bg} ${statusCfg.border}`}>
+                <span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${statusCfg.dot}`} />
+                <div className="flex-1 min-w-0">
+                  <p className={`text-sm font-semibold ${statusCfg.color}`}>{statusCfg.label}</p>
+                  {latestAnalysis.analysis?.ringkasan && (
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
+                      {latestAnalysis.analysis.ringkasan}
+                    </p>
+                  )}
                 </div>
-                <div className="flex-1">
-                  <div className="h-2 rounded-full bg-muted overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${statusCfg.dot}`}
-                      style={{ width: `${statusCfg.pct}%` }}
-                    />
-                  </div>
-                </div>
-                <span className={`text-sm font-bold shrink-0 ${statusCfg.color}`}>{statusCfg.pct}%</span>
               </div>
 
-              {/* 3 metrik */}
-              <div className="grid grid-cols-3 gap-2">
-                {metrics.map(({ label, value, unit }) => (
-                  <div key={label} className="rounded-xl bg-muted/50 px-3 py-2.5 text-center">
-                    <p className="text-xs text-muted-foreground mb-1">{label}</p>
-                    <p className="text-lg font-bold leading-none">{value}
-                      <span className="text-xs font-normal text-muted-foreground ml-0.5">{unit}</span>
+              {/* Info target: semester & IPK */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                    <p className="text-xs text-muted-foreground">Target Lulus</p>
+                  </div>
+                  <p className="text-lg font-bold leading-none tabular-nums">
+                    Semester {latestAnalysis.target_semester ?? '-'}
+                  </p>
+                  {sisaSemester !== null && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {sisaSemester > 0 ? `${sisaSemester} semester lagi` : 'Semester ini'}
+                    </p>
+                  )}
+                </div>
+                <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5">
+                    <Award className="h-3.5 w-3.5 text-muted-foreground" />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-xs text-muted-foreground cursor-help underline decoration-dotted">Target IPK</p>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs max-w-[200px]">
+                          <p><strong>Indeks Prestasi Kumulatif</strong> yang ingin dicapai saat lulus.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                  <p className="text-lg font-bold leading-none tabular-nums">
+                    {latestAnalysis.target_ipk != null ? Number(latestAnalysis.target_ipk).toFixed(2) : '-'}
+                  </p>
+                  {latestAnalysis.analysis?.ipk_minimal_per_semester != null && (
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Min/semester: {Number(latestAnalysis.analysis.ipk_minimal_per_semester).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Metrik kebutuhan */}
+              <div className="grid grid-cols-2 gap-3">
+                {latestAnalysis.analysis?.sks_per_semester_dibutuhkan != null && (
+                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-0.5">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-xs text-muted-foreground cursor-help underline decoration-dotted w-fit">SKS per Semester</p>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs max-w-[220px]">
+                          <p>Jumlah <strong>Satuan Kredit Semester</strong> yang perlu diambil setiap semester agar lulus tepat waktu sesuai target.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <p className="text-lg font-bold tabular-nums">
+                      {latestAnalysis.analysis.sks_per_semester_dibutuhkan}
+                      <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>
                     </p>
                   </div>
-                ))}
+                )}
+                {latestAnalysis.analysis?.ips_target_semester_depan != null && (
+                  <div className="rounded-xl bg-muted/50 px-4 py-3 flex flex-col gap-0.5">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-xs text-muted-foreground cursor-help underline decoration-dotted w-fit">Target IPS Depan</p>
+                        </TooltipTrigger>
+                        <TooltipContent className="text-xs max-w-[220px]">
+                          <p><strong>Indeks Prestasi Semester</strong> yang perlu dicapai di semester berikutnya untuk tetap on-track menuju target IPK.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <p className="text-lg font-bold tabular-nums">
+                      {Number(latestAnalysis.analysis.ips_target_semester_depan).toFixed(2)}
+                    </p>
+                  </div>
+                )}
               </div>
 
-              {/* Satu saran singkat */}
+              {/* Strategi kelulusan */}
+              {latestAnalysis.analysis?.strategi_kelulusan && (
+                <>
+                  <Separator />
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-semibold text-foreground">Strategi Kelulusan</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {latestAnalysis.analysis.strategi_kelulusan}
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Rekomendasi utama */}
               {latestAnalysis.analysis?.rekomendasi?.[0] && (
-                <div className="flex items-start gap-2.5 rounded-xl bg-primary/5 px-4 py-3">
+                <div className="flex items-start gap-2.5 rounded-xl bg-primary/5 border border-primary/10 px-4 py-3">
                   <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
-                  <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
                     {latestAnalysis.analysis.rekomendasi[0]}
                   </p>
                 </div>
               )}
+
             </CardContent>
           </Card>
         )
@@ -519,12 +627,46 @@ export default async function StudentDashboardPage() {
         </div>
       )}
 
-      {/* Chart IPS + Progress SKS */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      {/* Chart IPS & IPK — full width */}
+      <div className="grid gap-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Grafik IPS & IPK</CardTitle>
-            <CardDescription>IPS per semester (bar) dan IPK kumulatif (line)</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Grafik IPS & IPK</CardTitle>
+                <CardDescription>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help underline decoration-dotted">IPS</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[220px] text-xs">
+                        <p><strong>Indeks Prestasi Semester</strong> — nilai rata-rata per semester (bar).</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {' '}per semester (bar) dan{' '}
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="cursor-help underline decoration-dotted">IPK</span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-[220px] text-xs">
+                        <p><strong>Indeks Prestasi Kumulatif</strong> — akumulasi rata-rata nilai dari semua semester (garis).</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  {' '}kumulatif (garis)
+                </CardDescription>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-xs text-muted-foreground">Total SKS</p>
+                <p className="text-sm font-semibold tabular-nums">
+                  {summary.total_sks_earned}
+                  <span className="text-xs font-normal text-muted-foreground">/{summary.total_sks_required}</span>
+                </p>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             {chartData.length === 0 ? (
@@ -540,49 +682,9 @@ export default async function StudentDashboardPage() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Progress SKS</CardTitle>
-            <CardDescription>
-              {summary.total_sks_earned} / {summary.total_sks_required} SKS ({summary.sks_percentage}%)
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <StudentSKSChart
-              earned={summary.total_sks_earned}
-              required={summary.total_sks_required}
-              percentage={summary.sks_percentage}
-            />
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg bg-muted/60 px-3 py-2.5 flex flex-col gap-0.5">
-                <p className="text-muted-foreground text-xs">Rata-rata SKS/Sem</p>
-                <p className="font-semibold text-base tabular-nums">
-                  {currentSemester > 0 ? Math.round(summary.total_sks_earned / currentSemester) : 0}
-                  <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>
-                </p>
-              </div>
-              <div className="rounded-lg bg-muted/60 px-3 py-2.5 flex flex-col gap-0.5">
-                <p className="text-muted-foreground text-xs">SKS Butuh/Sem</p>
-                <p className="font-semibold text-base tabular-nums">
-                  {targetSemester > currentSemester
-                    ? Math.ceil((summary.total_sks_required - summary.total_sks_earned) / (targetSemester - currentSemester))
-                    : '-'}
-                  {targetSemester > currentSemester && <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>}
-                </p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" className="w-full" asChild>
-              <Link href="/student/target">
-                Atur Target Kelulusan
-                <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Aksi Cepat + MK Mengulang */}
+      {/* Aksi Cepat + MK Perlu Diulang */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -611,38 +713,67 @@ export default async function StudentDashboardPage() {
           </CardContent>
         </Card>
 
+        {/* Card MK Mengulang: tampil jika ada is_retake=true ATAU nilai di bawah passing grade */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              {retakeCourses.length > 0 && <AlertCircle className="h-4 w-4 text-orange-500" />}
-              Mata Kuliah Mengulang
+              {needsRetakeDisplay.length > 0 && <AlertCircle className="h-4 w-4 text-orange-500" />}
+              Mata Kuliah Perlu Diulang
             </CardTitle>
             <CardDescription>
-              {retakeCourses.length === 0 ? 'Tidak ada MK yang perlu diulang' : `${retakeCourses.length} MK mengulang`}
+              {needsRetakeDisplay.length === 0
+                ? 'Tidak ada mata kuliah yang perlu diulang'
+                : `${needsRetakeDisplay.length} mata kuliah perlu diperhatikan`}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {retakeCourses.length === 0 ? (
+            {needsRetakeDisplay.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-6 text-center gap-2">
                 <GraduationCap className="h-8 w-8 text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground">Semua nilai sudah baik</p>
+                <p className="text-sm text-muted-foreground">Semua nilai sudah memenuhi syarat</p>
               </div>
             ) : (
               <div className="space-y-2">
-                {retakeCourses.slice(0, 5).map((g) => (
+                {needsRetakeDisplay.slice(0, 5).map((g) => (
                   <div key={g.id} className="flex items-center justify-between py-1.5 border-b last:border-0">
                     <div>
                       <p className="text-sm font-medium">{g.course_name}</p>
-                      <p className="text-xs text-muted-foreground">Semester {g.semester_number} · {g.credits} SKS</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <p className="text-xs text-muted-foreground">
+                          Semester {g.semester_number} · {g.credits}{' '}
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help underline decoration-dotted">SKS</span>
+                              </TooltipTrigger>
+                              <TooltipContent side="bottom" className="text-xs">
+                                <p>Satuan Kredit Semester — bobot beban studi mata kuliah ini.</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </p>
+                        {!g.is_retake && (
+                          <Badge variant="outline" className="text-xs text-yellow-700 border-yellow-300 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400 py-0">
+                            Nilai tidak lulus
+                          </Badge>
+                        )}
+                      </div>
                     </div>
                     <Badge variant="outline" className="text-orange-600 border-orange-300 bg-orange-50 dark:bg-orange-950 dark:text-orange-400">
                       {g.grade}
                     </Badge>
                   </div>
                 ))}
-                {retakeCourses.length > 5 && (
-                  <p className="text-xs text-muted-foreground text-center pt-1">+{retakeCourses.length - 5} lainnya</p>
+                {needsRetakeDisplay.length > 5 && (
+                  <p className="text-xs text-muted-foreground text-center pt-1">
+                    +{needsRetakeDisplay.length - 5} lainnya
+                  </p>
                 )}
+                <div className="pt-1">
+                  <Button variant="outline" size="sm" className="w-full text-xs" asChild>
+                    <Link href="/student/grades">Lihat Semua Nilai</Link>
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>
