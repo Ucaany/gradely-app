@@ -77,7 +77,7 @@ function AIConfigSection({
   const [showKey, setShowKey] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [testLoading, setTestLoading] = useState(false)
-  const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
+  const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null)
 
   async function handleSave() {
     if (!apiKey.trim() && !isConfigured) {
@@ -136,17 +136,19 @@ function AIConfigSection({
           config_type: configType,
         }),
       })
+      const result = await res.json()
       if (res.ok) {
-        setTestResult('success')
+        setTestResult({ ok: true, message: 'Koneksi berhasil. Model siap digunakan.' })
         toast.success('Koneksi berhasil! Model dapat dijangkau.')
       } else {
-        const result = await res.json()
-        setTestResult('error')
-        toast.error(result.error ?? 'Koneksi gagal. Periksa API key dan Base URL.')
+        const errMsg = result.error ?? 'Koneksi gagal. Periksa API key dan Base URL.'
+        setTestResult({ ok: false, message: errMsg })
+        toast.error(errMsg)
       }
     } catch {
-      setTestResult('error')
-      toast.error('Gagal menghubungi AI API.')
+      const errMsg = 'Gagal menghubungi server. Periksa koneksi internet.'
+      setTestResult({ ok: false, message: errMsg })
+      toast.error(errMsg)
     } finally {
       setTestLoading(false)
     }
@@ -196,7 +198,7 @@ function AIConfigSection({
             disabled={isLoading}
           />
           <p className="text-xs text-muted-foreground">
-            Endpoint OpenAI-compatible. Harus HTTPS dengan domain publik.
+            Endpoint OpenAI-compatible. Harus HTTPS dengan domain publik. Sertakan path <span className="font-medium text-foreground">/v1</span> jika diperlukan, contoh: <span className="font-medium text-foreground">https://ai.sumopod.com/v1</span>
           </p>
         </div>
 
@@ -227,19 +229,15 @@ function AIConfigSection({
 
         {testResult && (
           <div className={`flex items-center gap-2 rounded-lg border px-4 py-3 text-sm ${
-            testResult === 'success'
+            testResult.ok
               ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-400'
               : 'border-destructive/30 bg-destructive/5 text-destructive'
           }`}>
-            {testResult === 'success'
+            {testResult.ok
               ? <CheckCircle2 className="h-4 w-4 shrink-0" />
               : <XCircle className="h-4 w-4 shrink-0" />
             }
-            <span>
-              {testResult === 'success'
-                ? 'Koneksi berhasil. Model siap digunakan.'
-                : 'Koneksi gagal. Periksa konfigurasi API key dan Base URL.'}
-            </span>
+            <span>{testResult.message}</span>
           </div>
         )}
 
