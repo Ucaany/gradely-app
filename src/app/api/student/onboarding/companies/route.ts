@@ -81,16 +81,17 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { skills, interested_company_ids, skill_not_found } = body as {
+    const { skills, interested_company_ids, skill_not_found, selected_careers } = body as {
       skills: string[]
       interested_company_ids: string[]
       skill_not_found?: boolean
+      selected_careers?: string[]
     }
 
-    // Save career interests (skills)
+    // Save career interests from CAREER_OPTIONS selection
     await supabase.from('career_interests').delete().eq('student_id', user.id)
-    if (!skill_not_found && skills?.length) {
-      const inserts = skills.map((s: string) => ({ student_id: user.id, interest: s }))
+    if (selected_careers?.length) {
+      const inserts = selected_careers.map((interest: string) => ({ student_id: user.id, interest }))
       await supabase.from('career_interests').insert(inserts)
     }
 

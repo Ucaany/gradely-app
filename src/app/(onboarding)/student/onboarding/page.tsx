@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import {
   Sparkles,
   Building2,
+  Briefcase,
   User,
   ChevronRight,
   ChevronLeft,
@@ -21,6 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
+import { CAREER_OPTIONS } from '@/lib/constants/career'
 import { getInitials } from '@/lib/utils'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
 
@@ -47,6 +49,7 @@ interface ProfileData {
 
 const STEPS = [
   { label: 'Skill & Minat', icon: Sparkles },
+  { label: 'Minat Karier', icon: Briefcase },
   { label: 'Industri', icon: Factory },
   { label: 'Perusahaan', icon: Building2 },
   { label: 'Profil Kamu', icon: User },
@@ -63,6 +66,7 @@ export default function OnboardingPage() {
   const [companies, setCompanies] = useState<Company[]>([])
   const [industries, setIndustries] = useState<string[]>([])
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
+  const [selectedCareers, setSelectedCareers] = useState<string[]>([])
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -127,16 +131,17 @@ export default function OnboardingPage() {
       }
       setStep(1)
     } else if (step === 1) {
-      // Step industri — lanjut ke perusahaan, load berdasarkan skill
+      setStep(2)
+    } else if (step === 2) {
       if (skillNotFound) {
         setCompanies([])
         setIndustries([])
       } else {
         await loadCompanies(selectedSkills)
       }
-      setStep(2)
-    } else if (step === 2) {
       setStep(3)
+    } else if (step === 3) {
+      setStep(4)
     } else {
       await handleComplete()
     }
@@ -161,6 +166,7 @@ export default function OnboardingPage() {
           interested_company_ids: selectedCompanies,
           skill_not_found: skillNotFound,
           selected_industries: selectedIndustries,
+          selected_careers: selectedCareers,
         }),
       })
       const result = await res.json()

@@ -227,8 +227,8 @@ export function calculateAcademicSummary(
     rule
   )
 
-  // Hitung batas SKS yang boleh diambil semester berikutnya
-  const allowedSKS = calculateAllowedSKS(ipk, currentSemester, rule)
+  // Hitung batas SKS yang boleh diambil semester berikutnya (berdasarkan IPS terakhir)
+  const allowedSKS = calculateAllowedSKS(lastIps, currentSemester, rule)
 
   return {
     total_sks_earned: sksLulus,

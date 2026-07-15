@@ -248,7 +248,7 @@ export default async function StudentDashboardPage() {
             </p>
           ) : (
             <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
-              IPK kamu <span className="font-semibold">{formatGPA(summary.gpa)}</span> — kamu boleh mengambil{' '}
+              IPS terakhir kamu <span className="font-semibold">{formatGPA(summary.last_gpa)}</span> — kamu boleh mengambil{' '}
               <span className="font-semibold">{summary.allowed_sks_min}–{summary.allowed_sks_max} SKS</span> di semester berikutnya.
             </p>
           )}
