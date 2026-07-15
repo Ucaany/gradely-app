@@ -145,58 +145,6 @@ export default function OnboardingPage() {
     }
   }
 
-  const NavButtons = () => (
-    <div className="flex items-center justify-between mt-8 gap-3">
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={handleBack}
-        disabled={step === 0}
-        className="gap-1.5"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Kembali
-      </Button>
-
-      <div className="flex items-center gap-1.5">
-        {STEPS.map((_, i) => (
-          <div
-            key={i}
-            className={`rounded-full transition-all duration-300 ${
-              i === step ? 'w-5 h-1.5 bg-primary'
-                : i < step ? 'w-1.5 h-1.5 bg-primary/40'
-                : 'w-1.5 h-1.5 bg-muted-foreground/25'
-            }`}
-          />
-        ))}
-      </div>
-
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleSkipLater}
-          className="text-muted-foreground text-xs"
-        >
-          Isi Nanti
-        </Button>
-        <Button
-          size="sm"
-          onClick={handleNext}
-          disabled={isCompleting}
-          className="gap-1.5"
-        >
-          {isCompleting
-            ? <><Loader2 className="h-4 w-4 animate-spin" />Menyimpan...</>
-            : step === STEPS.length - 1
-            ? <><CheckCircle2 className="h-4 w-4" />Mulai Gradely</>
-            : <>Lanjut<ChevronRight className="h-4 w-4" /></>
-          }
-        </Button>
-      </div>
-    </div>
-  )
-
   return (
     <div className="min-h-screen flex flex-col bg-background">
 
@@ -206,6 +154,7 @@ export default function OnboardingPage() {
 
       <div className="flex-1 w-full flex flex-col items-center justify-center px-4 py-12">
         <div className="w-full max-w-xl">
+
           {/* Step indicator */}
           <div className="flex flex-col items-center gap-4 mb-8">
             <div className="flex items-center gap-2">
@@ -252,6 +201,7 @@ export default function OnboardingPage() {
             </div>
           )}
 
+          {/* Step content */}
           {!isLoadingOptions && !optionsError && (
             <>
               {/* Step 0 — Minat Karier */}
@@ -265,7 +215,7 @@ export default function OnboardingPage() {
                   </div>
 
                   {availableSkills.length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="rounded-lg border border-dashed p-8 text-center">
                       <p className="text-sm text-muted-foreground">Belum ada pilihan karier yang tersedia.</p>
                       <p className="text-xs text-muted-foreground mt-1">Kamu bisa melanjutkan ke langkah berikutnya.</p>
                     </div>
@@ -298,7 +248,7 @@ export default function OnboardingPage() {
                     </div>
                   )}
 
-                  <div className="pt-2 flex justify-center">
+                  <div className="flex justify-center pt-1">
                     <button
                       type="button"
                       onClick={toggleCareerNotFound}
@@ -343,7 +293,7 @@ export default function OnboardingPage() {
                   </div>
 
                   {availableIndustries.length === 0 ? (
-                    <div className="text-center py-8">
+                    <div className="rounded-lg border border-dashed p-8 text-center">
                       <p className="text-sm text-muted-foreground">Belum ada pilihan industri yang tersedia.</p>
                       <p className="text-xs text-muted-foreground mt-1">Kamu bisa melanjutkan ke langkah berikutnya.</p>
                     </div>
@@ -358,7 +308,7 @@ export default function OnboardingPage() {
                             onClick={() => toggleIndustry(ind.name)}
                             className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm text-left transition-all cursor-pointer ${
                               selected
-                                ? 'border-primary bg-primary/8 text-primary shadow-sm ring-1 ring-primary/20'
+                                ? 'border-primary bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20'
                                 : 'border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent/50'
                             }`}
                           >
@@ -497,7 +447,58 @@ export default function OnboardingPage() {
             </>
           )}
 
-          <NavButtons />
+          {/* Nav Buttons — selalu tampil, Isi Nanti selalu bisa diklik */}
+          <div className="flex items-center justify-between mt-8 gap-3">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBack}
+              disabled={step === 0}
+              className="gap-1.5"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Kembali
+            </Button>
+
+            <div className="flex items-center gap-1.5">
+              {STEPS.map((_, i) => (
+                <div
+                  key={i}
+                  className={`rounded-full transition-all duration-300 ${
+                    i === step ? 'w-5 h-1.5 bg-primary'
+                      : i < step ? 'w-1.5 h-1.5 bg-primary/40'
+                      : 'w-1.5 h-1.5 bg-muted-foreground/25'
+                  }`}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSkipLater}
+                disabled={isCompleting}
+                className="text-muted-foreground text-xs"
+              >
+                Isi Nanti
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleNext}
+                disabled={isCompleting || isLoadingOptions}
+                className="gap-1.5"
+              >
+                {isCompleting
+                  ? <><Loader2 className="h-4 w-4 animate-spin" />Menyimpan...</>
+                  : step === STEPS.length - 1
+                  ? <><CheckCircle2 className="h-4 w-4" />Mulai Gradely</>
+                  : <>Lanjut<ChevronRight className="h-4 w-4" /></>
+                }
+              </Button>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
