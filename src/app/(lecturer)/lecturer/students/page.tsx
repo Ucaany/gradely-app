@@ -5,11 +5,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Input } from '@/components/ui/input'
-import { ArrowRight, Search } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { getInitials, formatGPA } from '@/lib/utils'
 import { ACADEMIC_STATUS_CONFIG } from '@/lib/utils/academic'
 import { getLecturerStudentData } from '@/lib/utils/lecturer-data'
+import { StudentsSearchInput } from '@/components/lecturer/students-search-input'
 
 export default async function LecturerStudentsPage({
   searchParams,
@@ -33,18 +33,7 @@ export default async function LecturerStudentsPage({
           <h1 className="text-2xl font-semibold tracking-tight">Mahasiswa Bimbingan</h1>
           <p className="text-sm text-muted-foreground">{studentSummaries.length} mahasiswa</p>
         </div>
-        <form method="get" className="w-full sm:w-auto">
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              name="q"
-              placeholder="Cari nama atau NIM..."
-              defaultValue={searchParams.q}
-              className="pl-8 w-full sm:w-[300px]"
-            />
-          </div>
-        </form>
+        <StudentsSearchInput defaultValue={searchParams.q} />
       </div>
 
       {studentSummaries.length === 0 && (

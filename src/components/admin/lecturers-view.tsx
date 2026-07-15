@@ -48,22 +48,33 @@ export function LecturersView({ lecturers, advisorCounts, count, page, totalPage
   const searchParams = useSearchParams()
   const [view, setView] = React.useState<"list" | "grid">("list")
   const [searchValue, setSearchValue] = React.useState(search ?? "")
+  const isFirstRender = React.useRef(true)
 
-  function handleSearch(e: React.FormEvent) {
-    e.preventDefault()
-    const params = new URLSearchParams(searchParams.toString())
-    if (searchValue) {
-      params.set("search", searchValue)
-    } else {
-      params.delete("search")
+  React.useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false
+      return
     }
-    params.delete("page")
-    router.push(`${pathname}?${params.toString()}`)
-  }
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString())
+      if (searchValue) {
+        params.set("search", searchValue)
+      } else {
+        params.delete("search")
+      }
+      params.delete("page")
+      router.replace(`${pathname}?${params.toString()}`)
+    }, 300)
+
+    return () => clearTimeout(timer)
+  }, [searchValue])
 
   function handleReset() {
     setSearchValue("")
-    router.push(pathname)
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete("search")
+    params.delete("page")
+    router.replace(`${pathname}?${params.toString()}`)
   }
 
   function buildPageUrl(p: number) {
@@ -102,24 +113,28 @@ export function LecturersView({ lecturers, advisorCounts, count, page, totalPage
       </div>
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <form onSubmit={handleSearch} className="flex gap-2 items-center w-full sm:max-w-sm">
+        <div className="flex gap-2 items-center w-full sm:max-w-sm">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
             <Input
-              name="search"
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
               placeholder="Cari nama atau email..."
-              className="pl-8"
+              className="pl-8 pr-8"
             />
+            {searchValue && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
+                onClick={handleReset}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
-          <Button type="submit" size="sm">Cari</Button>
-          {search && (
-            <Button type="button" variant="ghost" size="sm" onClick={handleReset}>
-              <X className="h-4 w-4" />
-            </Button>
-          )}
-        </form>
+        </div>
 
         <div className="flex items-center gap-1 border rounded-md p-1 self-start">
           <Button

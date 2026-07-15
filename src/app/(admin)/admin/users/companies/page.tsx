@@ -13,8 +13,8 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { formatDate } from '@/lib/utils'
+import { CompaniesSearchForm } from '@/components/admin/companies-search-form'
 
 export default async function CompaniesPage({
   searchParams,
@@ -59,17 +59,9 @@ export default async function CompaniesPage({
         </Button>
       </div>
 
-      <form method="GET" className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input name="search" defaultValue={search} placeholder="Cari nama perusahaan..." className="w-full sm:max-w-sm" />
-        <div className="flex gap-2">
-          <Button type="submit" size="sm">Cari</Button>
-          {search && (
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/admin/users/companies">Reset</Link>
-            </Button>
-          )}
-        </div>
-      </form>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <CompaniesSearchForm defaultSearch={search} />
+      </div>
 
       <Card className="overflow-hidden">
         <CardHeader className="px-4 py-3 sm:px-6 border-b">
