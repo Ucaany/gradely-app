@@ -170,13 +170,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate message with AI (gunakan proxy yang sama seperti analyze)
-    const apiKey = process.env.AI_API_KEY ?? ''
-    const baseUrl = (process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
-    const model = process.env.AI_MODEL ?? 'kr/auto'
+    // Load AI settings dari database (sama seperti route lain)
+    const { data: aiSettingRows } = await supabase
+      .from('settings')
+      .select('key, value')
+      .eq('university_id', lecturer.university_id ?? '')
+      .in('key', ['ai_api_key', 'ai_base_url', 'ai_model'])
 
-    if (!apiKey) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Layanan AI belum tersedia', success: false }, { status: 503 })
+    const aiSettingsMap = Object.fromEntries((aiSettingRows ?? []).map(r => [r.key, r.value]))
+    const apiKey = aiSettingsMap['ai_api_key'] ?? process.env.AI_API_KEY ?? ''
+    const baseUrl = (aiSettingsMap['ai_base_url'] ?? process.env.AI_BASE_URL ?? '').replace(/\/$/, '')
+    const model = aiSettingsMap['ai_model'] ?? process.env.AI_MODEL ?? 'kr/auto'
+
+    if (!apiKey || !baseUrl) {
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Layanan AI belum dikonfigurasi. Hubungi admin kampus.', success: false }, { status: 503 })
     }
 
     const adminContact = adminUser?.phone
