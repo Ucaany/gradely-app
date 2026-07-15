@@ -52,9 +52,10 @@ export const CATEGORY_LABEL: Record<string, string> = {
 interface PortfolioFormProps {
   categories: PortfolioCategory[]
   editItem?: StudentPortfolioWithCategory
+  initialCategoryId?: string
 }
 
-export function PortfolioForm({ categories, editItem }: PortfolioFormProps) {
+export function PortfolioForm({ categories, editItem, initialCategoryId }: PortfolioFormProps) {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [skillInput, setSkillInput] = useState('')
@@ -67,7 +68,7 @@ export function PortfolioForm({ categories, editItem }: PortfolioFormProps) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(createPortfolioSchema) as any,
     defaultValues: {
-      category_id: editItem?.category_id ?? '',
+      category_id: editItem?.category_id ?? initialCategoryId ?? '',
       title: editItem?.title ?? '',
       description: editItem?.description ?? '',
       skills: editItem?.skills ?? [],

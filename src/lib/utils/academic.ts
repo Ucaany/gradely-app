@@ -13,6 +13,7 @@ import type {
  * Digunakan sebagai fallback jika rule belum dikonfigurasi.
  */
 export const DEFAULT_SKS_RULES_BY_IPK: SKSRulesByIPK = {
+  enabled: true,
   semester_1_2_max: 20,
   tiers: [
     { ipk_min: 3.00, ipk_max: 4.00, sks_min: 22, sks_max: 24 },
@@ -53,6 +54,14 @@ export function calculateAllowedSKS(
   rule: AcademicRule
 ): { sks_min: number; sks_max: number } {
   const sksRules = rule.sks_rules_by_ipk ?? DEFAULT_SKS_RULES_BY_IPK
+
+  // Jika fitur dinonaktifkan, gunakan batas global dari aturan akademik
+  if (!sksRules.enabled) {
+    return {
+      sks_min: rule.min_sks_per_semester,
+      sks_max: rule.max_sks_per_semester,
+    }
+  }
 
   // Semester 1 & 2: sistem paket
   if (currentSemester <= 2) {

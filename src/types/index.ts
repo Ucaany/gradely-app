@@ -73,6 +73,7 @@ export interface SKSTier {
 
 // Aturan batas pengambilan SKS per semester
 export interface SKSRulesByIPK {
+  enabled: boolean          // true = aktif, false = nonaktif (gunakan batas global saja)
   semester_1_2_max: number  // Maks SKS untuk semester 1 & 2 (sistem paket)
   tiers: SKSTier[]          // Tier SKS untuk semester 3 ke atas, berdasarkan IPK
 }

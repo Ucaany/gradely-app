@@ -97,6 +97,7 @@ const sksTierSchema = z.object({
 
 // Aturan batas SKS per semester berdasarkan IPK
 const sksRulesByIpkSchema = z.object({
+  enabled: z.boolean(),
   semester_1_2_max: z.number().int().min(1).max(30),
   tiers: z.array(sksTierSchema).min(1).max(10),
 })

@@ -123,7 +123,12 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     success: true,
-    data: filteredStudents,
+    data: filteredStudents.map((s) => ({
+      ...s,
+      student_portfolios: (s.student_portfolios ?? []).filter(
+        (p: { is_public: boolean }) => p.is_public
+      ),
+    })),
     total: count ?? 0,
     page,
     pageSize,

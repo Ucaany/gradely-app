@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
 import { Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
 
 import { createAcademicRuleSchema, type CreateAcademicRuleInput } from '@/lib/validations'
 import { Button } from '@/components/ui/button'
@@ -86,6 +87,7 @@ function AcademicRuleForm({
           passing_grade: rule.passing_grade,
           grade_scale: rule.grade_scale,
           sks_rules_by_ipk: rule.sks_rules_by_ipk ?? {
+            enabled: true,
             semester_1_2_max: 20,
             tiers: DEFAULT_SKS_TIERS,
           },
@@ -101,6 +103,7 @@ function AcademicRuleForm({
           passing_grade: 'D',
           grade_scale: { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 },
           sks_rules_by_ipk: {
+            enabled: true,
             semester_1_2_max: 20,
             tiers: DEFAULT_SKS_TIERS,
           },
@@ -214,95 +217,119 @@ function AcademicRuleForm({
 
           {/* Aturan Batas SKS Berdasarkan IPK */}
           <div>
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">
-              Batas SKS Berdasarkan IPK
-            </p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Batas SKS Berdasarkan IPK
+              </p>
+              <FormField
+                control={form.control}
+                name="sks_rules_by_ipk.enabled"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormLabel className="text-xs text-muted-foreground">
+                      {field.value ? 'Aktif' : 'Nonaktif'}
+                    </FormLabel>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isLoading}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
             <p className="text-xs text-muted-foreground mb-3">
               Semester 1–2 menggunakan sistem paket. Semester 3 ke atas disesuaikan dengan IPK mahasiswa.
             </p>
 
-            <div className="mb-4">
-              <FormField control={form.control} name="sks_rules_by_ipk.semester_1_2_max" render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-xs">Maks SKS Semester 1 &amp; 2 (sistem paket)</FormLabel>
-                  <FormControl>
-                    <Input type="number" min={1} max={30} disabled={isLoading} {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
-                      className="h-8 w-32 text-sm" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )} />
-            </div>
+            {form.watch('sks_rules_by_ipk.enabled') && (
+              <>
+                <div className="mb-4">
+                  <FormField control={form.control} name="sks_rules_by_ipk.semester_1_2_max" render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-xs">Maks SKS Semester 1 &amp; 2 (sistem paket)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={1} max={30} disabled={isLoading} {...field}
+                          onChange={(e) => field.onChange(Number(e.target.value))}
+                          className="h-8 w-32 text-sm" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )} />
+                </div>
 
-            <p className="text-xs font-medium mb-2">Tier SKS untuk Semester 3 ke atas:</p>
-            <div className="rounded-lg border overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-muted/50 border-b">
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">IPK Min</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">IPK Maks</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">SKS Min</th>
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">SKS Maks</th>
-                    <th className="px-2 py-2 w-8"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {tierFields.map((field, index) => (
-                    <tr key={field.id} className={index < tierFields.length - 1 ? 'border-b' : ''}>
-                      {(['ipk_min', 'ipk_max', 'sks_min', 'sks_max'] as const).map((col) => (
-                        <td key={col} className="px-2 py-1.5">
-                          <FormField
-                            control={form.control}
-                            name={`sks_rules_by_ipk.tiers.${index}.${col}`}
-                            render={({ field: f }) => (
-                              <FormItem>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    step={col.startsWith('ipk') ? '0.01' : '1'}
-                                    min={0}
-                                    max={col.startsWith('ipk') ? 4 : 30}
-                                    disabled={isLoading}
-                                    {...f}
-                                    onChange={(e) => f.onChange(Number(e.target.value))}
-                                    className="h-7 text-xs w-full"
-                                  />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </td>
+                <p className="text-xs font-medium mb-2">Tier SKS untuk Semester 3 ke atas:</p>
+                <div className="rounded-lg border overflow-hidden">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="bg-muted/50 border-b">
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">IPK Min</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">IPK Maks</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">SKS Min</th>
+                        <th className="text-left px-3 py-2 font-medium text-muted-foreground">SKS Maks</th>
+                        <th className="px-2 py-2 w-8"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tierFields.map((field, index) => (
+                        <tr key={field.id} className={index < tierFields.length - 1 ? 'border-b' : ''}>
+                          {(['ipk_min', 'ipk_max', 'sks_min', 'sks_max'] as const).map((col) => (
+                            <td key={col} className="px-2 py-1.5">
+                              <FormField
+                                control={form.control}
+                                name={`sks_rules_by_ipk.tiers.${index}.${col}`}
+                                render={({ field: f }) => (
+                                  <FormItem>
+                                    <FormControl>
+                                      <Input
+                                        type="number"
+                                        step={col.startsWith('ipk') ? '0.01' : '1'}
+                                        min={0}
+                                        max={col.startsWith('ipk') ? 4 : 30}
+                                        disabled={isLoading}
+                                        {...f}
+                                        onChange={(e) => f.onChange(Number(e.target.value))}
+                                        className="h-7 text-xs w-full"
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </td>
+                          ))}
+                          <td className="px-2 py-1.5 text-center">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => removeTier(index)}
+                              disabled={isLoading || tierFields.length <= 1}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </td>
+                        </tr>
                       ))}
-                      <td className="px-2 py-1.5 text-center">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive"
-                          onClick={() => removeTier(index)}
-                          disabled={isLoading || tierFields.length <= 1}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-2 h-7 text-xs"
-              onClick={() => appendTier({ ipk_min: 0, ipk_max: 0, sks_min: 0, sks_max: 0 })}
-              disabled={isLoading}
-            >
-              <Plus className="h-3 w-3 mr-1" />
-              Tambah Tier
-            </Button>
+                    </tbody>
+                  </table>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2 h-7 text-xs"
+                  onClick={() => appendTier({ ipk_min: 0, ipk_max: 0, sks_min: 0, sks_max: 0 })}
+                  disabled={isLoading}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Tambah Tier
+                </Button>
+              </>
+            )}
           </div>
 
           <Separator />
