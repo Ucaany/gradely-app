@@ -30,6 +30,8 @@ import {
 import {
   calculateAcademicSummary,
   groupGradesBySemester,
+  autoDetectSemester,
+  DEFAULT_SKS_RULES_BY_IPK,
 } from '@/lib/utils/academic'
 import { formatGPA } from '@/lib/utils'
 import type { AcademicRule, StudentGrade } from '@/types'
@@ -111,7 +113,8 @@ export default async function StudentDashboardPage() {
     updated_at: '',
   }
 
-  const currentSemester = profile?.current_semester ?? 1
+  // Auto-detect semester dari data nilai (semester tertinggi yang ada)
+  const currentSemester = autoDetectSemester(grades, profile?.current_semester ?? 1)
   const targetSemester = target?.target_semester ?? effectiveRule.normal_semester
   const summary = calculateAcademicSummary(grades, currentSemester, targetSemester, effectiveRule)
   const semesterSummaries = groupGradesBySemester(grades)
@@ -233,6 +236,24 @@ export default async function StudentDashboardPage() {
         <p className="text-sm text-muted-foreground">
           {studyProgramName ?? 'Program Studi'} · NIM {profile?.nim ?? '-'} · Semester {currentSemester}
         </p>
+      </div>
+
+      {/* Batas SKS semester berikutnya */}
+      <div className="rounded-xl border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 px-4 py-3 flex items-start gap-3">
+        <BookOpen className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Batas SKS Semester Berikutnya</p>
+          {currentSemester <= 2 ? (
+            <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+              Semester 1–2 menggunakan sistem paket. Maks <span className="font-semibold">{effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20} SKS</span>.
+            </p>
+          ) : (
+            <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+              IPK kamu <span className="font-semibold">{formatGPA(summary.gpa)}</span> — kamu boleh mengambil{' '}
+              <span className="font-semibold">{summary.allowed_sks_min}–{summary.allowed_sks_max} SKS</span> di semester berikutnya.
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Stat Cards */}
@@ -429,35 +450,39 @@ export default async function StudentDashboardPage() {
       )}
 
       {/* Target info: skill & industri */}
-      {target && (target.achievement_skills?.length || target.achievement_internship) && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {target.achievement_skills && target.achievement_skills.length > 0 && (
+      {target && ((target.target_skills && target.target_skills.length > 0) || (target.target_industries && target.target_industries.length > 0)) && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {target.target_skills && target.target_skills.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Code2 className="h-4 w-4 text-primary" />
-                  Skill Target
+                  Skill yang Ingin Dikuasai
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
                 <div className="flex flex-wrap gap-1.5">
-                  {target.achievement_skills.map((s: string) => (
+                  {target.target_skills.map((s: string) => (
                     <Badge key={s} variant="secondary" className="text-xs">{s}</Badge>
                   ))}
                 </div>
               </CardContent>
             </Card>
           )}
-          {target.achievement_internship && (
+          {target.target_industries && target.target_industries.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
                   <Briefcase className="h-4 w-4 text-primary" />
-                  Target Pengalaman
+                  Industri yang Diminati
                 </CardTitle>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-sm text-muted-foreground">{target.achievement_internship}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {target.target_industries.map((ind: string) => (
+                    <Badge key={ind} variant="outline" className="text-xs">{ind}</Badge>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}
