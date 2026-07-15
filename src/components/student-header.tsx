@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { DarkModeToggle } from "@/components/dark-mode-toggle"
-import { NotificationBell } from "@/components/student/notification-bell"
+import { NotificationInbox } from "@/components/shared/notification-inbox"
 
 interface BreadcrumbItem {
   label: string
@@ -117,7 +117,7 @@ export function StudentHeader() {
       </div>
 
       <div className="ml-auto flex items-center gap-1 shrink-0">
-        <NotificationBell />
+        <NotificationInbox />
         <DarkModeToggle />
       </div>
     </header>

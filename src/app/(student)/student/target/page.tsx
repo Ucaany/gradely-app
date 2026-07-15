@@ -40,10 +40,6 @@ interface AIAnalysis {
 }
 
 
-const SKILL_OPTIONS = ['Desain Grafis','UI/UX Design','Ilustrasi','Fotografi','Videografi','Animasi','Musik','Seni Pertunjukan','Kriya & Kerajinan','Arsitektur','Fashion Design','Branding','Social Media','Copywriting','Web Development','Mobile Development']
-const SKILL_DESC: Record<string,string> = { 'Desain Grafis':'Membuat visual untuk media cetak, digital, dan branding menggunakan Illustrator & Photoshop.','UI/UX Design':'Merancang antarmuka dan pengalaman pengguna aplikasi/website yang intuitif.','Ilustrasi':'Membuat karya seni ilustrasi digital maupun tradisional.','Fotografi':'Mengabadikan momen dengan teknik pencahayaan dan komposisi yang tepat.','Videografi':'Merekam, mengedit, dan memproduksi konten video.','Animasi':'Membuat animasi 2D/3D untuk film, iklan, atau konten digital.','Musik':'Menciptakan dan memproduksi karya musik original.','Seni Pertunjukan':'Mengembangkan kemampuan teater, tari, atau seni pertunjukan.','Kriya & Kerajinan':'Membuat produk kerajinan tangan bernilai estetika tinggi.','Arsitektur':'Merancang bangunan yang estetis, fungsional, dan berkelanjutan.','Fashion Design':'Merancang pakaian dengan memahami tren dan kebutuhan pasar.','Branding':'Membangun identitas merek melalui strategi visual dan komunikasi.','Social Media':'Mengelola konten dan strategi pemasaran di media sosial.','Copywriting':'Menulis teks iklan dan konten marketing yang persuasif.','Web Development':'Membangun website menggunakan HTML, CSS, JavaScript, dan framework modern.','Mobile Development':'Mengembangkan aplikasi mobile untuk iOS dan Android.' }
-const INDUSTRY_OPTIONS = ['Kreatif & Desain','Periklanan','Media','Teknologi','Startup','Penerbitan','Entertainment','Konstruksi','Properti','Fashion','Ritel']
-const INDUSTRY_DESC: Record<string,string> = { 'Kreatif & Desain':'Studio desain dan agensi kreatif yang bergerak di bidang desain visual.','Periklanan':'Agensi iklan yang membuat kampanye kreatif untuk berbagai klien.','Media':'Perusahaan media, berita, broadcasting, dan platform konten digital.','Teknologi':'Perusahaan teknologi yang mengembangkan software, hardware, atau layanan digital.','Startup':'Perusahaan rintisan inovatif dengan budaya kerja yang dinamis.','Penerbitan':'Penerbit buku, majalah, dan konten cetak maupun digital.','Entertainment':'Industri hiburan termasuk film, musik, game, dan streaming.','Konstruksi':'Perusahaan konstruksi yang membutuhkan keahlian arsitektur dan desain.','Properti':'Pengembang properti dan perusahaan manajemen gedung.','Fashion':'Brand fashion dan industri tekstil yang membutuhkan kreativitas.','Ritel':'Perusahaan ritel yang membutuhkan desain display dan branding.' }
 const IPK_DESC: Record<string,string> = { '2.75':'Syarat minimum banyak perusahaan. Target realistis untuk menjaga peluang kerja.','3.00':'IPK baik dan cukup kompetitif. Memenuhi syarat sebagian besar lowongan dan beasiswa.','3.25':'IPK di atas rata-rata yang membuka lebih banyak peluang karier dan beasiswa.','3.50':'IPK sangat baik. Diinginkan banyak perusahaan top dan program graduate.','3.75':'Mendekati cumlaude. Membuka peluang beasiswa S2 bergengsi.','4.00':'IPK sempurna — Summa Cumlaude. Prestasi tertinggi.' }
 const SEM_DESC: Record<number,string> = { 7:'Lulus lebih cepat dari normal. Butuh rata-rata SKS lebih banyak tiap semester.', 8:'Waktu studi normal sesuai kurikulum. Target ideal mayoritas mahasiswa.', 9:'Satu semester lebih lambat. Masih dalam batas wajar.', 10:'Dua semester di atas normal. Perlu perhatian pada progres.', 11:'Tiga semester di atas normal. Konsultasikan dengan dosen wali.', 12:'Empat semester di atas normal. Prioritaskan percepatan studi.', 13:'Mendekati batas maksimal. Wajib segera menyelesaikan kewajiban akademik.', 14:'Semester terakhir yang diizinkan.' }
 const STEPS = [
@@ -126,21 +122,31 @@ export default function StudentTargetPage() {
   const [selectedIndustries, setSelectedIndustries] = useState<string[]>([])
   const [pengalaman, setPengalaman] = useState('')
   const [activeInfo, setActiveInfo] = useState<{ label: string; text: string } | null>(null)
+  const [skillOptions, setSkillOptions] = useState<{ name: string; description: string }[]>([])
+  const [industryOptions, setIndustryOptions] = useState<{ name: string; description: string }[]>([])
   const aiTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
     async function fetchData() {
       setIsLoading(true)
       try {
-        const [summaryRes, profileRes] = await Promise.all([fetch('/api/student/summary'), fetch('/api/student/profile')])
-        const summaryResult = await summaryRes.json()
-        const profileResult = await profileRes.json()
+        const [summaryRes, profileRes, skillsRes, industriesRes] = await Promise.all([
+          fetch('/api/student/summary'),
+          fetch('/api/student/profile'),
+          fetch('/api/student/skills'),
+          fetch('/api/student/industries'),
+        ])
+        const [summaryResult, profileResult, skillsResult, industriesResult] = await Promise.all([
+          summaryRes.json(), profileRes.json(), skillsRes.json(), industriesRes.json(),
+        ])
         setUserName(profileResult.data?.full_name?.split(' ')[0] ?? '')
         if (summaryResult.success && summaryResult.data) {
           setSummaryData(summaryResult.data)
           const t = summaryResult.data.target as StudentTarget | null
           if (t) { setTargetSemester(t.target_semester); setTargetIpk(t.target_ipk ?? null); setTargetYears(t.target_years ?? null) }
         }
+        if (skillsResult.success) setSkillOptions(skillsResult.data ?? [])
+        if (industriesResult.success) setIndustryOptions(industriesResult.data ?? [])
       } finally { setIsLoading(false) }
     }
     fetchData()
@@ -292,12 +298,15 @@ export default function StudentTargetPage() {
                   <div className="space-y-3">
                     <p className="text-xs font-medium mb-2.5 text-muted-foreground">Pilih skill yang ingin dikuasai (opsional)</p>
                     <div className="flex flex-wrap gap-2">
-                      {SKILL_OPTIONS.map(s => (
-                        <button key={s} onClick={() => { toggleSkill(s); setActiveInfo({ label: s, text: SKILL_DESC[s]??'' }) }}
-                          className={`rounded-full border px-3 py-1.5 text-xs transition-all ${selectedSkills.includes(s)?'bg-primary text-primary-foreground border-primary':'border-border hover:border-primary/60'}`}>
-                          {s}
+                      {skillOptions.map(s => (
+                        <button key={s.name} onClick={() => { toggleSkill(s.name); setActiveInfo({ label: s.name, text: s.description ?? '' }) }}
+                          className={`rounded-full border px-3 py-1.5 text-xs transition-all ${selectedSkills.includes(s.name)?'bg-primary text-primary-foreground border-primary':'border-border hover:border-primary/60'}`}>
+                          {s.name}
                         </button>
                       ))}
+                      {skillOptions.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Belum ada opsi skill tersedia.</p>
+                      )}
                     </div>
                     {selectedSkills.length>0 && <p className="text-xs text-muted-foreground">Dipilih: {selectedSkills.length} skill</p>}
                   </div>
@@ -307,12 +316,15 @@ export default function StudentTargetPage() {
                   <div className="space-y-3">
                     <p className="text-xs font-medium mb-2.5 text-muted-foreground">Industri yang diminati (opsional)</p>
                     <div className="flex flex-wrap gap-2">
-                      {INDUSTRY_OPTIONS.map(ind => (
-                        <button key={ind} onClick={() => { toggleIndustry(ind); setActiveInfo({ label: ind, text: INDUSTRY_DESC[ind]??'' }) }}
-                          className={`rounded-full border px-3 py-1.5 text-xs transition-all ${selectedIndustries.includes(ind)?'bg-primary text-primary-foreground border-primary':'border-border hover:border-primary/60'}`}>
-                          {ind}
+                      {industryOptions.map(ind => (
+                        <button key={ind.name} onClick={() => { toggleIndustry(ind.name); setActiveInfo({ label: ind.name, text: ind.description ?? '' }) }}
+                          className={`rounded-full border px-3 py-1.5 text-xs transition-all ${selectedIndustries.includes(ind.name)?'bg-primary text-primary-foreground border-primary':'border-border hover:border-primary/60'}`}>
+                          {ind.name}
                         </button>
                       ))}
+                      {industryOptions.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Belum ada opsi industri tersedia.</p>
+                      )}
                     </div>
                   </div>
                 )}

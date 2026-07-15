@@ -8,8 +8,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Input } from '@/components/ui/input'
 import { ArrowRight, Search } from 'lucide-react'
 import { getInitials, formatGPA } from '@/lib/utils'
-import { calculateAcademicSummary, ACADEMIC_STATUS_CONFIG } from '@/lib/utils/academic'
-import type { AcademicRule, StudentGrade } from '@/types'
+import { ACADEMIC_STATUS_CONFIG } from '@/lib/utils/academic'
+import { getLecturerStudentData } from '@/lib/utils/lecturer-data'
 
 export default async function LecturerStudentsPage({
   searchParams,
@@ -20,86 +20,10 @@ export default async function LecturerStudentsPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('users')
-    .select('university_id')
-    .eq('id', user.id)
-    .single()
-
-  const { data: advisorRows } = await supabase
-    .from('advisor_students')
-    .select('student_id')
-    .eq('lecturer_id', user.id)
-
-  const studentIds = (advisorRows ?? []).map((r) => r.student_id)
-
-  let students: Array<{
-    id: string
-    full_name: string
-    nim: string | null
-    avatar_url: string | null
-    current_semester: number | null
-    email: string
-    phone: string | null
-    study_programs: { name: string; short_name: string | null } | null
-  }> = []
-
-  if (studentIds.length > 0) {
-    let query = supabase
-      .from('users')
-      .select('id, full_name, nim, avatar_url, current_semester, email, phone, study_programs(name, short_name)')
-      .in('id', studentIds)
-      .eq('is_active', true)
-
-    if (searchParams.q) {
-      query = query.or(`full_name.ilike.%${searchParams.q}%,nim.ilike.%${searchParams.q}%`)
-    }
-
-    const { data } = await query.order('full_name')
-    students = (data ?? []).map((s: Record<string, unknown>) => ({
-      ...s,
-      study_programs: Array.isArray(s.study_programs) ? s.study_programs[0] : s.study_programs
-    })) as typeof students
-  }
-
-  let defaultRule: AcademicRule | null = null
-  if (profile?.university_id) {
-    const { data } = await supabase
-      .from('academic_rules')
-      .select('*')
-      .eq('university_id', profile.university_id)
-      .is('study_program_id', null)
-      .single()
-    defaultRule = data
-  }
-
-  const effectiveRule: AcademicRule = defaultRule ?? {
-    id: '', university_id: '', study_program_id: null,
-    total_sks_graduation: 144, normal_semester: 8, max_semester: 14,
-    min_gpa: 2.0, max_sks_per_semester: 24, min_sks_per_semester: 12,
-    passing_grade: 'D',
-    grade_scale: { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 },
-    created_at: '', updated_at: '',
-  }
-
-  const gradesByStudent = new Map<string, StudentGrade[]>()
-  if (studentIds.length > 0) {
-    const { data: allGrades } = await supabase
-      .from('student_grades')
-      .select('*')
-      .in('student_id', studentIds)
-    for (const g of (allGrades ?? [])) {
-      const arr = gradesByStudent.get(g.student_id) ?? []
-      arr.push(g as StudentGrade)
-      gradesByStudent.set(g.student_id, arr)
-    }
-  }
-
-  const studentSummaries = students.map((s) => {
-    const grades = gradesByStudent.get(s.id) ?? []
-    const currentSemester = s.current_semester ?? 1
-    const summary = calculateAcademicSummary(grades, currentSemester, effectiveRule.normal_semester, effectiveRule)
-    return { student: s, summary }
+  const { studentSummaries } = await getLecturerStudentData(user.id, {
+    includeEmail: true,
+    includePhone: true,
+    searchQuery: searchParams.q,
   })
 
   return (

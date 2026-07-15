@@ -33,13 +33,13 @@ export default async function LecturerDashboardPage() {
 
   const { data: profile } = await supabase
     .from('users')
-    .select('full_name, university_id, study_program_id, employee_id')
+    .select('full_name, university_id, study_program_id, join_code')
     .eq('id', user.id)
     .single()
 
   const { data: advisorRows } = await supabase
     .from('advisor_students')
-    .select('student_id, join_code')
+    .select('student_id')
     .eq('lecturer_id', user.id)
 
   const studentIds = (advisorRows ?? []).map((r) => r.student_id)
@@ -114,7 +114,7 @@ export default async function LecturerDashboardPage() {
     ({ summary }) => summary.academic_status === 'recovery_mode' || summary.academic_status === 'critical'
   )
 
-  const joinCode = advisorRows?.[0]?.join_code ?? null
+  const joinCode = profile?.join_code ?? null
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">

@@ -4,23 +4,6 @@ import type { ApiResponse, AcademicRule, StudentGrade } from '@/types'
 import { calculateAcademicSummary, groupGradesBySemester } from '@/lib/utils/academic'
 
 const RATE_LIMIT_MAX = 5
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(userId: string): { allowed: boolean; remaining: number; resetAt: number } {
-  const now = Date.now()
-  const entry = rateLimitMap.get(userId)
-  if (!entry || now > entry.resetAt) {
-    const resetAt = now + RATE_LIMIT_WINDOW_MS
-    rateLimitMap.set(userId, { count: 1, resetAt })
-    return { allowed: true, remaining: RATE_LIMIT_MAX - 1, resetAt }
-  }
-  if (entry.count >= RATE_LIMIT_MAX) {
-    return { allowed: false, remaining: 0, resetAt: entry.resetAt }
-  }
-  entry.count += 1
-  return { allowed: true, remaining: RATE_LIMIT_MAX - entry.count, resetAt: entry.resetAt }
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,14 +21,21 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
-    const rateLimit = checkRateLimit(user.id)
-    if (!rateLimit.allowed) {
-      const resetMin = Math.ceil((rateLimit.resetAt - Date.now()) / 60000)
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+    const { count: recentCount } = await supabase
+      .from('student_target_analyses')
+      .select('id', { count: 'exact', head: true })
+      .eq('student_id', user.id)
+      .gte('created_at', oneHourAgo)
+
+    const usedCount = recentCount ?? 0
+    if (usedCount >= RATE_LIMIT_MAX) {
       return NextResponse.json<ApiResponse>(
-        { data: null, error: `Batas analisis tercapai (${RATE_LIMIT_MAX}x/jam). Coba lagi dalam ${resetMin} menit.`, success: false },
+        { data: null, error: `Batas analisis tercapai (${RATE_LIMIT_MAX}x/jam). Coba lagi dalam beberapa menit.`, success: false },
         { status: 429 }
       )
     }
+    const remaining = RATE_LIMIT_MAX - usedCount - 1
 
     const body = await request.json()
     const { target_semester, target_ipk, target_years, career_goal } = body as {
@@ -304,7 +294,7 @@ Analisis secara mendalam kondisi dari semester 1 hingga prediksi lulus. Balas HA
     })
 
     return NextResponse.json({
-      data: { ...analysis, remaining_quota: rateLimit.remaining },
+      data: { ...analysis, remaining_quota: remaining },
       error: null,
       success: true,
     })

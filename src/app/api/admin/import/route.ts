@@ -33,7 +33,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'University tidak ditemukan untuk akun admin ini', success: false }, { status: 400 })
     }
 
-    const default_password = process.env.DEFAULT_IMPORT_PASSWORD ?? 'Gradely@2024'
+    const default_password = process.env.DEFAULT_IMPORT_PASSWORD
+    if (!default_password) {
+      return NextResponse.json<ApiResponse>(
+        { data: null, error: 'DEFAULT_IMPORT_PASSWORD environment variable tidak di-set. Hubungi administrator.', success: false },
+        { status: 500 }
+      )
+    }
 
     const serviceClient = createServiceClient()
     const result: ImportResult = { success: 0, failed: 0, errors: [] }
@@ -59,7 +65,7 @@ export async function POST(request: NextRequest) {
         const { data: authData, error: authError } =
           await serviceClient.auth.admin.createUser({
             email: data.email,
-            password: default_password ?? 'Gradely@2024',
+            password: default_password,
             email_confirm: true,
           })
 
@@ -94,6 +100,15 @@ export async function POST(request: NextRequest) {
           result.failed++
           result.errors.push({ row: i + 1, email: data.email, reason: insertError.message })
           continue
+        }
+
+        if (data.role === 'company') {
+          await serviceClient.from('companies').insert({
+            user_id: authData.user.id,
+            university_id,
+            company_name: data.full_name,
+            is_active: true,
+          })
         }
 
         result.success++

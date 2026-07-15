@@ -9,18 +9,12 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json<ApiResponse>({ data: null, error: 'Unauthorized', success: false }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('users').select('role, university_id').eq('id', user.id).single()
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
-    const { data: adminProfile } = await supabase
-      .from('users')
-      .select('university_id')
-      .eq('id', user.id)
-      .single()
-
-    const universityId = adminProfile?.university_id ?? null
+    const universityId = profile.university_id ?? null
 
     const studentsQuery = supabase
       .from('users')

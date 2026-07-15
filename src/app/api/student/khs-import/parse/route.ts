@@ -4,6 +4,7 @@ import type { ApiResponse } from '@/types'
 
 const SUPPORTED_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg', 'image/webp']
 const MAX_SIZE = 10 * 1024 * 1024
+const VALID_GRADES = new Set(['A', 'AB', 'B', 'BC', 'C', 'D', 'E'])
 
 function isValidPublicHttpsUrl(raw: string): boolean {
   try {
@@ -47,9 +48,11 @@ export async function POST(request: NextRequest) {
       .in('key', ['ai_vision_api_key', 'ai_vision_base_url', 'ai_vision_model'])
 
     const settingsMap = Object.fromEntries((settingRows ?? []).map(r => [r.key, r.value]))
-    const apiKey = settingsMap['ai_vision_api_key'] ?? ''
-    const rawBaseUrl = (settingsMap['ai_vision_base_url'] ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
-    const model = settingsMap['ai_vision_model'] ?? 'kr/auto'
+
+    // Fallback ke env vars jika settings DB kosong
+    const apiKey = settingsMap['ai_vision_api_key'] ?? process.env.AI_VISION_API_KEY ?? process.env.AI_API_KEY ?? ''
+    const rawBaseUrl = (settingsMap['ai_vision_base_url'] ?? process.env.AI_VISION_BASE_URL ?? process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
+    const model = settingsMap['ai_vision_model'] ?? process.env.AI_VISION_MODEL ?? process.env.AI_MODEL ?? 'kr/auto'
 
     if (!apiKey) {
       return NextResponse.json<ApiResponse>(
@@ -117,7 +120,7 @@ Aturan:
 
     const aiUrl = `${rawBaseUrl}/chat/completions`
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 55000)
+    const timeout = setTimeout(() => controller.abort(), 90000)
 
     let aiRes: Response
     try {
@@ -132,7 +135,7 @@ Aturan:
           messages: [{ role: 'user', content: contentParts }],
           temperature: 0,
           max_tokens: 4096,
-          stream: false,
+          stream: true,
         }),
         signal: controller.signal,
       })
@@ -161,14 +164,28 @@ Aturan:
       else if (aiRes.status === 404) userMsg = `Model "${model}" tidak ditemukan di endpoint ini.`
       else if (aiRes.status === 429) userMsg = 'Rate limit tercapai. Coba lagi beberapa saat.'
       else if (aiRes.status >= 500) userMsg = 'Server AI sedang bermasalah. Coba lagi nanti.'
-      return NextResponse.json<ApiResponse>(
-        { data: null, error: userMsg, success: false },
-        { status: 502 }
-      )
+      return NextResponse.json<ApiResponse>({ data: null, error: userMsg, success: false }, { status: 502 })
     }
 
-    const aiData = await aiRes.json()
-    const content: string = aiData.choices?.[0]?.message?.content ?? ''
+    // Parse SSE streaming response
+    const rawText = await aiRes.text()
+    const lines = rawText.split('\n').filter(l => l.startsWith('data: ') && !l.includes('[DONE]'))
+    let content = ''
+    for (const line of lines) {
+      try {
+        const json = JSON.parse(line.replace('data: ', ''))
+        const delta = json.choices?.[0]?.delta?.content
+        if (delta) content += delta
+      } catch { /* skip malformed lines */ }
+    }
+
+    // Fallback: jika tidak ada SSE chunks, coba parse sebagai non-streaming
+    if (!content) {
+      try {
+        const jsonResp = JSON.parse(rawText)
+        content = jsonResp.choices?.[0]?.message?.content ?? ''
+      } catch { /* not JSON */ }
+    }
 
     if (!content) {
       return NextResponse.json<ApiResponse>(
@@ -185,7 +202,6 @@ Aturan:
       )
     }
 
-    const VALID_GRADES = new Set(['A', 'AB', 'B', 'BC', 'C', 'D', 'E'])
     const raw: object[] = JSON.parse(jsonMatch[0])
     const grades = raw
       .filter((g: object) => {

@@ -48,7 +48,7 @@ function AIConfigSection({
   description,
   icon: Icon,
   configType,
-  universityId,
+  universityId: _universityId, // eslint-disable-line @typescript-eslint/no-unused-vars
   defaultApiKey,
   defaultBaseUrl,
   defaultModel,

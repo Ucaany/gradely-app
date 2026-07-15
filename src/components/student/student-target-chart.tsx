@@ -11,6 +11,7 @@ import {
   ResponsiveContainer,
   ReferenceLine,
   LabelList,
+  Cell,
 } from "recharts"
 
 interface TargetChartPoint {
@@ -28,19 +29,19 @@ interface StudentTargetChartProps {
 
 interface TooltipProps {
   active?: boolean
-  payload?: Array<{ name: string; value: number; color: string }>
+  payload?: Array<{ name: string; value: number; color: string; payload: TargetChartPoint }>
   label?: string
 }
 
 function CustomTooltip({ active, payload, label }: TooltipProps) {
   if (!active || !payload?.length) return null
-  const isActual = payload.some(p => p.name === 'ips')
+  const isActual = payload[0]?.payload?.is_actual ?? false
   return (
     <div className="rounded-xl border bg-card shadow-lg px-3 py-2.5 text-xs min-w-[160px]">
       <div className="flex items-center gap-2 mb-2">
         <p className="font-semibold text-foreground">{label}</p>
-        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isActual ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
-          {isActual ? 'Aktual' : 'Proyeksi'}
+        <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${isActual ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : 'bg-muted text-muted-foreground'}`}>
+          {isActual ? 'Data Nyata' : 'Prediksi'}
         </span>
       </div>
       {payload.map((p) => (
@@ -48,12 +49,15 @@ function CustomTooltip({ active, payload, label }: TooltipProps) {
           <div className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full" style={{ background: p.color }} />
             <span className="text-muted-foreground">
-              {p.name === 'ips' ? 'IPS' : 'IPK'}
+              {p.name === 'ips' ? 'IPS Semester Ini' : 'IPK Kumulatif'}
             </span>
           </div>
           <span className="font-semibold tabular-nums">{Number(p.value).toFixed(2)}</span>
         </div>
       ))}
+      {!isActual && (
+        <p className="text-muted-foreground/70 text-[10px] mt-1.5 border-t pt-1.5">Nilai perkiraan berdasarkan target</p>
+      )}
     </div>
   )
 }
@@ -64,20 +68,24 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+      {/* Legend yang lebih jelas */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-xs text-muted-foreground">
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm" style={{ background: 'hsl(var(--primary) / 0.3)' }} />
-          <span>IPS Aktual ({actualData.length} semester)</span>
+          <span className="inline-block h-3 w-4 rounded-sm bg-blue-500/70" />
+          <span>IPS Aktual — nilai nyata dari {actualData.length} semester lalu</span>
         </div>
+        {projectedData.length > 0 && (
+          <div className="flex items-center gap-1.5">
+            <span className="inline-block h-3 w-4 rounded-sm bg-muted border border-dashed border-muted-foreground/40" />
+            <span>IPS Proyeksi — prediksi {projectedData.length} semester ke depan</span>
+          </div>
+        )}
         <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-3 rounded-sm bg-muted border border-border" />
-          <span>IPS Proyeksi ({projectedData.length} semester)</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span className="inline-block h-3 w-0.5 bg-primary" style={{ height: 12 }} />
-          <span>IPK Kumulatif</span>
+          <span className="inline-block h-0.5 w-4 bg-primary" />
+          <span>IPK Kumulatif — nilai rata-rata keseluruhan</span>
         </div>
       </div>
+
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart data={data} margin={{ top: 20, right: 12, left: -16, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
@@ -95,9 +103,11 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
             axisLine={false}
           />
           <Tooltip content={<CustomTooltip />} />
+
+          {/* Garis IPK minimum */}
           <ReferenceLine
             y={minGpa}
-            stroke="hsl(var(--destructive) / 0.5)"
+            stroke="hsl(var(--destructive) / 0.6)"
             strokeDasharray="4 3"
             label={{
               value: `IPK Min ${minGpa.toFixed(2)}`,
@@ -106,10 +116,12 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
               position: 'insideTopRight',
             }}
           />
+
+          {/* Garis target IPK */}
           {targetIPK && (
             <ReferenceLine
               y={targetIPK}
-              stroke="hsl(var(--primary) / 0.5)"
+              stroke="hsl(var(--primary) / 0.6)"
               strokeDasharray="5 4"
               label={{
                 value: `Target IPK ${targetIPK.toFixed(2)}`,
@@ -119,13 +131,17 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
               }}
             />
           )}
-          <Bar
-            dataKey="ips"
-            radius={[4, 4, 0, 0]}
-            barSize={28}
-            fill="hsl(var(--primary) / 0.25)"
-            stroke="hsl(var(--primary) / 0.5)"
-          >
+
+          {/* Bar IPS — beda warna aktual vs proyeksi */}
+          <Bar dataKey="ips" radius={[4, 4, 0, 0]} barSize={28}>
+            {data.map((entry, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={entry.is_actual ? 'hsl(217 91% 60% / 0.7)' : 'hsl(var(--muted))'}
+                stroke={entry.is_actual ? 'hsl(217 91% 60%)' : 'hsl(var(--muted-foreground) / 0.3)'}
+                strokeDasharray={entry.is_actual ? '0' : '4 2'}
+              />
+            ))}
             <LabelList
               dataKey="ips"
               position="top"
@@ -133,6 +149,8 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
               formatter={((v: unknown) => typeof v === 'number' && v > 0 ? v.toFixed(2) : '') as (value: unknown) => string}
             />
           </Bar>
+
+          {/* Line IPK kumulatif */}
           <Line
             type="monotone"
             dataKey="ipk"
@@ -149,18 +167,25 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
                   fill={payload.is_actual ? 'hsl(var(--primary))' : 'hsl(var(--background))'}
                   stroke="hsl(var(--primary))"
                   strokeWidth={payload.is_actual ? 0 : 2}
-                  strokeDasharray={payload.is_actual ? '0' : '3 2'}
                 />
               )
             }}
             activeDot={{ r: 6, strokeWidth: 2, stroke: 'hsl(var(--background))' }}
             connectNulls
-          />
+          >
+            <LabelList
+              dataKey="ipk"
+              position="top"
+              style={{ fontSize: 9, fill: 'hsl(var(--primary))' }}
+              formatter={((v: unknown) => typeof v === 'number' && v > 0 ? v.toFixed(2) : '') as (value: unknown) => string}
+            />
+          </Line>
         </ComposedChart>
       </ResponsiveContainer>
+
       {projectedData.length > 0 && (
         <p className="text-xs text-muted-foreground text-center">
-          Proyeksi {projectedData.length} semester ke depan berdasarkan target yang ditetapkan
+          📊 Bar biru = nilai nyata · Bar abu = prediksi · Garis = IPK kumulatif
         </p>
       )}
     </div>

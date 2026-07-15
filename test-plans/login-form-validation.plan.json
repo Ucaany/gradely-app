@@ -1,0 +1,44 @@
+{
+  "projectId": "026062f0-daf8-4331-8a4e-509ad34a22b0",
+  "type": "frontend",
+  "name": "Login form validation",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to login page",
+      "action": "navigate",
+      "url": "https://graph-headstand-copper.ngrok-free.dev/login"
+    },
+    {
+      "type": "action",
+      "description": "Click submit with empty fields",
+      "action": "click",
+      "selector": "button[type='submit']"
+    },
+    {
+      "type": "assertion",
+      "description": "Validation errors should appear for empty form",
+      "selector": "p.text-destructive",
+      "assertion": "visible"
+    },
+    {
+      "type": "action",
+      "description": "Fill email with invalid format",
+      "action": "fill",
+      "selector": "#login-email",
+      "value": "notanemail"
+    },
+    {
+      "type": "action",
+      "description": "Click submit with invalid email",
+      "action": "click",
+      "selector": "button[type='submit']"
+    },
+    {
+      "type": "assertion",
+      "description": "Validation error should appear for invalid email format",
+      "selector": "p.text-destructive",
+      "assertion": "visible"
+    }
+  ]
+}

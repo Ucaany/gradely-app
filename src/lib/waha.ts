@@ -84,7 +84,8 @@ export async function logWhatsAppMessage(
   recipientId: string | null,
   phone: string,
   message: string,
-  result: SendMessageResult
+  result: SendMessageResult,
+  universityId?: string
 ) {
   const supabase = createServiceClient()
   await supabase.from('whatsapp_logs').insert({
@@ -94,6 +95,7 @@ export async function logWhatsAppMessage(
     status: result.success ? 'sent' : 'failed',
     error_message: result.error ?? null,
     sent_at: result.success ? new Date().toISOString() : null,
+    university_id: universityId ?? null,
   })
 }
 
@@ -104,12 +106,12 @@ export async function sendAndLog(
   const settings = await getWahaSettings(universityId)
   if (!settings) {
     const err = 'Konfigurasi WAHA belum diatur'
-    await logWhatsAppMessage(payload.recipientId ?? null, payload.phone, payload.message, { success: false, error: err })
+    await logWhatsAppMessage(payload.recipientId ?? null, payload.phone, payload.message, { success: false, error: err }, universityId)
     return { success: false, error: err }
   }
 
   const result = await sendWhatsAppMessage(settings, payload)
-  await logWhatsAppMessage(payload.recipientId ?? null, payload.phone, payload.message, result)
+  await logWhatsAppMessage(payload.recipientId ?? null, payload.phone, payload.message, result, universityId)
   return result
 }
 

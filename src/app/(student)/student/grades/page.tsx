@@ -46,6 +46,7 @@ export default function StudentGradesPage() {
   const [grades, setGrades] = useState<StudentGrade[]>([])
   const [semesterGroups, setSemesterGroups] = useState<SemesterGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editGrade, setEditGrade] = useState<StudentGrade | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -53,6 +54,7 @@ export default function StudentGradesPage() {
 
   const fetchGrades = useCallback(async () => {
     setIsLoading(true)
+    setFetchError(null)
     try {
       const res = await fetch('/api/student/grades')
       const result = await res.json()
@@ -80,7 +82,11 @@ export default function StudentGradesPage() {
             }
           })
         setSemesterGroups(groups)
+      } else {
+        setFetchError(result.error ?? 'Gagal memuat data nilai.')
       }
+    } catch {
+      setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
     } finally {
       setIsLoading(false)
     }
@@ -156,6 +162,13 @@ export default function StudentGradesPage() {
         <div className="flex items-center justify-center py-16">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
+      ) : fetchError ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
+            <p className="text-sm text-destructive">{fetchError}</p>
+            <Button variant="outline" size="sm" onClick={fetchGrades}>Coba Lagi</Button>
+          </CardContent>
+        </Card>
       ) : semesterGroups.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-3">

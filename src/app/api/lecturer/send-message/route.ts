@@ -163,11 +163,16 @@ export async function POST(request: NextRequest) {
     const wahaApiKey = settingsMap['waha_api_key']
 
     if (!wahaUrl || !wahaSession) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Konfigurasi WAHA belum diatur. Hubungi admin kampus.', success: false }, { status: 503 })
+      if (!preview_only) {
+        return NextResponse.json<ApiResponse>({ data: null, error: 'Konfigurasi WAHA belum diatur. Hubungi admin kampus.', success: false }, { status: 503 })
+      }
     }
 
-    // Generate message with AI
+    // Generate message with AI (gunakan proxy yang sama seperti analyze)
     const apiKey = process.env.AI_API_KEY ?? ''
+    const baseUrl = (process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
+    const model = process.env.AI_MODEL ?? 'kr/auto'
+
     if (!apiKey) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Layanan AI belum tersedia', success: false }, { status: 503 })
     }
@@ -178,7 +183,20 @@ export async function POST(request: NextRequest) {
         ? `📧 Kontak Gradely: ${adminUser.email}`
         : '📩 Hubungi kantor akademik kampus untuk info lebih lanjut'
 
-    const prompt = `Kamu adalah sistem notifikasi akademik Gradely. Buatkan pesan WhatsApp resmi dari sistem Gradely kepada mahasiswa berisi laporan lengkap perkembangan akademik beserta saran konkret. Pesan harus informatif, terstruktur, hangat, dan profesional dalam Bahasa Indonesia.
+    const prompt = (() => {
+      const nowWIB = new Date(Date.now() + 7 * 60 * 60 * 1000)
+      const hour = nowWIB.getUTCHours()
+      const greeting = hour >= 4 && hour < 11 ? 'Selamat Pagi'
+        : hour >= 11 && hour < 15 ? 'Selamat Siang'
+        : hour >= 15 && hour < 18 ? 'Selamat Sore'
+        : 'Selamat Malam'
+      const dateStr = nowWIB.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+      const timeStr = `${String(nowWIB.getUTCHours()).padStart(2,'0')}.${String(nowWIB.getUTCMinutes()).padStart(2,'0')} WIB`
+
+      return `Kamu adalah sistem notifikasi akademik Gradely. Buatkan pesan WhatsApp resmi dari sistem Gradely kepada mahasiswa berisi laporan lengkap perkembangan akademik beserta saran konkret. Pesan harus informatif, terstruktur, hangat, dan profesional dalam Bahasa Indonesia.
+
+WAKTU PENGIRIMAN: ${greeting}, ${dateStr} pukul ${timeStr}
+Gunakan salam "${greeting}" di awal pesan (WAJIB sesuai waktu di atas).
 
 ============================
 DATA MAHASISWA
@@ -248,42 +266,45 @@ Aturan format:
 - Pisahkan tiap bagian dengan baris kosong
 - Maksimal 500 kata
 - Balas HANYA dengan teks pesan WA, tidak perlu penjelasan tambahan`
+    })()
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
-    const geminiRes = await fetch(geminiUrl, {
+    const aiRes = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.65, maxOutputTokens: 1024 },
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.65,
+        max_tokens: 1024,
+        stream: true,
       }),
+      signal: AbortSignal.timeout(60000),
     })
 
     let messageText = ''
-    if (geminiRes.ok) {
-      const geminiData = await geminiRes.json()
-      messageText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-    } else {
-      const fallbackRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.65, maxOutputTokens: 1024 },
-          }),
-        }
-      )
-      if (!fallbackRes.ok) {
-        return NextResponse.json<ApiResponse>({ data: null, error: 'Gagal generate pesan dari AI', success: false }, { status: 502 })
+    if (aiRes.ok) {
+      const rawText = await aiRes.text()
+      const lines = rawText.split('\n').filter(l => l.startsWith('data: ') && !l.includes('[DONE]'))
+      for (const line of lines) {
+        try {
+          const json = JSON.parse(line.replace('data: ', ''))
+          const delta = json.choices?.[0]?.delta?.content
+          if (delta) messageText += delta
+        } catch { /* skip */ }
       }
-      const fallbackData = await fallbackRes.json()
-      messageText = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+      if (!messageText) {
+        try {
+          const jsonResp = JSON.parse(rawText)
+          messageText = jsonResp.choices?.[0]?.message?.content ?? ''
+        } catch { /* not JSON */ }
+      }
     }
 
     if (!messageText) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'AI tidak menghasilkan pesan', success: false }, { status: 422 })
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Gagal generate pesan dari AI', success: false }, { status: 502 })
     }
 
     if (preview_only) {

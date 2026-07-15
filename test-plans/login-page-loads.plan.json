@@ -1,0 +1,43 @@
+{
+  "projectId": "026062f0-daf8-4331-8a4e-509ad34a22b0",
+  "type": "frontend",
+  "name": "Login page loads correctly",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to login page",
+      "action": "navigate",
+      "url": "https://graph-headstand-copper.ngrok-free.dev/login"
+    },
+    {
+      "type": "assertion",
+      "description": "Login heading should be visible",
+      "selector": "h1",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Email input should be visible",
+      "selector": "#login-email",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Password input should be visible",
+      "selector": "#login-password",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Submit button should be visible",
+      "selector": "button[type='submit']",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Forgot password link should be visible",
+      "selector": "a[href='/reset-password']",
+      "assertion": "visible"
+    }
+  ]
+}

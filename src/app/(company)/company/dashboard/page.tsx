@@ -9,19 +9,16 @@ import { BarChart, Bar, XAxis, YAxis, Cell, PieChart, Pie } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
 
-interface StudentResult {
-  id: string
-  full_name: string
-  avatar_url: string | null
-  gpa?: number
-  study_programs: { id: string; name: string; short_name: string | null; degree_level: string } | null
-  universities: { id: string; name: string; short_name: string | null } | null
-  student_portfolios: { id: string; title: string; skills: string[]; is_public: boolean; status: string }[]
-  career_interests: { interest: string }[]
+interface DashboardStats {
+  total_students: number
+  public_portfolios: number
+  unique_skills: number
+  top_skills: { name: string; count: number }[]
+  top_careers: { name: string; count: number }[]
 }
 
-const PALETTE = ['#6366f1','#8b5cf6','#a78bfa','#c4b5fd','#818cf8','#93c5fd','#7dd3fc','#67e8f9','#6ee7b7','#86efac','#fda4af','#fcd34d']
-const CAREER_PALETTE = ['#f59e0b','#f97316','#ef4444','#ec4899','#a855f7','#6366f1','#3b82f6','#06b6d4','#10b981','#84cc16']
+const PALETTE = ['#6366f1','#8b5cf6','#a78bfa','#c4b5fd','#818cf8','#93c5fd','#7dd3fc','#67e8f9']
+const CAREER_PALETTE = ['#f59e0b','#f97316','#ef4444','#ec4899','#a855f7','#6366f1']
 
 function StatCard({ title, value, desc, icon: Icon, isLoading }: {
   title: string; value: number | string; desc: string; icon: React.ElementType; isLoading: boolean
@@ -45,50 +42,32 @@ function StatCard({ title, value, desc, icon: Icon, isLoading }: {
 }
 
 export default function CompanyDashboardPage() {
-  const [students, setStudents] = useState<StudentResult[]>([])
-  const [total, setTotal] = useState(0)
+  const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
-  const fetchStudents = useCallback(async () => {
+  const fetchStats = useCallback(async () => {
     setIsLoading(true)
+    setFetchError(null)
     try {
-      const res = await fetch('/api/company/students?pageSize=50')
+      const res = await fetch('/api/company/dashboard-stats')
       const data = await res.json()
       if (data.success) {
-        setStudents(data.data ?? [])
-        setTotal(data.total ?? 0)
+        setStats(data.data)
+      } else {
+        setFetchError(data.error ?? 'Gagal memuat data dashboard.')
       }
+    } catch {
+      setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
     } finally {
       setIsLoading(false)
     }
   }, [])
 
-  useEffect(() => { fetchStudents() }, [fetchStudents])
+  useEffect(() => { fetchStats() }, [fetchStats])
 
-  const publicPortfoliosCount = students.reduce((acc, s) => acc + (s.student_portfolios ?? []).filter(p => p.is_public).length, 0)
-  const uniqueSkillsCount = new Set(students.flatMap(s => s.student_portfolios?.flatMap(p => p.skills ?? []) ?? [])).size
-
-  const skillMap = new Map<string, number>()
-  for (const s of students) {
-    const seen = new Set<string>()
-    for (const p of s.student_portfolios ?? []) {
-      for (const sk of p.skills ?? []) {
-        if (!seen.has(sk)) { seen.add(sk); skillMap.set(sk, (skillMap.get(sk) ?? 0) + 1) }
-      }
-    }
-  }
-  const topSkills = Array.from(skillMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 8)
-    .map(([name, count], i) => ({ name, count, fill: PALETTE[i % PALETTE.length] }))
-
-  const careerMap = new Map<string, number>()
-  for (const s of students) {
-    const seen = new Set<string>()
-    for (const c of s.career_interests ?? []) {
-      if (!seen.has(c.interest)) { seen.add(c.interest); careerMap.set(c.interest, (careerMap.get(c.interest) ?? 0) + 1) }
-    }
-  }
-  const topCareers = Array.from(careerMap.entries()).sort((a, b) => b[1] - a[1]).slice(0, 6)
-    .map(([name, count], i) => ({ name, count, fill: CAREER_PALETTE[i % CAREER_PALETTE.length] }))
+  const topSkills = (stats?.top_skills ?? []).map((d, i) => ({ ...d, fill: PALETTE[i % PALETTE.length] }))
+  const topCareers = (stats?.top_careers ?? []).map((d, i) => ({ ...d, fill: CAREER_PALETTE[i % CAREER_PALETTE.length] }))
 
   const skillChartConfig = Object.fromEntries(topSkills.map((d, i) => [`item${i}`, { label: d.name, color: PALETTE[i % PALETTE.length] }]))
   const careerChartConfig = Object.fromEntries(topCareers.map((d, i) => [`item${i}`, { label: d.name, color: CAREER_PALETTE[i % CAREER_PALETTE.length] }]))
@@ -105,25 +84,32 @@ export default function CompanyDashboardPage() {
         <p className="text-sm text-muted-foreground">Ringkasan talent pool mahasiswa</p>
       </div>
 
+      {fetchError && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center justify-between gap-4">
+          <p className="text-sm text-destructive">{fetchError}</p>
+          <button onClick={fetchStats} className="text-xs underline text-destructive shrink-0">Coba Lagi</button>
+        </div>
+      )}
+
       {/* Stat Cards */}
       <div className="grid gap-4 sm:grid-cols-3">
         <StatCard
           title="Total Mahasiswa"
-          value={total}
+          value={stats?.total_students ?? 0}
           desc="Total profil terindeks di platform"
           icon={Users}
           isLoading={isLoading}
         />
         <StatCard
           title="Portofolio Publik"
-          value={publicPortfoliosCount}
+          value={stats?.public_portfolios ?? 0}
           desc="Dari mahasiswa terlihat"
           icon={Briefcase}
           isLoading={isLoading}
         />
         <StatCard
           title="Skill Unik"
-          value={uniqueSkillsCount}
+          value={stats?.unique_skills ?? 0}
           desc="Dari seluruh portofolio"
           icon={Layers}
           isLoading={isLoading}
@@ -161,7 +147,7 @@ export default function CompanyDashboardPage() {
               <BarChart2 className="h-4 w-4 text-muted-foreground" />
               <CardTitle className="text-base">Top Skill Mahasiswa</CardTitle>
             </div>
-            <CardDescription>8 skill terbanyak dari portofolio publik</CardDescription>
+            <CardDescription>8 skill terbanyak dari seluruh portofolio publik</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -194,7 +180,7 @@ export default function CompanyDashboardPage() {
               <Briefcase className="h-4 w-4 text-muted-foreground" />
               <CardTitle className="text-base">Distribusi Minat Karier</CardTitle>
             </div>
-            <CardDescription>6 minat karier terbanyak</CardDescription>
+            <CardDescription>6 minat karier terbanyak dari seluruh mahasiswa</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (

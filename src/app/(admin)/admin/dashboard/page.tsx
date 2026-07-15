@@ -39,6 +39,7 @@ import Link from 'next/link'
 import { DashboardChart } from '@/components/admin/dashboard-chart'
 import { StudentStatusChart } from '@/components/admin/student-status-chart'
 import { SendLecturerDialog } from '@/components/admin/send-lecturer-dialog'
+import { SystemStatusCard } from '@/components/admin/system-status-card'
 import { formatDate, getInitials } from '@/lib/utils'
 import type { WhatsappLog } from '@/types'
 
@@ -53,7 +54,9 @@ export default async function AdminDashboardPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const period = (searchParams.period ?? '24h') as Period
+  const VALID_PERIODS = ['24h', '1w', 'all'] as const
+  const rawPeriod = searchParams.period ?? '24h'
+  const period: Period = (VALID_PERIODS as readonly string[]).includes(rawPeriod) ? (rawPeriod as Period) : '24h'
 
   const now = new Date()
   const periodStart =
@@ -69,10 +72,11 @@ export default async function AdminDashboardPage({
 
   const [
     studentsRes, lecturersRes, companiesRes, programsRes,
-    recentStudentsRes, wahaLogsRes, advisorRes,
+    recentStudentsRes, wahaLogsRes,     advisorRes,
     studentsLastMonth, lecturersLastMonth, companiesLastMonth,
     studentsThisMonth, lecturersThisMonth, companiesThisMonth,
     lecturersListRes,
+    advisorCountRes,
   ] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
@@ -83,7 +87,7 @@ export default async function AdminDashboardPage({
       periodStart
         ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).limit(50)
         : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('advisor_students').select('id, lecturer_id, users!advisor_students_lecturer_id_fkey(id, full_name, avatar_url)', { count: 'exact' }).limit(100),
+      supabase.from('advisor_students').select('lecturer_id', { count: 'exact' }),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
@@ -91,6 +95,7 @@ export default async function AdminDashboardPage({
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', thisMonthStart),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', thisMonthStart),
       supabase.from('users').select('id, full_name, email, phone, avatar_url').eq('role', 'lecturer').eq('is_active', true).order('full_name', { ascending: true }),
+      supabase.from('advisor_students').select('id', { count: 'exact', head: true }),
     ])
 
   function calcTrend(thisMonth: number, lastMonth: number): string {
@@ -120,18 +125,12 @@ export default async function AdminDashboardPage({
     { label: 'Import CSV', href: '/admin/users/import', icon: FileUp, description: 'Import data dari file CSV', iconClass: 'text-orange-500' },
   ]
 
-  const systemStatus = [
-    { label: 'Database', status: 'Aktif' },
-    { label: 'Autentikasi', status: 'Aktif' },
-    { label: 'Notifikasi WhatsApp', status: 'Aktif' },
-  ]
-
   const students = recentStudentsRes.data ?? []
   const wahaLogs = (wahaLogsRes.data ?? []) as WhatsappLog[]
 
-  // Advisor stats
+  // Advisor stats — use exact count (no 100-row cap)
+  const totalAdvisorConnections = advisorCountRes.count ?? 0
   const advisorRows = advisorRes.data ?? []
-  const totalAdvisorConnections = advisorRes.count ?? 0
   const activeLecturerIds = new Set(advisorRows.map((a) => a.lecturer_id))
   const activeLecturersCount = activeLecturerIds.size
 
@@ -189,28 +188,7 @@ export default async function AdminDashboardPage({
         <div className="lg:col-span-2">
           <DashboardChart />
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Status Sistem</CardTitle>
-            <CardDescription>Kondisi layanan saat ini</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1">
-            {systemStatus.map((item, i) => (
-              <div key={item.label}>
-                <div className="flex items-center justify-between py-2">
-                  <div className="flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
-                    <span className="text-sm">{item.label}</span>
-                  </div>
-                  <Badge variant="outline" className="shrink-0 text-emerald-600 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800">
-                    {item.status}
-                  </Badge>
-                </div>
-                {i < systemStatus.length - 1 && <Separator />}
-              </div>
-            ))}
-          </CardContent>
-        </Card>
+        <SystemStatusCard />
       </div>
 
       {/* Status Akademik Chart */}

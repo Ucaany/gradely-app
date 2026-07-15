@@ -12,6 +12,7 @@ import {
   MessageSquare,
   UserCheck,
   Sparkles,
+  Bell,
 } from "lucide-react"
 import {
   Sidebar,
@@ -83,6 +84,11 @@ const adminNavAkademik = [
 ]
 
 const adminNavKonfigurasi = [
+  {
+    title: "Kirim Notifikasi",
+    url: "/admin/notifications",
+    icon: Bell,
+  },
   {
     title: "Konfigurasi WAHA",
     url: "/admin/settings",

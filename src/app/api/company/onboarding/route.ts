@@ -17,11 +17,11 @@ export async function GET() {
       .from('companies')
       .select('id, company_name, industry, description, website, logo_url, address, postal_code')
       .eq('user_id', user.id)
-      .single()
+      .maybeSingle()
 
     if (error) return NextResponse.json<ApiResponse>({ data: null, error: error.message, success: false }, { status: 500 })
 
-    return NextResponse.json<ApiResponse>({ data: company, error: null, success: true })
+    return NextResponse.json<ApiResponse>({ data: company ?? null, error: null, success: true })
   } catch {
     return NextResponse.json<ApiResponse>({ data: null, error: 'Internal server error', success: false }, { status: 500 })
   }
@@ -47,7 +47,8 @@ export async function POST(request: NextRequest) {
 
     const { data: updated, error: updateError } = await supabase
       .from('companies')
-      .update({
+      .upsert({
+        user_id: user.id,
         company_name: company_name.trim(),
         industry: industry?.trim() || null,
         description: description?.trim() || null,
@@ -56,13 +57,12 @@ export async function POST(request: NextRequest) {
         address: address?.trim() || null,
         postal_code: postal_code?.trim() || null,
         updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', user.id)
+      }, { onConflict: 'user_id' })
       .select('id')
       .single()
 
     if (updateError || !updated) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Data perusahaan tidak ditemukan', success: false }, { status: 404 })
+      return NextResponse.json<ApiResponse>({ data: null, error: updateError?.message ?? 'Gagal menyimpan data perusahaan', success: false }, { status: 500 })
     }
 
     const { error: onboardingError } = await supabase

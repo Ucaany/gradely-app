@@ -167,105 +167,129 @@ export async function POST(request: NextRequest) {
     const wahaApiKey = settingsMap['waha_api_key']
 
     if (!wahaUrl || !wahaSession) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'Konfigurasi WAHA belum diatur.', success: false }, { status: 503 })
+      if (!preview_only) {
+        return NextResponse.json<ApiResponse>({ data: null, error: 'Konfigurasi WAHA belum diatur. Hubungi admin kampus.', success: false }, { status: 503 })
+      }
     }
 
     const apiKey = process.env.AI_API_KEY ?? ''
+    const baseUrl = (process.env.AI_BASE_URL ?? 'https://9prxy.sribuai.my.id/v1').replace(/\/$/, '')
+    const model = process.env.AI_MODEL ?? 'kr/auto'
     if (!apiKey) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Layanan AI belum tersedia', success: false }, { status: 503 })
     }
 
-    const prompt = `Kamu adalah sistem notifikasi akademik Gradely. Buatkan pesan WhatsApp resmi dari Admin Gradely kepada dosen wali berisi laporan lengkap kondisi akademik seluruh mahasiswa bimbingannya. Pesan harus informatif, terstruktur, profesional dalam Bahasa Indonesia.
+    const prompt = (() => {
+      const nowWIB = new Date(Date.now() + 7 * 60 * 60 * 1000)
+      const hour = nowWIB.getUTCHours()
+      const greeting = hour >= 4 && hour < 11 ? 'Selamat Pagi'
+        : hour >= 11 && hour < 15 ? 'Selamat Siang'
+        : hour >= 15 && hour < 18 ? 'Selamat Sore'
+        : 'Selamat Malam'
+      const dateStr = nowWIB.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })
+      const timeStr = `${String(nowWIB.getUTCHours()).padStart(2,'0')}.${String(nowWIB.getUTCMinutes()).padStart(2,'0')} WIB`
+
+      return `Kamu adalah sistem notifikasi akademik Gradely. Tugas kamu adalah membuat pesan WhatsApp RESMI dari Admin Gradely kepada dosen wali. IKUTI TEMPLATE BERIKUT PERSIS, jangan ubah urutan atau judul section.
+
+WAKTU: ${greeting}, ${dateStr} pukul ${timeStr}
 
 ============================
-DATA DOSEN WALI
+DATA INPUT
 ============================
-Nama    : ${lecturer.full_name}
-Email   : ${lecturer.email ?? '-'}
-No HP   : ${lecturer.phone}
-
-============================
-RINGKASAN MAHASISWA BIMBINGAN
-============================
-Total mahasiswa bimbingan : ${totalAdvisees}
-Rata-rata IPK             : ${avgIpk}
-Mahasiswa Unggul/On Track : ${onTrack.length} orang
-Mahasiswa Perlu Perhatian : ${needAttention.length} orang
-Mahasiswa Kritis/Darurat  : ${critical.length} orang
-Nomor HP belum diisi      : ${noPhone.length} orang
-
-============================
-DETAIL PER MAHASISWA
-============================
-${studentSummaries.map((s, i) => `${i + 1}. ${s.name} (${s.nim}) - ${s.prodi} Sem ${s.semester}
+Nama Dosen     : ${lecturer.full_name}
+Total Bimbingan: ${totalAdvisees} mahasiswa
+Rata-rata IPK  : ${avgIpk}
+Unggul/On Track: ${onTrack.length} orang
+Perlu Perhatian: ${needAttention.length} orang
+Kritis/Darurat : ${critical.length} orang
+No HP belum diisi: ${noPhone.length} orang
+Detail mahasiswa:
+${studentSummaries.length > 0 ? studentSummaries.map((s, i) => `${i + 1}. ${s.name} (${s.nim}) - ${s.prodi} Sem ${s.semester}
    IPK: ${s.ipk.toFixed(2)} | IPS Terakhir: ${s.ips_terakhir.toFixed(2)} | SKS: ${s.sks_lulus}/${s.sks_total}
-   Status: ${s.status} | Prediksi Lulus: Sem ${s.prediksi_lulus}${s.mk_mengulang > 0 ? ` | MK Mengulang: ${s.mk_mengulang}` : ''}${!s.phone_valid ? ' | ⚠️ No HP belum diisi' : ''}`
-).join('\n\n')}
-
-${critical.length > 0 ? `============================
-MAHASISWA DARURAT/KRITIS
-============================
-${critical.map(s => `- ${s.name} (${s.nim}): IPK ${s.ipk.toFixed(2)}, ${s.status}`).join('\n')}` : ''}
+   Status: ${s.status} | Prediksi Lulus: Sem ${s.prediksi_lulus}${s.mk_mengulang > 0 ? ` | MK Mengulang: ${s.mk_mengulang}` : ''}${!s.phone_valid ? ' | ⚠️ No HP belum diisi' : ''}`).join('\n\n') : '(Belum ada mahasiswa bimbingan)'}
+Kontak Admin   : ${adminUser.full_name} | ${adminContact}
 
 ============================
-KONTAK ADMIN GRADELY
+TEMPLATE PESAN (IKUTI PERSIS)
 ============================
-${adminUser.full_name} | ${adminContact}
 
-Buatkan pesan WhatsApp dengan struktur TEPAT sebagai berikut:
+${greeting}, Bapak/Ibu ${lecturer.full_name} 🙏
 
-1. HEADER: Salam resmi dari Admin Gradely + nama dosen
-2. RINGKASAN: Total mahasiswa, rata-rata IPK, distribusi status (unggul/perhatian/kritis)
-3. SOROTAN KRITIS: Jika ada mahasiswa darurat/kritis, sebutkan nama dan kondisinya secara spesifik
-4. MAHASISWA PERLU PERHATIAN: Sebutkan yang perlu perhatian khusus
-5. APRESIASI: Sebutkan mahasiswa dengan performa baik jika ada
-6. PERMINTAAN TINDAKAN: Minta dosen segera menghubungi mahasiswa kritis, jadwalkan konsultasi
-7. INFO NOMOR HP: Jika ada mahasiswa yang belum mengisi nomor HP, minta dosen menginformasikan ke mahasiswa untuk segera mengisi di profil Gradely
-8. PENUTUP: Terima kasih + kontak admin untuk pertanyaan: ${adminContact}
+Kami dari Admin Gradely menyampaikan laporan akademik mahasiswa bimbingan Bapak/Ibu per ${dateStr}.
 
-Aturan format:
-- Gunakan emoji relevan (📊 📋 ⚠️ ✅ 🔴 🟡 🟢)
+📊 RINGKASAN BIMBINGAN
+[Tulis ringkasan: total mahasiswa, rata-rata IPK, distribusi status. Jika 0 mahasiswa, tulis bahwa belum ada mahasiswa terdaftar dan minta dosen bagikan join code]
+
+🔴 SOROTAN KRITIS
+[Jika ada mahasiswa kritis, sebutkan nama + kondisi + saran tindakan. Jika tidak ada, tulis "Tidak ada mahasiswa dengan status kritis."]
+
+🟡 PERLU PERHATIAN
+[Jika ada, sebutkan nama + kondisi. Jika tidak ada, tulis "Tidak ada mahasiswa yang memerlukan perhatian khusus."]
+
+🟢 APRESIASI
+[Jika ada mahasiswa Unggul/On Track, sebutkan nama + IPK. Jika tidak ada, tulis "Belum ada data."]
+
+📋 TINDAKAN YANG DIPERLUKAN
+[Tulis 2-3 tindakan konkret yang perlu dilakukan dosen berdasarkan kondisi di atas. Jika 0 mahasiswa, minta dosen aktifkan join code]
+
+⚠️ INFO NOMOR HP
+[Jika ada yang belum mengisi HP, sebutkan. Jika semua sudah, tulis "Semua mahasiswa sudah mengisi nomor HP."]
+
+Terima kasih atas perhatian dan kerja sama Bapak/Ibu ${lecturer.full_name}. Kami siap membantu jika ada pertanyaan.
+
+Salam hormat,
+${adminUser.full_name}
+Admin Gradely
+${adminContact}
+
+============================
+ATURAN FORMAT
+============================
+- WAJIB gunakan salam "${greeting}" di baris pertama
+- Gunakan emoji persis seperti di template (📊 🔴 🟡 🟢 📋 ⚠️)
 - Paragraf pendek, mudah dibaca di layar HP
-- Jangan gunakan format markdown bold (*text*) atau italic (_text_)
-- Pisahkan tiap bagian dengan baris kosong
-- Maksimal 600 kata
-- Balas HANYA dengan teks pesan WA, tidak perlu penjelasan tambahan`
+- JANGAN gunakan *bold* atau _italic_
+- Pisahkan tiap section dengan baris kosong
+- Balas HANYA teks pesan WA, tanpa penjelasan tambahan`
+    })()
 
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`
-    const geminiRes = await fetch(geminiUrl, {
+    const aiRes = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.65, maxOutputTokens: 1200 },
+        model,
+        messages: [{ role: 'user', content: prompt }],
+        temperature: 0.3,
+        max_tokens: 1200,
+        stream: true,
       }),
+      signal: AbortSignal.timeout(60000),
     })
 
     let messageText = ''
-    if (geminiRes.ok) {
-      const geminiData = await geminiRes.json()
-      messageText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
-    } else {
-      const fallbackRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-goog-api-key': apiKey },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.65, maxOutputTokens: 1200 },
-          }),
-        }
-      )
-      if (!fallbackRes.ok) {
-        return NextResponse.json<ApiResponse>({ data: null, error: 'Gagal generate pesan dari AI', success: false }, { status: 502 })
+    if (aiRes.ok) {
+      const rawText = await aiRes.text()
+      const lines = rawText.split('\n').filter(l => l.startsWith('data: ') && !l.includes('[DONE]'))
+      for (const line of lines) {
+        try {
+          const json = JSON.parse(line.replace('data: ', ''))
+          const delta = json.choices?.[0]?.delta?.content
+          if (delta) messageText += delta
+        } catch { /* skip */ }
       }
-      const fallbackData = await fallbackRes.json()
-      messageText = fallbackData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+      if (!messageText) {
+        try {
+          const jsonResp = JSON.parse(rawText)
+          messageText = jsonResp.choices?.[0]?.message?.content ?? ''
+        } catch { /* not JSON */ }
+      }
     }
 
     if (!messageText) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'AI tidak menghasilkan pesan', success: false }, { status: 422 })
+      return NextResponse.json<ApiResponse>({ data: null, error: 'Gagal generate pesan dari AI', success: false }, { status: 502 })
     }
 
     if (preview_only) {

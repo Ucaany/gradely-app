@@ -39,12 +39,14 @@ export default function StudentPortfolioPage() {
   const [items, setItems] = useState<StudentPortfolioWithCategory[]>([])
   const [categories, setCategories] = useState<PortfolioCategory[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [filterCategory, setFilterCategory] = useState<string>('all')
   const [filterVisibility, setFilterVisibility] = useState<string>('all')
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
+    setFetchError(null)
     try {
       const [portfolioRes, catRes] = await Promise.all([
         fetch('/api/student/portfolio'),
@@ -52,7 +54,10 @@ export default function StudentPortfolioPage() {
       ])
       const [portfolioData, catData] = await Promise.all([portfolioRes.json(), catRes.json()])
       if (portfolioData.success) setItems(portfolioData.data ?? [])
+      else setFetchError(portfolioData.error ?? 'Gagal memuat portofolio.')
       if (catData.success) setCategories(catData.data ?? [])
+    } catch {
+      setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
     } finally {
       setIsLoading(false)
     }
@@ -169,6 +174,13 @@ export default function StudentPortfolioPage() {
         <div className="flex items-center justify-center py-16">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
+      ) : fetchError ? (
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
+            <p className="text-sm text-destructive">{fetchError}</p>
+            <Button variant="outline" size="sm" onClick={fetchData}>Coba Lagi</Button>
+          </CardContent>
+        </Card>
       ) : items.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-3">

@@ -1,0 +1,40 @@
+{
+  "steps": [
+    {
+      "action": "navigate",
+      "url": "https://graph-headstand-copper.ngrok-free.dev/login"
+    },
+    {
+      "action": "assert",
+      "type": "visible",
+      "selector": "input[type='email']",
+      "message": "Email input should be visible"
+    },
+    {
+      "action": "assert",
+      "type": "visible",
+      "selector": "input[type='password']",
+      "message": "Password input should be visible"
+    },
+    {
+      "action": "fill",
+      "selector": "input[type='email']",
+      "value": "test@example.com"
+    },
+    {
+      "action": "fill",
+      "selector": "input[type='password']",
+      "value": "wrongpassword"
+    },
+    {
+      "action": "click",
+      "selector": "button[type='submit']"
+    },
+    {
+      "action": "assert",
+      "type": "visible",
+      "selector": "[role='alert'], .error, [data-sonner-toast]",
+      "message": "Error message should appear for invalid credentials"
+    }
+  ]
+}

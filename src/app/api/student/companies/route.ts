@@ -61,9 +61,21 @@ export async function GET() {
       companiesQuery = companiesQuery.in('industry', relevantIndustries)
     }
 
-    const { data: companies } = await companiesQuery.limit(20)
+    const { data: companies } = await companiesQuery.order('company_name').limit(50)
 
-    const result = (companies ?? []).map(c => ({
+    // Jika tidak ada hasil dari filter industri, tampilkan semua perusahaan aktif
+    let finalCompanies = companies ?? []
+    if (finalCompanies.length === 0) {
+      const { data: allCompanies } = await supabase
+        .from('companies')
+        .select('id, company_name, industry, description, website, logo_url, company_categories(category)')
+        .eq('is_active', true)
+        .order('company_name')
+        .limit(50)
+      finalCompanies = allCompanies ?? []
+    }
+
+    const result = (finalCompanies).map(c => ({
       ...c,
       is_interested: interestedIds.includes(c.id),
     }))

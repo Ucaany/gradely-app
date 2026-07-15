@@ -14,7 +14,7 @@ interface Props {
   isConfigured: boolean
 }
 
-export function GeminiSettingsForm({ universityId, isConfigured }: Props) {
+export function GeminiSettingsForm({ universityId: _universityId, isConfigured }: Props) { // eslint-disable-line @typescript-eslint/no-unused-vars
   const router = useRouter()
   const [apiKey, setApiKey] = useState('')
   const [showKey, setShowKey] = useState(false)

@@ -21,21 +21,28 @@ export async function GET() {
 
     const universityId = profile.university_id ?? null
 
+    if (!universityId) {
+      return NextResponse.json({ data: [], error: null, success: true })
+    }
+
     // Ambil ID mahasiswa aktif dalam universitas admin
-    let studentIds: Set<string> = new Set()
-    if (universityId) {
-      const { data: students } = await supabase
-        .from('users')
-        .select('id')
-        .eq('role', 'student')
-        .eq('university_id', universityId)
-        .eq('is_active', true)
-      studentIds = new Set((students ?? []).map((s: { id: string }) => s.id))
+    const { data: students } = await supabase
+      .from('users')
+      .select('id')
+      .eq('role', 'student')
+      .eq('university_id', universityId)
+      .eq('is_active', true)
+
+    const studentIds = (students ?? []).map((s: { id: string }) => s.id)
+
+    if (studentIds.length === 0) {
+      return NextResponse.json({ data: [], error: null, success: true })
     }
 
     const { data: grades, error } = await supabase
       .from('student_grades')
       .select('semester_number, grade_points, credits, student_id')
+      .in('student_id', studentIds)
       .order('semester_number', { ascending: true })
 
     if (error) return NextResponse.json<ApiResponse>({ data: null, error: error.message, success: false }, { status: 500 })
@@ -44,14 +51,7 @@ export async function GET() {
       return NextResponse.json({ data: [], error: null, success: true })
     }
 
-    // Filter hanya grades milik mahasiswa universitas admin
-    const filteredGrades = universityId && studentIds.size > 0
-      ? grades.filter((g: { student_id: string }) => studentIds.has(g.student_id))
-      : grades
-
-    if (filteredGrades.length === 0) {
-      return NextResponse.json({ data: [], error: null, success: true })
-    }
+    const filteredGrades = grades
 
     // Group by semester_number, hitung rata-rata IPS per semester dan IPK kumulatif
     const semesterMap = new Map<number, { totalWeighted: number; totalCredits: number }>()

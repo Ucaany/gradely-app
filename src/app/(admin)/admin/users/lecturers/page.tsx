@@ -24,7 +24,8 @@ export default async function LecturersPage({
     .range(from, to)
 
   if (searchParams.search) {
-    query = query.or(`full_name.ilike.%${searchParams.search}%,email.ilike.%${searchParams.search}%`)
+    const safe = searchParams.search.replace(/[,.()'"%]/g, '')
+    query = query.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%`)
   }
 
   const { data: lecturers, count } = await query

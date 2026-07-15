@@ -40,7 +40,8 @@ export default async function StudentsPage({
         .order('full_name')
         .range(from, to)
       if (searchParams.search) {
-        q = q.or(`full_name.ilike.%${searchParams.search}%,email.ilike.%${searchParams.search}%,nim.ilike.%${searchParams.search}%`)
+        const safe = searchParams.search.replace(/[,.()'"%]/g, '')
+        q = q.or(`full_name.ilike.%${safe}%,email.ilike.%${safe}%,nim.ilike.%${safe}%`)
       }
       if (searchParams.program) {
         q = q.eq('study_program_id', searchParams.program)

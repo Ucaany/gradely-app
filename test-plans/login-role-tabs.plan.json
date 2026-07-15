@@ -1,0 +1,49 @@
+{
+  "projectId": "026062f0-daf8-4331-8a4e-509ad34a22b0",
+  "type": "frontend",
+  "name": "Login role tabs selection",
+  "planSteps": [
+    {
+      "type": "action",
+      "description": "Navigate to login page",
+      "action": "navigate",
+      "url": "https://graph-headstand-copper.ngrok-free.dev/login"
+    },
+    {
+      "type": "assertion",
+      "description": "Mahasiswa role tab should be visible",
+      "selector": "button:has-text('Mahasiswa')",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Dosen Wali role tab should be visible",
+      "selector": "button:has-text('Dosen Wali')",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Admin role tab should be visible",
+      "selector": "button:has-text('Admin')",
+      "assertion": "visible"
+    },
+    {
+      "type": "assertion",
+      "description": "Industri role tab should be visible",
+      "selector": "button:has-text('Industri')",
+      "assertion": "visible"
+    },
+    {
+      "type": "action",
+      "description": "Click Dosen Wali role tab",
+      "action": "click",
+      "selector": "button:has-text('Dosen Wali')"
+    },
+    {
+      "type": "assertion",
+      "description": "Dosen Wali tab should still be visible after selection",
+      "selector": "button:has-text('Dosen Wali')",
+      "assertion": "visible"
+    }
+  ]
+}
