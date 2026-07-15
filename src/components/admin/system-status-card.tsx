@@ -1,10 +1,11 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { CheckCircle2, XCircle, Loader2, AlertCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 
 interface HealthItem {
   label: string
@@ -15,20 +16,42 @@ interface HealthItem {
 export function SystemStatusCard() {
   const [items, setItems] = useState<HealthItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [lastChecked, setLastChecked] = useState<Date | null>(null)
 
-  useEffect(() => {
+  const fetchStatus = useCallback(() => {
+    setIsLoading(true)
     fetch('/api/admin/health')
       .then((r) => r.json())
       .then((d) => { if (d.success) setItems(d.data ?? []) })
       .catch(() => {})
-      .finally(() => setIsLoading(false))
+      .finally(() => {
+        setIsLoading(false)
+        setLastChecked(new Date())
+      })
   }, [])
+
+  useEffect(() => {
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 60000)
+    return () => clearInterval(interval)
+  }, [fetchStatus])
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">Status Sistem</CardTitle>
-        <CardDescription>Kondisi layanan saat ini</CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-base">Status Sistem</CardTitle>
+            <CardDescription>
+              {lastChecked
+                ? `Dicek ${lastChecked.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}`
+                : 'Kondisi layanan saat ini'}
+            </CardDescription>
+          </div>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={fetchStatus} disabled={isLoading}>
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-1">
         {isLoading ? (

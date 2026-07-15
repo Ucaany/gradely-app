@@ -42,6 +42,7 @@ export function CompanyDetailActions({
   const router = useRouter()
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [activeState, setActiveState] = useState(isActive)
   const [categories, setCategories] = useState<{ id: string; category: string }[]>(initialCategories)
   const [newCategory, setNewCategory] = useState('')
   const [isSavingCategories, setIsSavingCategories] = useState(false)
@@ -68,7 +69,7 @@ export function CompanyDetailActions({
       const res = await fetch(`/api/admin/companies/${companyId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_active: !isActive }),
+        body: JSON.stringify({ is_active: !activeState }),
         credentials: 'include',
       })
       const result = await res.json()
@@ -76,7 +77,8 @@ export function CompanyDetailActions({
         toast.error(result.error ?? 'Gagal mengubah status')
         return
       }
-      toast.success(isActive ? 'Perusahaan dinonaktifkan' : 'Perusahaan diaktifkan')
+      setActiveState(prev => !prev)
+      toast.success(activeState ? 'Perusahaan dinonaktifkan' : 'Perusahaan diaktifkan')
       router.refresh()
     } finally {
       setIsLoading(false)
@@ -167,12 +169,12 @@ export function CompanyDetailActions({
         >
           {isLoading ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-          ) : isActive ? (
+          ) : activeState ? (
             <ToggleRight className="h-4 w-4 mr-2 text-emerald-600" />
           ) : (
             <ToggleLeft className="h-4 w-4 mr-2 text-muted-foreground" />
           )}
-          {isActive ? 'Nonaktifkan' : 'Aktifkan'}
+          {activeState ? 'Nonaktifkan' : 'Aktifkan'}
         </Button>
 
         <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>

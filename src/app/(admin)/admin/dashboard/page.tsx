@@ -33,7 +33,6 @@ import {
   MessageCircle,
   XCircle,
   Clock,
-  Link2,
 } from 'lucide-react'
 import Link from 'next/link'
 import { DashboardChart } from '@/components/admin/dashboard-chart'
@@ -72,11 +71,10 @@ export default async function AdminDashboardPage({
 
   const [
     studentsRes, lecturersRes, companiesRes, programsRes,
-    recentStudentsRes, wahaLogsRes,     advisorRes,
+    recentStudentsRes, wahaLogsRes, advisorRes,
     studentsLastMonth, lecturersLastMonth, companiesLastMonth,
     studentsThisMonth, lecturersThisMonth, companiesThisMonth,
     lecturersListRes,
-    advisorCountRes,
   ] =
     await Promise.all([
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').eq('is_active', true),
@@ -87,7 +85,7 @@ export default async function AdminDashboardPage({
       periodStart
         ? supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').gte('created_at', periodStart).order('created_at', { ascending: false }).limit(50)
         : supabase.from('whatsapp_logs').select('id, phone_number, message, status, error_message, sent_at, created_at').order('created_at', { ascending: false }).limit(50),
-      supabase.from('advisor_students').select('lecturer_id', { count: 'exact' }),
+      supabase.from('advisor_students').select('lecturer_id'),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'student').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', lastMonthStart).lte('created_at', lastMonthEnd),
@@ -95,7 +93,6 @@ export default async function AdminDashboardPage({
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'lecturer').gte('created_at', thisMonthStart),
       supabase.from('users').select('id', { count: 'exact', head: true }).eq('role', 'company').gte('created_at', thisMonthStart),
       supabase.from('users').select('id, full_name, email, phone, avatar_url').eq('role', 'lecturer').eq('is_active', true).order('full_name', { ascending: true }),
-      supabase.from('advisor_students').select('id', { count: 'exact', head: true }),
     ])
 
   function calcTrend(thisMonth: number, lastMonth: number): string {
@@ -128,11 +125,8 @@ export default async function AdminDashboardPage({
   const students = recentStudentsRes.data ?? []
   const wahaLogs = (wahaLogsRes.data ?? []) as WhatsappLog[]
 
-  // Advisor stats — use exact count (no 100-row cap)
-  const totalAdvisorConnections = advisorCountRes.count ?? 0
+  // Advisor stats
   const advisorRows = advisorRes.data ?? []
-  const activeLecturerIds = new Set(advisorRows.map((a) => a.lecturer_id))
-  const activeLecturersCount = activeLecturerIds.size
 
   // Dosen list dengan jumlah mahasiswa bimbingan
   const lecturersList = (lecturersListRes.data ?? []) as Array<{
@@ -220,41 +214,6 @@ export default async function AdminDashboardPage({
                 {i < arr.length - 1 && <Separator />}
               </div>
             ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Advisor Connections */}
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Koneksi</CardTitle>
-            <Link2 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{totalAdvisorConnections}</div>
-            <p className="text-xs text-muted-foreground mt-1">Mahasiswa terhubung ke dosen wali</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Dosen Aktif</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{activeLecturersCount}</div>
-            <p className="text-xs text-muted-foreground mt-1">Dosen wali sudah punya mahasiswa</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Mahasiswa Belum Terhubung</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">
-              {Math.max(0, (studentsRes.count ?? 0) - totalAdvisorConnections)}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Belum memiliki dosen wali</p>
           </CardContent>
         </Card>
       </div>

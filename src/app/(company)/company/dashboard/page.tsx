@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Users, Briefcase, Layers, Search, ArrowRight, BarChart2, GraduationCap, Building2, RefreshCw } from 'lucide-react'
+import { Users, Briefcase, Layers, Search, ArrowRight, BarChart2, GraduationCap, Building2, RefreshCw, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, Cell, PieChart, Pie } from 'recharts'
@@ -49,17 +49,23 @@ export default function CompanyDashboardPage() {
   const [isSyncing, setIsSyncing] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [lastSynced, setLastSynced] = useState<string | null>(null)
+  const [isVerified, setIsVerified] = useState<boolean | null>(null)
 
   const fetchStats = useCallback(async () => {
     setIsLoading(true)
     setFetchError(null)
     try {
-      const res = await fetch('/api/company/dashboard-stats')
-      const data = await res.json()
-      if (data.success) {
-        setStats(data.data)
+      const [statsRes, profileRes] = await Promise.all([
+        fetch('/api/company/dashboard-stats').then(r => r.json()),
+        fetch('/api/company/onboarding').then(r => r.json()),
+      ])
+      if (statsRes.success) {
+        setStats(statsRes.data)
       } else {
-        setFetchError(data.error ?? 'Gagal memuat data dashboard.')
+        setFetchError(statsRes.error ?? 'Gagal memuat data dashboard.')
+      }
+      if (profileRes.success) {
+        setIsVerified(profileRes.data?.is_active ?? false)
       }
     } catch {
       setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
@@ -119,6 +125,23 @@ export default function CompanyDashboardPage() {
           </Button>
         </div>
       </div>
+
+      {isVerified === false && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-3 flex items-center gap-3">
+          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Akun menunggu verifikasi</p>
+            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+              Profil perusahaan kamu sedang ditinjau oleh admin. Beberapa fitur mungkin terbatas sampai akun diaktifkan.
+            </p>
+          </div>
+          <Link href="/company/profile" className="shrink-0">
+            <Button size="sm" variant="outline" className="text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40">
+              Lihat Profil
+            </Button>
+          </Link>
+        </div>
+      )}
 
       {fetchError && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 flex items-center justify-between gap-4">

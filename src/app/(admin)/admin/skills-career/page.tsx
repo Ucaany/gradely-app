@@ -210,7 +210,7 @@ function MappingPanel({
   const activeIndustries = industries.filter(i => i.is_active)
 
   React.useEffect(() => {
-    if (selectedSkillId) {
+    if (selectedSkillId !== null) {
       setDraft(mapping[selectedSkillId] ?? [])
     }
   }, [selectedSkillId, mapping])
@@ -224,6 +224,7 @@ function MappingPanel({
     setSaving(true)
     try {
       await onSave(selectedSkillId, draft)
+      // draft sudah sesuai, tidak perlu reset — mapping parent sudah diupdate via fetch server
     } finally {
       setSaving(false)
     }
@@ -415,7 +416,10 @@ export default function SkillsCareerPage() {
     })
     const result = await res.json()
     if (!result.success) { toast.error(result.error ?? 'Gagal menyimpan mapping'); return }
-    setMapping(prev => ({ ...prev, [skillId]: industryIds }))
+    // Refresh mapping dari server untuk memastikan count badge akurat
+    const freshMap = await fetch('/api/admin/skill-industry-map').then(r => r.json())
+    if (freshMap.success) setMapping(freshMap.data ?? {})
+    else setMapping(prev => ({ ...prev, [skillId]: industryIds }))
     toast.success('Mapping skill–industri disimpan')
   }
 

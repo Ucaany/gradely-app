@@ -119,8 +119,22 @@ export default function OnboardingPage() {
     if (step > 0) setStep(s => s - 1)
   }
 
-  function handleSkipLater() {
+  async function handleSkipLater() {
+    try {
+      await fetch('/api/student/onboarding/companies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selected_industries: [],
+          selected_careers: [],
+          profile_visible: true,
+        }),
+      })
+    } catch {
+      // ignore error, still redirect
+    }
     router.push('/student/dashboard')
+    router.refresh()
   }
 
   async function handleComplete() {
