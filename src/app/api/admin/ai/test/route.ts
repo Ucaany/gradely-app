@@ -8,15 +8,34 @@ export async function POST(request: NextRequest) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json<ApiResponse>({ data: null, error: 'Unauthorized', success: false }, { status: 401 })
 
-    const { data: profile } = await supabase.from('users').select('role').eq('id', user.id).single()
+    const { data: profile } = await supabase.from('users').select('role, university_id').eq('id', user.id).single()
     if (!profile || profile.role !== 'admin') {
       return NextResponse.json<ApiResponse>({ data: null, error: 'Forbidden', success: false }, { status: 403 })
     }
 
     const body = await request.json()
-    const { api_key, base_url, model } = body as { api_key: string; base_url: string; model: string }
+    const { api_key, base_url, model, config_type } = body as {
+      api_key: string | null
+      base_url: string
+      model: string
+      config_type?: 'text' | 'vision'
+    }
 
-    if (!api_key?.trim()) {
+    const keyPrefix = config_type === 'vision' ? 'ai_vision_' : 'ai_'
+
+    let resolvedApiKey = api_key?.trim() ?? ''
+
+    if (!resolvedApiKey && profile.university_id) {
+      const { data: settingRows } = await supabase
+        .from('settings')
+        .select('key, value')
+        .eq('university_id', profile.university_id)
+        .in('key', [`${keyPrefix}api_key`])
+      const settingsMap = Object.fromEntries((settingRows ?? []).map(r => [r.key, r.value]))
+      resolvedApiKey = settingsMap[`${keyPrefix}api_key`] ?? process.env.AI_API_KEY ?? ''
+    }
+
+    if (!resolvedApiKey) {
       return NextResponse.json<ApiResponse>({ data: null, error: 'API key diperlukan', success: false }, { status: 400 })
     }
 
@@ -46,7 +65,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${api_key.trim()}`,
+        Authorization: `Bearer ${resolvedApiKey}`,
       },
       body: JSON.stringify({
         model: model?.trim() || 'kr/auto',
@@ -56,7 +75,15 @@ export async function POST(request: NextRequest) {
     })
 
     if (!res.ok) {
-      return NextResponse.json<ApiResponse>({ data: null, error: 'API tidak dapat dijangkau', success: false }, { status: 502 })
+      const errBody = await res.text().catch(() => '')
+      let userMsg = 'API tidak dapat dijangkau'
+      if (res.status === 401) userMsg = 'API key tidak valid atau tidak memiliki akses.'
+      else if (res.status === 403) userMsg = 'API key tidak memiliki izin untuk model ini.'
+      else if (res.status === 404) userMsg = `Model "${model}" tidak ditemukan di endpoint ini.`
+      else if (res.status === 429) userMsg = 'Rate limit tercapai. Coba lagi beberapa saat.'
+      else if (res.status >= 500) userMsg = `Server AI error ${res.status}.`
+      void errBody
+      return NextResponse.json<ApiResponse>({ data: null, error: userMsg, success: false }, { status: 502 })
     }
 
     return NextResponse.json<ApiResponse>({ data: { ok: true }, error: null, success: true })

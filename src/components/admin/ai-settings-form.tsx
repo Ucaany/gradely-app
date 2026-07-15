@@ -80,7 +80,7 @@ function AIConfigSection({
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null)
 
   async function handleSave() {
-    if (!apiKey.trim()) {
+    if (!apiKey.trim() && !isConfigured) {
       toast.error('Masukkan API key terlebih dahulu')
       return
     }
@@ -90,16 +90,17 @@ function AIConfigSection({
     }
     setIsLoading(true)
     try {
+      const settingsPayload: Record<string, string> = {
+        [`${keyPrefix}base_url`]: baseUrl.trim(),
+        [`${keyPrefix}model`]: model.trim(),
+      }
+      if (apiKey.trim()) {
+        settingsPayload[`${keyPrefix}api_key`] = apiKey.trim()
+      }
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            settings: {
-              [`${keyPrefix}api_key`]: apiKey.trim(),
-              [`${keyPrefix}base_url`]: baseUrl.trim(),
-              [`${keyPrefix}model`]: model.trim(),
-            },
-          }),
+        body: JSON.stringify({ settings: settingsPayload }),
       })
       const result = await res.json()
       if (!res.ok) {
@@ -114,7 +115,7 @@ function AIConfigSection({
   }
 
   async function handleTest() {
-    if (!apiKey.trim()) {
+    if (!apiKey.trim() && !isConfigured) {
       toast.error('Masukkan API key terlebih dahulu')
       return
     }
@@ -129,17 +130,19 @@ function AIConfigSection({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          api_key: apiKey.trim(),
+          api_key: apiKey.trim() || null,
           base_url: baseUrl.trim(),
           model: model.trim(),
+          config_type: configType,
         }),
       })
       if (res.ok) {
         setTestResult('success')
         toast.success('Koneksi berhasil! Model dapat dijangkau.')
       } else {
+        const result = await res.json()
         setTestResult('error')
-        toast.error('Koneksi gagal. Periksa API key dan Base URL.')
+        toast.error(result.error ?? 'Koneksi gagal. Periksa API key dan Base URL.')
       }
     } catch {
       setTestResult('error')

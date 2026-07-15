@@ -44,9 +44,16 @@ export async function POST(request: NextRequest) {
 
     const serviceClient = createServiceClient()
 
+    const API_KEY_FIELDS = new Set(['ai_api_key', 'ai_vision_api_key', 'gemini_api_key'])
+
     // Hanya upsert key yang ada dalam allowlist
     const upserts = Object.entries(settings as Record<string, string>)
       .filter(([key]) => ALLOWED_SETTING_KEYS.has(key))
+      .filter(([key, value]) => {
+        // Jangan overwrite api_key yang ada di DB dengan string kosong
+        if (API_KEY_FIELDS.has(key) && !value?.trim()) return false
+        return true
+      })
       .map(([key, value]) => ({
         university_id,
         key,
