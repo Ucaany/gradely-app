@@ -81,8 +81,8 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { skills, interested_company_ids, skill_not_found, selected_careers } = body as {
-      skills: string[]
+    const { interested_company_ids, selected_careers } = body as {
+      skills?: string[]
       interested_company_ids: string[]
       skill_not_found?: boolean
       selected_careers?: string[]

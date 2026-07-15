@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { Users, Briefcase, Layers, Search, ArrowRight, BarChart2, GraduationCap, Building2 } from 'lucide-react'
+import { Users, Briefcase, Layers, Search, ArrowRight, BarChart2, GraduationCap, Building2, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { BarChart, Bar, XAxis, YAxis, Cell, PieChart, Pie } from 'recharts'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { toast } from 'sonner'
 
 interface DashboardStats {
   total_students: number
@@ -44,7 +46,9 @@ function StatCard({ title, value, desc, icon: Icon, isLoading }: {
 export default function CompanyDashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isSyncing, setIsSyncing] = useState(false)
   const [fetchError, setFetchError] = useState<string | null>(null)
+  const [lastSynced, setLastSynced] = useState<string | null>(null)
 
   const fetchStats = useCallback(async () => {
     setIsLoading(true)
@@ -64,6 +68,25 @@ export default function CompanyDashboardPage() {
     }
   }, [])
 
+  async function handleSync() {
+    setIsSyncing(true)
+    try {
+      const res = await fetch('/api/company/sync-students')
+      const data = await res.json()
+      if (data.success) {
+        setLastSynced(data.data.synced_at)
+        await fetchStats()
+        toast.success(`Sinkronisasi selesai — ${data.data.total} mahasiswa tersedia`)
+      } else {
+        toast.error(data.error ?? 'Gagal sinkronisasi')
+      }
+    } catch {
+      toast.error('Gagal sinkronisasi. Periksa koneksi internet.')
+    } finally {
+      setIsSyncing(false)
+    }
+  }
+
   useEffect(() => { fetchStats() }, [fetchStats])
 
   const topSkills = (stats?.top_skills ?? []).map((d, i) => ({ ...d, fill: PALETTE[i % PALETTE.length] }))
@@ -79,9 +102,22 @@ export default function CompanyDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="text-sm text-muted-foreground">Ringkasan talent pool mahasiswa</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground">Ringkasan talent pool mahasiswa</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {lastSynced && (
+            <p className="text-xs text-muted-foreground hidden sm:block">
+              Terakhir sync: {new Date(lastSynced).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          )}
+          <Button variant="outline" size="sm" onClick={handleSync} disabled={isSyncing || isLoading} className="gap-1.5">
+            <RefreshCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+            {isSyncing ? 'Sinkronisasi...' : 'Sinkronisasi'}
+          </Button>
+        </div>
       </div>
 
       {fetchError && (

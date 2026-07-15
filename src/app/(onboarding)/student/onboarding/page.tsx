@@ -449,8 +449,54 @@ export default function OnboardingPage() {
               <Progress value={((step + 1) / STEPS.length) * 100} className="h-1 w-40" />
             </div>
 
-            {/* STEP 2 — Industri */}
+            {/* STEP 2 — Minat Karier */}
             {step === 1 && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h1 className="text-2xl font-semibold tracking-tight">Minat karier kamu</h1>
+                  <p className="text-sm text-muted-foreground mt-1.5 max-w-md mx-auto">
+                    Pilih bidang karier yang ingin kamu tekuni. Data ini ditampilkan ke perusahaan mitra.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {CAREER_OPTIONS.map((option) => {
+                    const selected = selectedCareers.includes(option)
+                    return (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => setSelectedCareers(prev =>
+                          prev.includes(option) ? prev.filter(c => c !== option) : [...prev, option]
+                        )}
+                        className={`inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium border transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background text-foreground border-border hover:bg-muted'
+                        }`}
+                      >
+                        {selected && <Check className="h-3.5 w-3.5" />}
+                        {option}
+                      </button>
+                    )
+                  })}
+                </div>
+                {selectedCareers.length > 0 && (
+                  <Card className="border-primary/20 bg-primary/5">
+                    <CardContent className="py-3 px-4">
+                      <p className="text-xs font-medium text-primary mb-2">{selectedCareers.length} minat dipilih</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedCareers.map(c => (
+                          <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            )}
+
+            {/* STEP 3 — Industri */}
+            {step === 2 && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h1 className="text-2xl font-semibold tracking-tight">Industri yang kamu minati</h1>
@@ -511,8 +557,8 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* STEP 3 — Companies */}
-            {step === 2 && (
+            {/* STEP 4 — Companies */}
+            {step === 3 && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h1 className="text-2xl font-semibold tracking-tight">Perusahaan & industri relevan</h1>
@@ -602,8 +648,8 @@ export default function OnboardingPage() {
               </div>
             )}
 
-            {/* STEP 4 — Profile */}
-            {step === 3 && (
+            {/* STEP 5 — Profile */}
+            {step === 4 && (
               <div className="space-y-6">
                 <div className="text-center">
                   <h1 className="text-2xl font-semibold tracking-tight">Konfirmasi profil kamu</h1>
@@ -688,6 +734,21 @@ export default function OnboardingPage() {
                         )}
                       </CardContent>
                     </Card>
+
+                    {selectedCareers.length > 0 && (
+                      <Card>
+                        <CardHeader className="pb-2 pt-4 px-4">
+                          <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Minat Karier</CardTitle>
+                        </CardHeader>
+                        <CardContent className="px-4 pb-4">
+                          <div className="flex flex-wrap gap-1.5">
+                            {selectedCareers.map(c => (
+                              <Badge key={c} variant="secondary" className="text-xs">{c}</Badge>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {selectedIndustries.length > 0 && (
                       <Card>
