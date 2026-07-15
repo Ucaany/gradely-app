@@ -19,6 +19,7 @@ import {
   ArrowRight,
   QrCode,
   TrendingUp,
+  Briefcase,
 } from 'lucide-react'
 import { getInitials, formatGPA } from '@/lib/utils'
 import { calculateAcademicSummary, ACADEMIC_STATUS_CONFIG } from '@/lib/utils/academic'
@@ -87,6 +88,8 @@ export default async function LecturerDashboardPage() {
   }
 
   const gradesByStudent = new Map<string, StudentGrade[]>()
+  let careerCounts: { name: string; count: number }[] = []
+
   if (studentIds.length > 0) {
     const { data: allGrades } = await supabase
       .from('student_grades')
@@ -97,6 +100,20 @@ export default async function LecturerDashboardPage() {
       arr.push(g as StudentGrade)
       gradesByStudent.set(g.student_id, arr)
     }
+
+    const { data: careerRows } = await supabase
+      .from('career_interests')
+      .select('interest')
+      .in('student_id', studentIds)
+
+    const careerMap = new Map<string, number>()
+    for (const row of (careerRows ?? [])) {
+      careerMap.set(row.interest, (careerMap.get(row.interest) ?? 0) + 1)
+    }
+    careerCounts = Array.from(careerMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 6)
+      .map(([name, count]) => ({ name, count }))
   }
 
   const studentSummaries = students.map((s) => {

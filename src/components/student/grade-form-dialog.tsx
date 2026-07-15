@@ -39,6 +39,8 @@ interface GradeFormDialogProps {
   onOpenChange: (open: boolean) => void
   editGrade?: StudentGrade | null
   onSuccess: () => void
+  existingGrades?: StudentGrade[]
+  passingGradePoints?: number
 }
 
 const GRADE_OPTIONS = ['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E'] as const
@@ -73,7 +75,7 @@ function getSemesterType(semesterNumber: number): 'ganjil' | 'genap' {
   return semesterNumber % 2 === 1 ? 'ganjil' : 'genap'
 }
 
-export function GradeFormDialog({ open, onOpenChange, editGrade, onSuccess }: GradeFormDialogProps) {
+export function GradeFormDialog({ open, onOpenChange, editGrade, onSuccess, existingGrades = [], passingGradePoints = 1.0 }: GradeFormDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const isEdit = !!editGrade
 
@@ -142,6 +144,23 @@ export function GradeFormDialog({ open, onOpenChange, editGrade, onSuccess }: Gr
 
   const watchSemester = form.watch('semester_number')
   const watchSemesterType = form.watch('semester_type')
+  const watchCourseName = form.watch('course_name')
+
+  // Cek apakah mata kuliah ini bisa diulang:
+  // - Harus ada nilai sebelumnya dengan nama yang sama (di luar entri yang sedang diedit)
+  // - Nilai sebelumnya harus di bawah passing grade
+  const priorGrade = existingGrades
+    .filter((g) => g.id !== editGrade?.id)
+    .find((g) => g.course_name.trim().toLowerCase() === watchCourseName.trim().toLowerCase())
+
+  const isRetakeEligible = !!priorGrade && priorGrade.grade_points < passingGradePoints
+
+  // Saat course_name berubah: reset is_retake jika tidak eligible
+  useEffect(() => {
+    if (!isRetakeEligible) {
+      form.setValue('is_retake', false)
+    }
+  }, [watchCourseName, isRetakeEligible, form])
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -294,11 +313,31 @@ export function GradeFormDialog({ open, onOpenChange, editGrade, onSuccess }: Gr
               control={form.control}
               name="is_retake"
               render={({ field }) => (
-                <FormItem className="flex items-center gap-2 space-y-0">
-                  <FormControl>
-                    <Checkbox checked={field.value} onCheckedChange={field.onChange} disabled={isLoading} />
-                  </FormControl>
-                  <FormLabel className="font-normal cursor-pointer">Mata kuliah mengulang</FormLabel>
+                <FormItem className="flex flex-col gap-1 space-y-0">
+                  <div className="flex items-center gap-2">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                        disabled={isLoading || !isRetakeEligible}
+                      />
+                    </FormControl>
+                    <FormLabel className={`font-normal ${!isRetakeEligible ? 'text-muted-foreground cursor-not-allowed' : 'cursor-pointer'}`}>
+                      Mata kuliah mengulang
+                    </FormLabel>
+                  </div>
+                  {watchCourseName.trim() !== '' && !isRetakeEligible && (
+                    <p className="text-xs text-muted-foreground pl-6">
+                      {!priorGrade
+                        ? 'Belum ada nilai sebelumnya untuk mata kuliah ini.'
+                        : `Nilai sebelumnya (${priorGrade.grade}) sudah lulus — tidak perlu mengulang.`}
+                    </p>
+                  )}
+                  {isRetakeEligible && priorGrade && (
+                    <p className="text-xs text-orange-600 dark:text-orange-400 pl-6">
+                      Nilai sebelumnya: {priorGrade.grade} ({Number(priorGrade.grade_points).toFixed(2)}) — eligible untuk mengulang.
+                    </p>
+                  )}
                 </FormItem>
               )}
             />

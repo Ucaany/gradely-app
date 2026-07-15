@@ -51,15 +51,25 @@ export default function StudentGradesPage() {
   const [editGrade, setEditGrade] = useState<StudentGrade | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list')
+  const [passingGradePoints, setPassingGradePoints] = useState<number>(1.0)
 
   const fetchGrades = useCallback(async () => {
     setIsLoading(true)
     setFetchError(null)
     try {
-      const res = await fetch('/api/student/grades')
-      const result = await res.json()
-      if (result.success) {
-        const data: StudentGrade[] = result.data ?? []
+      const [gradesRes, ruleRes] = await Promise.all([
+        fetch('/api/student/grades'),
+        fetch('/api/student/academic-rule'),
+      ])
+      const gradesResult = await gradesRes.json()
+      const ruleResult = await ruleRes.json()
+
+      if (ruleResult.success) {
+        setPassingGradePoints(ruleResult.data.passing_grade_points ?? 1.0)
+      }
+
+      if (gradesResult.success) {
+        const data: StudentGrade[] = gradesResult.data ?? []
         setGrades(data)
         const map = new Map<string, StudentGrade[]>()
         for (const g of data) {
@@ -83,7 +93,7 @@ export default function StudentGradesPage() {
           })
         setSemesterGroups(groups)
       } else {
-        setFetchError(result.error ?? 'Gagal memuat data nilai.')
+        setFetchError(gradesResult.error ?? 'Gagal memuat data nilai.')
       }
     } catch {
       setFetchError('Gagal memuat data. Periksa koneksi internet Anda.')
@@ -319,6 +329,8 @@ export default function StudentGradesPage() {
         onOpenChange={(v) => { setDialogOpen(v); if (!v) setEditGrade(null) }}
         editGrade={editGrade}
         onSuccess={fetchGrades}
+        existingGrades={grades}
+        passingGradePoints={passingGradePoints}
       />
     </div>
   )

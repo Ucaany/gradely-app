@@ -71,18 +71,37 @@ export async function POST(request: NextRequest) {
 
     const { semester_number, semester_type, academic_year, course_name, credits, grade, is_retake } = parsed.data
 
-    // Ambil academic rules untuk grade_scale
+    // Ambil academic rules untuk grade_scale & passing_grade
     let gradeScale = { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 }
-    if (profile.study_program_id) {
+    let passingGrade = 'D'
+    if (profile.university_id) {
       const { data: rule } = await supabase
         .from('academic_rules')
-        .select('grade_scale')
+        .select('grade_scale, passing_grade')
         .eq('university_id', profile.university_id)
-        .or(`study_program_id.eq.${profile.study_program_id},study_program_id.is.null`)
+        .or(profile.study_program_id ? `study_program_id.eq.${profile.study_program_id},study_program_id.is.null` : 'study_program_id.is.null')
         .order('study_program_id', { ascending: false })
         .limit(1)
         .single()
       if (rule?.grade_scale) gradeScale = rule.grade_scale
+      if (rule?.passing_grade) passingGrade = rule.passing_grade
+    }
+
+    // Validasi is_retake: hanya boleh jika ada nilai sebelumnya di bawah passing_grade
+    if (is_retake) {
+      const passingPoints = (gradeScale as Record<string, number>)[passingGrade] ?? 1.0
+      const { data: priorGrades } = await supabase
+        .from('student_grades')
+        .select('grade_points')
+        .eq('student_id', user.id)
+        .ilike('course_name', course_name.trim())
+      const hasPriorFailed = (priorGrades ?? []).some((g) => g.grade_points < passingPoints)
+      if (!hasPriorFailed) {
+        return NextResponse.json<ApiResponse>(
+          { data: null, error: 'Mata kuliah ini tidak bisa ditandai mengulang. Belum ada nilai sebelumnya yang di bawah batas lulus.', success: false },
+          { status: 422 }
+        )
+      }
     }
 
     const grade_points = getGradePoints(grade, gradeScale)

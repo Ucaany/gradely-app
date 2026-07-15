@@ -15,6 +15,8 @@ import {
   Check,
   SearchX,
   Factory,
+  Eye,
+  EyeOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -25,6 +27,7 @@ import { Progress } from '@/components/ui/progress'
 import { CAREER_OPTIONS } from '@/lib/constants/career'
 import { getInitials } from '@/lib/utils'
 import { DarkModeToggle } from '@/components/dark-mode-toggle'
+import { Switch } from '@/components/ui/switch'
 
 interface Company {
   id: string
@@ -67,6 +70,7 @@ export default function OnboardingPage() {
   const [industries, setIndustries] = useState<string[]>([])
   const [selectedCompanies, setSelectedCompanies] = useState<string[]>([])
   const [selectedCareers, setSelectedCareers] = useState<string[]>([])
+  const [profileVisible, setProfileVisible] = useState(true)
   const [profile, setProfile] = useState<ProfileData | null>(null)
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(false)
   const [isCompleting, setIsCompleting] = useState(false)
@@ -167,6 +171,7 @@ export default function OnboardingPage() {
           skill_not_found: skillNotFound,
           selected_industries: selectedIndustries,
           selected_careers: selectedCareers,
+          profile_visible: profileVisible,
         }),
       })
       const result = await res.json()
@@ -764,6 +769,29 @@ export default function OnboardingPage() {
                         </CardContent>
                       </Card>
                     )}
+
+                    <Card>
+                      <CardHeader className="pb-2 pt-4 px-4">
+                        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                          {profileVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
+                          Visibilitas Profil
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        <div className="flex items-center justify-between rounded-lg border p-3">
+                          <div className="space-y-0.5">
+                            <p className="text-sm font-medium">Tampil ke Perusahaan</p>
+                            <p className="text-xs text-muted-foreground">
+                              {profileVisible ? 'Profil kamu bisa ditemukan perusahaan mitra' : 'Profil kamu tersembunyi dari perusahaan'}
+                            </p>
+                          </div>
+                          <Switch
+                            checked={profileVisible}
+                            onCheckedChange={setProfileVisible}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
                   </div>
                 )}
               </div>

@@ -81,11 +81,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { interested_company_ids, selected_careers } = body as {
+    const { interested_company_ids, selected_careers, profile_visible } = body as {
       skills?: string[]
       interested_company_ids: string[]
       skill_not_found?: boolean
       selected_careers?: string[]
+      profile_visible?: boolean
     }
 
     // Save career interests from CAREER_OPTIONS selection
@@ -105,10 +106,10 @@ export async function POST(request: NextRequest) {
       await supabase.from('student_company_interests').insert(companyInserts)
     }
 
-    // Mark onboarding complete
+    // Mark onboarding complete + set profile visibility
     await supabase
       .from('users')
-      .update({ onboarding_completed: true })
+      .update({ onboarding_completed: true, profile_visible: profile_visible ?? false })
       .eq('id', user.id)
 
     return NextResponse.json({ data: { completed: true }, error: null, success: true })

@@ -44,21 +44,42 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     const updateData: Record<string, unknown> = { ...parsed.data }
 
-    // Recalculate grade_points jika grade berubah
+    // Recalculate grade_points & validate is_retake jika berubah
+    let gradeScale = { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 }
+    let passingGrade = 'D'
+    if (profile.university_id) {
+      const { data: rule } = await supabase
+        .from('academic_rules')
+        .select('grade_scale, passing_grade')
+        .eq('university_id', profile.university_id)
+        .or(profile.study_program_id ? `study_program_id.eq.${profile.study_program_id},study_program_id.is.null` : 'study_program_id.is.null')
+        .order('study_program_id', { ascending: false })
+        .limit(1)
+        .single()
+      if (rule?.grade_scale) gradeScale = rule.grade_scale
+      if (rule?.passing_grade) passingGrade = rule.passing_grade
+    }
+
     if (parsed.data.grade) {
-      let gradeScale = { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 }
-      if (profile.study_program_id) {
-        const { data: rule } = await supabase
-          .from('academic_rules')
-          .select('grade_scale')
-          .eq('university_id', profile.university_id)
-          .or(`study_program_id.eq.${profile.study_program_id},study_program_id.is.null`)
-          .order('study_program_id', { ascending: false })
-          .limit(1)
-          .single()
-        if (rule?.grade_scale) gradeScale = rule.grade_scale
-      }
       updateData.grade_points = getGradePoints(parsed.data.grade, gradeScale)
+    }
+
+    // Validasi is_retake jika diubah menjadi true
+    if (parsed.data.is_retake === true) {
+      const passingPoints = (gradeScale as Record<string, number>)[passingGrade] ?? 1.0
+      const { data: existingForCourse } = await supabase
+        .from('student_grades')
+        .select('id, grade_points')
+        .eq('student_id', user.id)
+        .neq('id', params.id)
+        .ilike('course_name', (parsed.data.course_name ?? '').trim() || '%')
+      const hasPriorFailed = (existingForCourse ?? []).some((g) => g.grade_points < passingPoints)
+      if (!hasPriorFailed) {
+        return NextResponse.json<ApiResponse>(
+          { data: null, error: 'Mata kuliah ini tidak bisa ditandai mengulang. Belum ada nilai sebelumnya yang di bawah batas lulus.', success: false },
+          { status: 422 }
+        )
+      }
     }
 
     const { data, error } = await supabase

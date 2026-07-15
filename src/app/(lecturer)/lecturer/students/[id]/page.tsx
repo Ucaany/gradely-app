@@ -39,7 +39,7 @@ export default async function LecturerStudentDetailPage({
 
   if (!isBound) notFound()
 
-  const [{ data: student }, { data: gradesRaw }, { data: lecturerProfile }] = await Promise.all([
+  const [{ data: student }, { data: gradesRaw }, { data: lecturerProfile }, { data: careerRows }] = await Promise.all([
     supabase
       .from('users')
       .select('id, full_name, nim, email, phone, avatar_url, current_semester, created_at, study_programs(name, short_name), universities(name)')
@@ -55,11 +55,16 @@ export default async function LecturerStudentDetailPage({
       .select('university_id')
       .eq('id', user.id)
       .single(),
+    supabase
+      .from('career_interests')
+      .select('interest')
+      .eq('student_id', params.id),
   ])
 
   if (!student) notFound()
 
   const grades = (gradesRaw ?? []) as StudentGrade[]
+  const careerInterests = (careerRows ?? []).map((r) => r.interest)
 
   let defaultRule: AcademicRule | null = null
   if (lecturerProfile?.university_id) {
@@ -236,6 +241,28 @@ export default async function LecturerStudentDetailPage({
           </CardContent>
         </Card>
       </div>
+
+      {/* Minat Karier */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <BookOpen className="h-4 w-4 text-muted-foreground" />
+            Minat Karier
+          </CardTitle>
+          <CardDescription>Bidang karier yang diminati mahasiswa</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {careerInterests.length === 0 ? (
+            <p className="text-sm text-muted-foreground italic">Belum ada minat karier yang dipilih</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {careerInterests.map((interest) => (
+                <Badge key={interest} variant="secondary">{interest}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Indikator Risiko */}
       <Card>
