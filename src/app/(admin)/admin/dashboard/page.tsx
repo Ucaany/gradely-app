@@ -20,7 +20,7 @@ import { StudentStatusChart } from '@/components/admin/student-status-chart'
 import { SendLecturerDialog } from '@/components/admin/send-lecturer-dialog'
 import { SystemStatusCard } from '@/components/admin/system-status-card'
 import { WhatsAppLogsCard } from '@/components/admin/whatsapp-logs-card'
-import { formatDate, getInitials } from '@/lib/utils'
+import { getInitials } from '@/lib/utils'
 
 type Period = '24h' | '1w' | 'all'
 
