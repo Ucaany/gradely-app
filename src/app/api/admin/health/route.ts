@@ -30,15 +30,13 @@ export async function GET() {
     if (fonnteConfigured) {
       try {
         const pingRes = await fetch('https://api.fonnte.com/device', {
-          method: 'GET',
+          method: 'POST',
           headers: { Authorization: fonnteToken },
           signal: AbortSignal.timeout(6000),
         })
-        if (pingRes.ok) {
-          const json = await pingRes.json()
-          // Fonnte returns status true when device is connected
-          fonnteOk = json?.status === true
-        }
+        const json = await pingRes.json().catch(() => ({}))
+        // Fonnte returns status: true when token valid & device connected
+        fonnteOk = json?.status === true
       } catch {
         fonnteOk = false
       }
