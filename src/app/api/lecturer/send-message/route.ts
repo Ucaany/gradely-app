@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { calculateAcademicSummary, groupGradesBySemester } from '@/lib/utils/academic'
+import { sendAndLog } from '@/lib/waha'
 import type { ApiResponse, AcademicRule, StudentGrade } from '@/types'
 
 export async function POST(request: NextRequest) {
@@ -150,26 +151,6 @@ export async function POST(request: NextRequest) {
       need_attention: 'Perlu Perhatian', recovery_mode: 'Butuh Pemulihan', critical: 'Darurat Akademik',
     }
 
-    // Load WAHA settings
-    const { data: wahaSettings } = await supabase
-      .from('settings')
-      .select('key, value')
-      .eq('university_id', lecturer.university_id ?? '')
-      .in('key', ['waha_url', 'waha_session', 'waha_api_key'])
-
-    const settingsMap: Record<string, string> = {}
-    for (const s of (wahaSettings ?? [])) settingsMap[s.key] = s.value
-
-    const wahaUrl = settingsMap['waha_url']
-    const wahaSession = settingsMap['waha_session']
-    const wahaApiKey = settingsMap['waha_api_key']
-
-    if (!wahaUrl || !wahaSession) {
-      if (!preview_only) {
-        return NextResponse.json<ApiResponse>({ data: null, error: 'Konfigurasi WAHA belum diatur. Hubungi admin kampus.', success: false }, { status: 503 })
-      }
-    }
-
     // Load AI settings dari database (sama seperti route lain)
     const { data: aiSettingRows } = await supabase
       .from('settings')
@@ -315,42 +296,15 @@ Aturan format:
       return NextResponse.json<ApiResponse>({ data: { message: messageText }, error: null, success: true })
     }
 
-    // Format nomor HP mahasiswa ke format WhatsApp
-    const chatId = phoneDigits.startsWith('0')
-      ? `62${phoneDigits.slice(1)}@c.us`
-      : phoneDigits.startsWith('62')
-        ? `${phoneDigits}@c.us`
-        : `62${phoneDigits}@c.us`
-
-    const wahaHeaders: Record<string, string> = { 'Content-Type': 'application/json' }
-    if (wahaApiKey) wahaHeaders['X-Api-Key'] = wahaApiKey
-
-    const wahaRes = await fetch(`${wahaUrl}/api/sendText`, {
-      method: 'POST',
-      headers: wahaHeaders,
-      body: JSON.stringify({ session: wahaSession, chatId, text: messageText }),
-      signal: AbortSignal.timeout(10000),
-    })
-
-    if (!wahaRes.ok) {
-      const errText = await wahaRes.text()
-      await supabase.from('whatsapp_logs').insert({
-        recipient_id: student_id,
-        phone_number: student.phone,
-        message: messageText,
-        status: 'failed',
-        error_message: `WAHA error: ${wahaRes.status} ${errText}`,
-      })
-      return NextResponse.json<ApiResponse>({ data: null, error: `Gagal mengirim via WAHA: ${wahaRes.status}`, success: false }, { status: 502 })
-    }
-
-    await supabase.from('whatsapp_logs').insert({
-      recipient_id: student_id,
-      phone_number: student.phone,
+    const result = await sendAndLog(lecturer.university_id ?? '', {
+      phone: student.phone!,
       message: messageText,
-      status: 'sent',
-      sent_at: new Date().toISOString(),
+      recipientId: student_id,
     })
+
+    if (!result.success) {
+      return NextResponse.json<ApiResponse>({ data: null, error: result.error ?? 'Gagal mengirim pesan', success: false }, { status: 502 })
+    }
 
     return NextResponse.json<ApiResponse>({ data: { message: messageText }, error: null, success: true })
   } catch (err) {
