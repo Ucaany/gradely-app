@@ -31,7 +31,6 @@ import {
   calculateAcademicSummary,
   groupGradesBySemester,
   autoDetectSemester,
-  DEFAULT_SKS_RULES_BY_IPK,
 } from '@/lib/utils/academic'
 import { formatGPA } from '@/lib/utils'
 import type { AcademicRule, StudentGrade } from '@/types'

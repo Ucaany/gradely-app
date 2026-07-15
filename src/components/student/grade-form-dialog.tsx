@@ -41,16 +41,18 @@ interface GradeFormDialogProps {
   onSuccess: () => void
 }
 
-const GRADE_OPTIONS = ['A', 'AB', 'B', 'BC', 'C', 'D', 'E'] as const
+const GRADE_OPTIONS = ['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E'] as const
 
 export const GRADE_COLORS: Record<string, string> = {
-  A: 'text-green-700 border-green-300 bg-green-50 dark:bg-green-950 dark:text-green-400',
-  AB: 'text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400',
-  B: 'text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-950 dark:text-blue-400',
-  BC: 'text-sky-700 border-sky-300 bg-sky-50 dark:bg-sky-950 dark:text-sky-400',
-  C: 'text-yellow-700 border-yellow-300 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400',
-  D: 'text-orange-700 border-orange-300 bg-orange-50 dark:bg-orange-950 dark:text-orange-400',
-  E: 'text-red-700 border-red-300 bg-red-50 dark:bg-red-950 dark:text-red-400',
+  A:   'text-green-700 border-green-300 bg-green-50 dark:bg-green-950 dark:text-green-400',
+  'A-':'text-emerald-700 border-emerald-300 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-400',
+  BA:  'text-teal-700 border-teal-300 bg-teal-50 dark:bg-teal-950 dark:text-teal-400',
+  'B+':'text-cyan-700 border-cyan-300 bg-cyan-50 dark:bg-cyan-950 dark:text-cyan-400',
+  B:   'text-blue-700 border-blue-300 bg-blue-50 dark:bg-blue-950 dark:text-blue-400',
+  'B-':'text-sky-700 border-sky-300 bg-sky-50 dark:bg-sky-950 dark:text-sky-400',
+  C:   'text-yellow-700 border-yellow-300 bg-yellow-50 dark:bg-yellow-950 dark:text-yellow-400',
+  D:   'text-orange-700 border-orange-300 bg-orange-50 dark:bg-orange-950 dark:text-orange-400',
+  E:   'text-red-700 border-red-300 bg-red-50 dark:bg-red-950 dark:text-red-400',
 }
 
 // Generate daftar tahun ajaran (5 tahun ke belakang s/d sekarang)
