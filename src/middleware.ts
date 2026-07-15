@@ -31,7 +31,18 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const { supabaseResponse, user, supabase } = await updateSession(request)
+  let supabaseResponse: NextResponse
+  let user: Awaited<ReturnType<typeof updateSession>>['user']
+  let supabase: Awaited<ReturnType<typeof updateSession>>['supabase']
+
+  try {
+    const result = await updateSession(request)
+    supabaseResponse = result.supabaseResponse
+    user = result.user
+    supabase = result.supabase
+  } catch {
+    return NextResponse.next()
+  }
 
   const isAuthPage = pathname === '/login' || pathname === '/reset-password' || pathname === '/update-password'
   const isStudentOnboarding = pathname.startsWith('/student/onboarding')
