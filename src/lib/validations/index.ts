@@ -88,9 +88,11 @@ export const updateStudyProgramSchema = z.object({
 // ============================================================
 export const gradeScaleSchema = z.object({
   A: z.number().min(0).max(4),
-  AB: z.number().min(0).max(4),
+  'A-': z.number().min(0).max(4),
+  BA: z.number().min(0).max(4),
+  'B+': z.number().min(0).max(4),
   B: z.number().min(0).max(4),
-  BC: z.number().min(0).max(4),
+  'B-': z.number().min(0).max(4),
   C: z.number().min(0).max(4),
   D: z.number().min(0).max(4),
   E: z.number().min(0).max(4),
@@ -105,7 +107,7 @@ export const createAcademicRuleSchema = z.object({
   min_gpa: z.number().min(0).max(4),
   max_sks_per_semester: z.number().int().min(12).max(30),
   min_sks_per_semester: z.number().int().min(1).max(24),
-  passing_grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']),
+  passing_grade: z.enum(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']),
   grade_scale: gradeScaleSchema,
 })
 
@@ -117,7 +119,7 @@ export const updateAcademicRuleSchema = z.object({
   min_gpa: z.number().min(0).max(4).optional(),
   max_sks_per_semester: z.number().int().min(12).max(30).optional(),
   min_sks_per_semester: z.number().int().min(1).max(24).optional(),
-  passing_grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']).optional(),
+  passing_grade: z.enum(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']).optional(),
   grade_scale: gradeScaleSchema.optional(),
 })
 
@@ -130,7 +132,7 @@ export const createGradeSchema = z.object({
   academic_year: z.string().min(4, 'Tahun ajaran wajib diisi').max(20),
   course_name: z.string().min(2, 'Nama mata kuliah minimal 2 karakter').max(100),
   credits: z.number().int().min(1).max(6),
-  grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']),
+  grade: z.enum(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']),
   is_retake: z.boolean(),
 })
 
@@ -140,7 +142,7 @@ export const updateGradeSchema = z.object({
   academic_year: z.string().min(4).max(20).optional(),
   course_name: z.string().min(2).max(100).optional(),
   credits: z.number().int().min(1).max(6).optional(),
-  grade: z.enum(['A', 'AB', 'B', 'BC', 'C', 'D', 'E']).optional(),
+  grade: z.enum(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E']).optional(),
   is_retake: z.boolean().optional(),
 })
 

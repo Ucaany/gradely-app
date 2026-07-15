@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const { semester_number, semester_type, academic_year, course_name, credits, grade, is_retake } = parsed.data
 
     // Ambil academic rules untuk grade_scale
-    let gradeScale = { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 }
+    let gradeScale = { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 }
     if (profile.study_program_id) {
       const { data: rule } = await supabase
         .from('academic_rules')

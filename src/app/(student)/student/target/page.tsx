@@ -40,7 +40,7 @@ interface AIAnalysis {
 }
 
 
-const IPK_DESC: Record<string,string> = { '2.75':'Syarat minimum banyak perusahaan. Target realistis untuk menjaga peluang kerja.','3.00':'IPK baik dan cukup kompetitif. Memenuhi syarat sebagian besar lowongan dan beasiswa.','3.25':'IPK di atas rata-rata yang membuka lebih banyak peluang karier dan beasiswa.','3.50':'IPK sangat baik. Diinginkan banyak perusahaan top dan program graduate.','3.75':'Mendekati cumlaude. Membuka peluang beasiswa S2 bergengsi.','4.00':'IPK sempurna — Summa Cumlaude. Prestasi tertinggi.' }
+const IPK_DESC: Record<string,string> = { '2.75':'Syarat minimum banyak perusahaan. Target realistis untuk menjaga peluang kerja.','3.00':'IPK baik dan cukup kompetitif. Memenuhi syarat sebagian besar lowongan dan beasiswa.','3.25':'IPK di atas rata-rata yang membuka lebih banyak peluang karier dan beasiswa.','3.50':'IPK sangat baik. Diinginkan banyak perusahaan top dan program graduate.','3.75':'Mendekati Cum Laude. Membuka peluang beasiswa S2 bergengsi.','4.00':'IPK sempurna — Dengan Pujian / Cum Laude. Prestasi tertinggi.' }
 const SEM_DESC: Record<number,string> = { 7:'Lulus lebih cepat dari normal. Butuh rata-rata SKS lebih banyak tiap semester.', 8:'Waktu studi normal sesuai kurikulum. Target ideal mayoritas mahasiswa.', 9:'Satu semester lebih lambat. Masih dalam batas wajar.', 10:'Dua semester di atas normal. Perlu perhatian pada progres.', 11:'Tiga semester di atas normal. Konsultasikan dengan dosen wali.', 12:'Empat semester di atas normal. Prioritaskan percepatan studi.', 13:'Mendekati batas maksimal. Wajib segera menyelesaikan kewajiban akademik.', 14:'Semester terakhir yang diizinkan.' }
 const STEPS = [
   { id: 1, label: 'Semester', icon: GraduationCap, desc: 'Target semester & tahun lulus' },
@@ -282,7 +282,7 @@ export default function StudentTargetPage() {
                         <button key={ipk} onClick={() => { setTargetIpk(ipk===targetIpk?null:ipk); setActiveInfo({ label: `IPK ${ipk.toFixed(2)}`, text: IPK_DESC[ipk.toFixed(2)]??'' }) }}
                           className={`rounded-xl border-2 py-3 text-center transition-all ${targetIpk===ipk?'border-primary bg-primary/5':'border-border hover:border-primary/40'}`}>
                           <p className="text-xl font-bold">{ipk.toFixed(2)}</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">{ipk>=3.75?'Cum Laude':ipk>=3.5?'Sangat Baik':ipk>=3.0?'Baik':'Cukup'}</p>
+                          <p className="text-xs text-muted-foreground mt-0.5">{ipk>3.5?'Dengan Pujian':ipk>=3.01?'Sangat Memuaskan':ipk>=2.76?'Memuaskan':'Cukup'}</p>
                         </button>
                       ))}
                     </div>

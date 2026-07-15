@@ -12,7 +12,7 @@ interface GradeInput {
   academic_year: string
 }
 
-const VALID_GRADES = new Set(['A', 'AB', 'B', 'BC', 'C', 'D', 'E'])
+const VALID_GRADES = new Set(['A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E'])
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Ambil grade scale dari academic rules
-    let gradeScale = { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 }
+    let gradeScale = { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 }
     if (profile.study_program_id) {
       const { data: rule } = await supabase
         .from('academic_rules')

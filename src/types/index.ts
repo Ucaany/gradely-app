@@ -11,7 +11,7 @@ export type AcademicStatus =
   | 'recovery_mode'
   | 'critical'
 
-export type GradeValue = 'A' | 'AB' | 'B' | 'BC' | 'C' | 'D' | 'E'
+export type GradeValue = 'A' | 'A-' | 'BA' | 'B+' | 'B' | 'B-' | 'C' | 'D' | 'E'
 
 export type PortfolioStatus = 'completed' | 'ongoing'
 
@@ -53,9 +53,11 @@ export interface StudyProgramWithUniversity extends StudyProgram {
 // ============================================================
 export interface GradeScale {
   A: number
-  AB: number
+  'A-': number
+  BA: number
+  'B+': number
   B: number
-  BC: number
+  'B-': number
   C: number
   D: number
   E: number

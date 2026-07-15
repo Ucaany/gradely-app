@@ -46,7 +46,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 
     // Recalculate grade_points jika grade berubah
     if (parsed.data.grade) {
-      let gradeScale = { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 }
+      let gradeScale = { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 }
       if (profile.study_program_id) {
         const { data: rule } = await supabase
           .from('academic_rules')

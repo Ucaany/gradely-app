@@ -15,7 +15,7 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  CREATE TYPE grade_value AS ENUM ('A', 'AB', 'B', 'BC', 'C', 'D', 'E');
+  CREATE TYPE grade_value AS ENUM ('A', 'A-', 'BA', 'B+', 'B', 'B-', 'C', 'D', 'E');
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS academic_rules (
   max_sks_per_semester   INTEGER NOT NULL DEFAULT 24,
   min_sks_per_semester   INTEGER NOT NULL DEFAULT 12,
   passing_grade          grade_value NOT NULL DEFAULT 'D',
-  grade_scale            JSONB NOT NULL DEFAULT '{"A":4.0,"AB":3.5,"B":3.0,"BC":2.5,"C":2.0,"D":1.0,"E":0.0}',
+  grade_scale            JSONB NOT NULL DEFAULT '{"A":4.0,"A-":3.75,"BA":3.5,"B+":3.25,"B":3.0,"B-":2.75,"C":2.0,"D":1.0,"E":0.0}',
 
   created_at             TIMESTAMPTZ DEFAULT NOW(),
   updated_at             TIMESTAMPTZ DEFAULT NOW()

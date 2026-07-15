@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       max_sks_per_semester: 24,
       min_sks_per_semester: 12,
       passing_grade: 'D',
-      grade_scale: { A: 4.0, AB: 3.5, B: 3.0, BC: 2.5, C: 2.0, D: 1.0, E: 0.0 },
+      grade_scale: { A: 4.0, 'A-': 3.75, BA: 3.5, 'B+': 3.25, B: 3.0, 'B-': 2.75, C: 2.0, D: 1.0, E: 0.0 },
       created_at: '',
       updated_at: '',
     }
