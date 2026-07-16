@@ -52,7 +52,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { updateStudentProfileSchema, type UpdateStudentProfileInput } from '@/lib/validations'
-import { getInitials } from '@/lib/utils'
+import { getInitials, normalizeImageUrl } from '@/lib/utils'
 
 interface ProfileData {
   id: string
@@ -214,7 +214,7 @@ export default function StudentProfilePage() {
           <Card>
             <CardContent className="pt-6 flex flex-col items-center text-center gap-3">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={profile.avatar_url ?? undefined} />
+                <AvatarImage src={normalizeImageUrl(profile.avatar_url)} />
                 <AvatarFallback className="text-xl font-semibold">{getInitials(profile.full_name)}</AvatarFallback>
               </Avatar>
               <div>
@@ -328,7 +328,7 @@ export default function StudentProfilePage() {
                           {field.value && (
                             <div className="flex items-center gap-2 mt-1">
                               <Avatar className="h-8 w-8">
-                                <AvatarImage src={field.value || undefined} />
+                                <AvatarImage src={normalizeImageUrl(field.value)} />
                                 <AvatarFallback className="text-xs">{getInitials(form.watch('full_name'))}</AvatarFallback>
                               </Avatar>
                               <p className="text-xs text-muted-foreground">Preview foto profil</p>

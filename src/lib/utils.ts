@@ -51,6 +51,29 @@ export function getInitials(name: string): string {
     .slice(0, 2)
 }
 
+/**
+ * Normalisasi URL gambar dari berbagai sumber:
+ * - Google Drive /view URL → direct download URL
+ * - URL lain dikembalikan as-is
+ */
+export function normalizeImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined
+
+  // Google Drive: https://drive.google.com/file/d/FILE_ID/view?...
+  const driveMatch = url.match(/drive\.google\.com\/file\/d\/([a-zA-Z0-9_-]+)/)
+  if (driveMatch) {
+    return `https://drive.google.com/uc?export=view&id=${driveMatch[1]}`
+  }
+
+  // Google Drive: https://drive.google.com/open?id=FILE_ID
+  const driveOpenMatch = url.match(/drive\.google\.com\/open\?id=([a-zA-Z0-9_-]+)/)
+  if (driveOpenMatch) {
+    return `https://drive.google.com/uc?export=view&id=${driveOpenMatch[1]}`
+  }
+
+  return url
+}
+
 /** Debounce helper */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
