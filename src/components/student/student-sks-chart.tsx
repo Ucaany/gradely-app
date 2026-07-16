@@ -39,7 +39,7 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
   ]
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-6 py-6 px-8">
+    <div className="flex flex-col md:flex-row items-center justify-center gap-8 py-6 px-8">
       {/* Donut Chart - Kiri */}
       <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
         <ResponsiveContainer width="100%" height="100%">

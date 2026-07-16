@@ -625,7 +625,7 @@ export default async function StudentDashboardPage() {
         </Card>
 
         {/* Card MK Mengulang: tampil jika ada is_retake=true ATAU nilai di bawah passing grade */}
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               {needsRetakeDisplay.length > 0 && <AlertCircle className="h-4 w-4 text-orange-500" />}
@@ -637,9 +637,9 @@ export default async function StudentDashboardPage() {
                 : `${needsRetakeDisplay.length} mata kuliah perlu diperhatikan`}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col">
             {needsRetakeDisplay.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 gap-3 w-full text-center">
+              <div className="flex flex-col items-center justify-center min-h-[180px] gap-3 w-full text-center">
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50 dark:bg-emerald-950/30">
                   <CheckCircle2 className="h-6 w-6 text-emerald-500" aria-hidden="true" />
                 </div>

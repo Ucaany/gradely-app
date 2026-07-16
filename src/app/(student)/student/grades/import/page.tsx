@@ -180,8 +180,8 @@ export default function ImportKHSPage() {
         toast.error(data.error ?? 'Gagal mengimpor nilai')
         return
       }
-      setResult(data)
-      toast.success(`${data.imported} nilai berhasil diimpor`)
+      setResult(data.data)
+      toast.success(`${data.data.imported} nilai berhasil diimpor`)
     } finally {
       setIsImporting(false)
     }
