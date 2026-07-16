@@ -47,8 +47,17 @@ export function NavUser({ user }: NavUserProps) {
     router.refresh()
   }
 
-  const profileHref = user.role === 'admin' ? '/admin/account' : '/student/profile'
-  const settingsHref = user.role === 'admin' ? '/admin/account' : '/student/settings'
+  const profileHref = user.role === 'admin'
+    ? '/admin/account'
+    : user.role === 'lecturer'
+    ? '/lecturer/profile'
+    : '/student/profile'
+
+  const settingsHref = user.role === 'admin'
+    ? '/admin/account'
+    : user.role === 'lecturer'
+    ? '/lecturer/profile'
+    : '/student/settings'
 
   return (
     <SidebarMenu>
@@ -94,7 +103,7 @@ export function NavUser({ user }: NavUserProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              {user.role === 'student' && (
+              {(user.role === 'student' || user.role === 'lecturer') && (
                 <DropdownMenuItem onClick={() => router.push(profileHref)}>
                   <UserCircle className="h-4 w-4" />
                   Profil Saya

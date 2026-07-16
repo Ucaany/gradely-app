@@ -30,7 +30,6 @@ import {
   AlertTriangle,
   Briefcase,
   Code2,
-  Sparkles,
   Info,
 } from 'lucide-react'
 import {
@@ -42,6 +41,7 @@ import { formatGPA } from '@/lib/utils'
 import type { AcademicRule, StudentGrade } from '@/types'
 import { StudentIPKChart } from '@/components/student/student-ipk-chart'
 import { StudentTargetChart } from '@/components/student/student-target-chart'
+import { StudentSKSChart } from '@/components/student/student-sks-chart'
 
 export default async function StudentDashboardPage() {
   const supabase = await createClient()
@@ -250,7 +250,7 @@ export default async function StudentDashboardPage() {
             </p>
           </div>
           <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40" asChild>
-            <Link href="/student/onboarding">Lengkapi Sekarang</Link>
+            <Link href="/student/career">Lengkapi Sekarang</Link>
           </Button>
         </div>
       )}
@@ -428,88 +428,35 @@ export default async function StudentDashboardPage() {
           : null
 
         return (
-          <Card>
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-                  <CardTitle className="text-base">Prediksi & Analisis Kelulusan</CardTitle>
-                </div>
-                <Button variant="ghost" size="sm" asChild>
-                  <Link href="/student/target/history">
-                    Lihat Detail <ArrowRight className="h-3.5 w-3.5 ml-1" aria-hidden="true" />
-                  </Link>
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {/* Status */}
-              <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${statusCfg.bg} ${statusCfg.border}`}>
-                <span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${statusCfg.dot}`} />
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-semibold ${statusCfg.color}`}>{statusCfg.label}</p>
-                  {latestAnalysis.analysis?.ringkasan && (
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2 leading-relaxed">
-                      {latestAnalysis.analysis.ringkasan}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* 4 metrik utama dalam grid */}
-              <div className="grid grid-cols-2 gap-2">
-                <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
-                  <p className="text-xs text-muted-foreground">Target Lulus</p>
-                  <p className="text-base font-bold tabular-nums">
-                    Sem {latestAnalysis.target_semester ?? '-'}
-                  </p>
-                  {sisaSemester !== null && (
-                    <p className="text-xs text-muted-foreground">
-                      {sisaSemester > 0 ? `${sisaSemester} sem lagi` : 'Semester ini'}
-                    </p>
-                  )}
-                </div>
-                <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
-                  <p className="text-xs text-muted-foreground">Target IPK</p>
-                  <p className="text-base font-bold tabular-nums">
-                    {latestAnalysis.target_ipk != null ? Number(latestAnalysis.target_ipk).toFixed(2) : '-'}
-                  </p>
-                  {latestAnalysis.analysis?.ipk_minimal_per_semester != null && (
-                    <p className="text-xs text-muted-foreground">
-                      Min/sem: {Number(latestAnalysis.analysis.ipk_minimal_per_semester).toFixed(2)}
-                    </p>
-                  )}
-                </div>
-                {latestAnalysis.analysis?.sks_per_semester_dibutuhkan != null && (
-                  <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
-                    <p className="text-xs text-muted-foreground">SKS/Semester</p>
-                    <p className="text-base font-bold tabular-nums">
-                      {latestAnalysis.analysis.sks_per_semester_dibutuhkan}
-                      <span className="text-xs font-normal text-muted-foreground ml-1">SKS</span>
-                    </p>
-                  </div>
+          <div className={`flex items-center gap-3 rounded-xl border px-4 py-3 ${statusCfg.bg} ${statusCfg.border}`}>
+            <span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${statusCfg.dot}`} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <p className={`text-sm font-semibold ${statusCfg.color}`}>{statusCfg.label}</p>
+                {latestAnalysis.target_semester != null && (
+                  <span className="text-xs text-muted-foreground">
+                    · Target Sem {latestAnalysis.target_semester}
+                    {sisaSemester !== null && sisaSemester > 0 && ` (${sisaSemester} sem lagi)`}
+                  </span>
                 )}
-                {latestAnalysis.analysis?.ips_target_semester_depan != null && (
-                  <div className="rounded-lg bg-muted/50 px-3 py-2.5 flex flex-col gap-0.5">
-                    <p className="text-xs text-muted-foreground">Target IPS Depan</p>
-                    <p className="text-base font-bold tabular-nums">
-                      {Number(latestAnalysis.analysis.ips_target_semester_depan).toFixed(2)}
-                    </p>
-                  </div>
+                {latestAnalysis.target_ipk != null && (
+                  <span className="text-xs text-muted-foreground">
+                    · IPK {Number(latestAnalysis.target_ipk).toFixed(2)}
+                  </span>
                 )}
               </div>
-
-              {/* Rekomendasi utama — 1 saja */}
               {latestAnalysis.analysis?.rekomendasi?.[0] && (
-                <div className="flex items-start gap-2.5 rounded-xl bg-primary/5 border border-primary/10 px-3 py-2.5">
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" aria-hidden="true" />
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    {latestAnalysis.analysis.rekomendasi[0]}
-                  </p>
-                </div>
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1 leading-relaxed">
+                  {latestAnalysis.analysis.rekomendasi[0]}
+                </p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+            <Button variant="ghost" size="sm" className="shrink-0 h-7 px-2 text-xs" asChild>
+              <Link href="/student/target/history">
+                Detail <ArrowRight className="h-3 w-3 ml-1" aria-hidden="true" />
+              </Link>
+            </Button>
+          </div>
         )
       })()}
 
@@ -531,32 +478,11 @@ export default async function StudentDashboardPage() {
         </div>
       )}
 
-      {/* Minat Karir + Target info: skill & industri */}
-      {(careerInterests.length > 0 || (target && ((target.target_skills && target.target_skills.length > 0) || (target.target_industries && target.target_industries.length > 0)))) && (
+      {/* Target info: skill & industri */}
+      {target && ((target.target_skills && target.target_skills.length > 0) || (target.target_industries && target.target_industries.length > 0)) && (
         <div className="grid gap-4 sm:grid-cols-2">
-          {/* Minat Karir — dari career_interests */}
-          {careerInterests.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-primary" aria-hidden="true" />
-                  Minat Karir
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="flex flex-wrap gap-1.5">
-                  {careerInterests.map((interest) => (
-                    <Badge key={interest} variant="secondary" className="text-xs">{interest}</Badge>
-                  ))}
-                </div>
-                <Button variant="ghost" size="sm" className="mt-2 h-7 px-2 text-xs text-muted-foreground" asChild>
-                  <Link href="/student/career">Edit Minat</Link>
-                </Button>
-              </CardContent>
-            </Card>
-          )}
           {/* Skill target */}
-          {target && target.target_skills && target.target_skills.length > 0 && (
+          {target.target_skills && target.target_skills.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -574,7 +500,7 @@ export default async function StudentDashboardPage() {
             </Card>
           )}
           {/* Industri target */}
-          {target && target.target_industries && target.target_industries.length > 0 && (
+          {target.target_industries && target.target_industries.length > 0 && (
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -594,8 +520,24 @@ export default async function StudentDashboardPage() {
         </div>
       )}
 
-      {/* Chart IPS & IPK — full width */}
-      <div className="grid gap-4">
+      {/* Chart SKS Progress + IPS & IPK */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        {/* Donut SKS Progress */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Progres SKS</CardTitle>
+            <CardDescription>Capaian SKS menuju kelulusan</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <StudentSKSChart
+              sksEarned={summary.total_sks_earned}
+              sksRequired={summary.total_sks_required}
+            />
+          </CardContent>
+        </Card>
+
+        {/* Chart IPS & IPK — 2/3 width */}
+        <div className="lg:col-span-2">
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
@@ -649,6 +591,7 @@ export default async function StudentDashboardPage() {
             )}
           </CardContent>
         </Card>
+        </div>
       </div>
 
       {/* Aksi Cepat + MK Perlu Diulang */}
