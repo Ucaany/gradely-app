@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { deduplicateRetakes } from '@/lib/utils/academic'
 import type { ApiResponse, StudentGrade } from '@/types'
 
 // GET /api/admin/chart-data — rata-rata IPK & IPS per semester dari mahasiswa universitas admin
 export async function GET() {
   try {
+    // Auth check — anon client untuk baca session
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json<ApiResponse>({ data: null, error: 'Unauthorized', success: false }, { status: 401 })
@@ -26,13 +27,16 @@ export async function GET() {
       return NextResponse.json({ data: [], error: null, success: true })
     }
 
+    // Query data pakai service client — bypass RLS agar admin bisa baca data mahasiswa lain
+    const service = createServiceClient()
+
     // Ambil ID mahasiswa aktif dalam universitas admin
-    const { data: students } = await supabase
+    const { data: students } = await service
       .from('users')
       .select('id')
       .eq('role', 'student')
       .eq('university_id', universityId)
-      .eq('is_active', true)
+      .neq('is_active', false)
 
     const studentIds = (students ?? []).map((s: { id: string }) => s.id)
 
@@ -40,7 +44,7 @@ export async function GET() {
       return NextResponse.json({ data: [], error: null, success: true })
     }
 
-    const { data: grades, error } = await supabase
+    const { data: grades, error } = await service
       .from('student_grades')
       .select('semester_number, grade_points, credits, student_id, course_name, is_retake')
       .in('student_id', studentIds)

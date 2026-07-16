@@ -51,7 +51,7 @@ const lecturerNavLainnya = [
   },
   {
     title: "Pengaturan",
-    url: "/lecturer/profile",
+    url: "/lecturer/settings",
     icon: Settings,
   },
 ]

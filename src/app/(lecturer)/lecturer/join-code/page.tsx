@@ -9,13 +9,13 @@ export default async function LecturerJoinCodePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const { data: advisorRows } = await supabase
-    .from('advisor_students')
+  const { data: profile } = await supabase
+    .from('users')
     .select('join_code')
-    .eq('lecturer_id', user.id)
-    .limit(1)
+    .eq('id', user.id)
+    .single()
 
-  const joinCode = advisorRows?.[0]?.join_code ?? null
+  const joinCode = profile?.join_code ?? null
 
   const { data: totalStudents } = await supabase
     .from('advisor_students')

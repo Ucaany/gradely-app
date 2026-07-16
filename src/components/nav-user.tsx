@@ -56,7 +56,7 @@ export function NavUser({ user }: NavUserProps) {
   const settingsHref = user.role === 'admin'
     ? '/admin/account'
     : user.role === 'lecturer'
-    ? '/lecturer/profile'
+    ? '/lecturer/settings'
     : '/student/settings'
 
   return (

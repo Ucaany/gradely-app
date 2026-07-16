@@ -18,10 +18,11 @@ const ROUTE_BREADCRUMBS: Record<string, BreadcrumbItem[]> = {
   "/lecturer/risk": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Monitoring Risiko" }],
   "/lecturer/join-code": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Kode Bergabung" }],
   "/lecturer/profile": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Profil Saya" }],
+  "/lecturer/settings": [{ label: "Dashboard", href: "/lecturer/dashboard" }, { label: "Pengaturan" }],
 }
 
 const BACK_ROUTES: Record<string, string> = {
-  "/lecturer/profile": "/lecturer/dashboard",
+  "/lecturer/settings": "/lecturer/dashboard",
 }
 
 function getStudentDetailBreadcrumbs(pathname: string): BreadcrumbItem[] | null {

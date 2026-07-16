@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Copy, RefreshCw, Check } from 'lucide-react'
@@ -12,27 +11,27 @@ interface JoinCodeClientProps {
   lecturerId: string
 }
 
-export function JoinCodeClient({ initialCode, lecturerId }: JoinCodeClientProps) {
+export function JoinCodeClient({ initialCode }: JoinCodeClientProps) {
   const [code, setCode] = useState(initialCode)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
-  const supabase = createClient()
 
   async function generateCode() {
     setLoading(true)
-    const newCode = Math.random().toString(36).substring(2, 8).toUpperCase()
-    const { error } = await supabase
-      .from('advisor_students')
-      .update({ join_code: newCode })
-      .eq('lecturer_id', lecturerId)
-
-    if (error) {
+    try {
+      const res = await fetch('/api/lecturer/join-code', { method: 'POST' })
+      const json = await res.json()
+      if (!res.ok || !json.success) {
+        toast.error(json.error ?? 'Gagal membuat kode bergabung')
+      } else {
+        setCode(json.data.join_code)
+        toast.success('Kode bergabung berhasil dibuat')
+      }
+    } catch {
       toast.error('Gagal membuat kode bergabung')
-    } else {
-      setCode(newCode)
-      toast.success('Kode bergabung berhasil dibuat')
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   async function copyCode() {
