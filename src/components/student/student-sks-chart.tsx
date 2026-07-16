@@ -39,8 +39,8 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
   ]
 
   return (
-    <div className="flex flex-col items-center gap-4 py-2">
-      {/* Donut */}
+    <div className="flex flex-col md:flex-row items-center gap-6 py-2">
+      {/* Sisi Kiri: Donut Chart */}
       <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -68,8 +68,8 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
         </div>
       </div>
 
-      {/* Info — rata tengah */}
-      <div className="flex flex-col items-center gap-2 text-center w-full">
+      {/* Sisi Kanan: Informasi Teks */}
+      <div className="flex flex-col justify-center items-start text-left gap-2 w-full md:w-auto">
         <div>
           <p className="text-2xl font-bold tabular-nums leading-none">
             {sksEarned}
@@ -77,7 +77,7 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
           </p>
           <p className="text-xs text-muted-foreground mt-1">SKS ditempuh dari total kelulusan</p>
         </div>
-        <div className="flex items-center justify-center gap-4 text-xs pt-1">
+        <div className="flex items-start flex-col gap-2 text-xs pt-1">
           <div className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full bg-primary shrink-0" />
             <span className="text-muted-foreground">Ditempuh: <span className="font-semibold text-foreground">{sksEarned}</span></span>
