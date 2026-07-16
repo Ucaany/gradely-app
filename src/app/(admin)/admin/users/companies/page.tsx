@@ -1,7 +1,8 @@
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { UserPlus } from 'lucide-react'
+import Image from 'next/image'
+import { UserPlus, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -87,13 +88,28 @@ export default async function CompaniesPage({
                   companies.map((company) => (
                     <TableRow key={company.id}>
                       <TableCell className="pl-4 sm:pl-6">
-                        <div className="min-w-0">
-                          <p className="font-medium text-sm truncate max-w-[180px]">{company.company_name}</p>
-                          {company.website && (
-                            <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate block max-w-[180px]">
-                              {company.website}
-                            </a>
-                          )}
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden text-xs font-bold text-muted-foreground">
+                            {company.logo_url ? (
+                              <Image
+                                src={company.logo_url}
+                                alt={company.company_name}
+                                width={32}
+                                height={32}
+                                className="object-cover w-full h-full"
+                              />
+                            ) : (
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm truncate max-w-[160px]">{company.company_name}</p>
+                            {company.website && (
+                              <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-xs text-primary hover:underline truncate block max-w-[160px]">
+                                {company.website}
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">{company.industry ?? '-'}</TableCell>

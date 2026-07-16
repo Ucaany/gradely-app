@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator'
 import { formatDate } from '@/lib/utils'
 import { CompanyDetailActions } from '@/components/admin/company-detail-actions'
 import { Globe, Building2 } from 'lucide-react'
+import Image from 'next/image'
 
 export default async function CompanyDetailPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -46,8 +47,18 @@ export default async function CompanyDetailPage({ params }: { params: { id: stri
           <Card>
             <CardHeader className="pb-4">
               <div className="flex items-center gap-4">
-                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted">
-                  <Building2 className="h-8 w-8 text-muted-foreground" />
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-muted overflow-hidden">
+                  {company.logo_url ? (
+                    <Image
+                      src={company.logo_url}
+                      alt={company.company_name}
+                      width={64}
+                      height={64}
+                      className="object-cover w-full h-full"
+                    />
+                  ) : (
+                    <Building2 className="h-8 w-8 text-muted-foreground" />
+                  )}
                 </div>
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">

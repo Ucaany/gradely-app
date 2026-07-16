@@ -79,7 +79,7 @@ export default function StudentCareerPage() {
         <p className="text-sm text-muted-foreground">Kelola minat karier kamu</p>
       </div>
 
-      <Card className="max-w-2xl">
+      <Card className="w-full">
         <CardHeader>
           <CardTitle className="text-base">Minat Karier</CardTitle>
           <CardDescription>

@@ -59,7 +59,8 @@ export async function PATCH(request: NextRequest) {
 
     const updateData: Record<string, unknown> = {}
     if (parsed.data.full_name !== undefined) updateData.full_name = parsed.data.full_name
-    if (parsed.data.phone !== undefined) updateData.phone = parsed.data.phone || null
+    if (parsed.data.phone !== undefined) updateData.phone = parsed.data.phone
+    if (parsed.data.avatar_url !== undefined) updateData.avatar_url = parsed.data.avatar_url || null || null
     if (parsed.data.avatar_url !== undefined) updateData.avatar_url = parsed.data.avatar_url || null
     if (parsed.data.current_semester !== undefined) updateData.current_semester = parsed.data.current_semester
     if (parsed.data.current_semester_type !== undefined) updateData.current_semester_type = parsed.data.current_semester_type

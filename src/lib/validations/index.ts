@@ -207,7 +207,7 @@ const dateOrNull = z
   .transform((val) => (val === '' ? null : val ?? null))
 
 export const createPortfolioSchema = z.object({
-  category_id: z.string().uuid('Kategori tidak valid'),
+  category_id: z.string().min(1, 'Kategori wajib dipilih').uuid('Kategori tidak valid'),
   title: z.string().min(2, 'Judul minimal 2 karakter').max(200),
   description: z.string().max(1000).optional().nullable(),
   skills: z.array(z.string().max(50)).default([]),

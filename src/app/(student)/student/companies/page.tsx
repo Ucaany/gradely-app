@@ -29,6 +29,7 @@ export default function StudentCompaniesPage() {
   const [data, setData] = useState<CompaniesData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [togglingId, setTogglingId] = useState<string | null>(null)
+  const [brokenLogos, setBrokenLogos] = useState<Set<string>>(new Set())
 
   const fetchData = useCallback(async () => {
     setIsLoading(true)
@@ -135,13 +136,14 @@ export default function StudentCompaniesPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-start gap-3">
                   <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-sm font-bold text-muted-foreground">
-                    {company.logo_url ? (
+                    {company.logo_url && !brokenLogos.has(company.id) ? (
                       <Image
                         src={company.logo_url}
                         alt={company.company_name}
                         width={40}
                         height={40}
                         className="rounded-lg object-cover"
+                        onError={() => setBrokenLogos((prev) => new Set(prev).add(company.id))}
                       />
                     ) : (
                       company.company_name.slice(0, 2).toUpperCase()
