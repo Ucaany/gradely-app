@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { Bell, CheckCircle2, AlertTriangle, AlertOctagon, XCircle, TrendingUp } from "lucide-react"
+import { Bell, CheckCircle2, AlertTriangle, AlertOctagon, XCircle, TrendingUp, Briefcase } from "lucide-react"
 import {
   Popover,
   PopoverContent,
@@ -19,6 +19,8 @@ interface AcademicInfo {
   onboarding_completed: boolean
   current_semester: number
   gpa: number
+  has_career_interests: boolean
+  has_target_industries: boolean
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: React.ElementType; dot: string }> = {
@@ -44,13 +46,19 @@ export function NotificationBell() {
   useEffect(() => {
     async function fetchInfo() {
       try {
-        const [summaryRes, profileRes] = await Promise.all([
+        const [summaryRes, profileRes, careerRes, targetRes] = await Promise.all([
           fetch('/api/student/summary'),
           fetch('/api/student/profile'),
+          fetch('/api/student/career'),
+          fetch('/api/student/target'),
         ])
         const summaryResult = await summaryRes.json()
         const profileResult = await profileRes.json()
+        const careerResult = await careerRes.json()
+        const targetResult = await targetRes.json()
         if (summaryResult.success && profileResult.success) {
+          const hasCareerInterests = careerResult.success && (careerResult.data?.interests?.length ?? 0) > 0
+          const hasTargetIndustries = targetResult.success && (targetResult.data?.target_industries?.length ?? 0) > 0
           const summary = summaryResult.data.summary
           const profile = profileResult.data
           const cfg = STATUS_CONFIG[summary.academic_status]
@@ -62,6 +70,8 @@ export function NotificationBell() {
             onboarding_completed: profile?.onboarding_completed ?? true,
             current_semester: summary.current_semester,
             gpa: summary.gpa,
+            has_career_interests: hasCareerInterests,
+            has_target_industries: hasTargetIndustries,
           })
         }
       } catch {}
@@ -69,7 +79,8 @@ export function NotificationBell() {
     fetchInfo()
   }, [])
 
-  const notifCount = info ? (!info.onboarding_completed ? 1 : 0) + (['need_attention', 'recovery_mode', 'critical'].includes(info.academic_status) ? 1 : 0) : 0
+  const needsCareerProfile = info ? (!info.has_career_interests || !info.has_target_industries) : false
+  const notifCount = info ? (!info.onboarding_completed ? 1 : 0) + (['need_attention', 'recovery_mode', 'critical'].includes(info.academic_status) ? 1 : 0) + (needsCareerProfile ? 1 : 0) : 0
 
   const cfg = info ? STATUS_CONFIG[info.academic_status] : null
   const StatusIcon = cfg?.icon
@@ -124,6 +135,31 @@ export function NotificationBell() {
                       onClick={() => setOpen(false)}
                     >
                       Lanjutkan sekarang →
+                    </Link>
+                  </div>
+                </div>
+              )}
+
+              {needsCareerProfile && (
+                <div className="px-4 py-3 flex items-start gap-3 bg-amber-50/50 dark:bg-amber-950/20">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 mt-0.5">
+                    <Briefcase className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Profil karier belum lengkap</p>
+                    <p className="text-xs text-amber-700 dark:text-amber-400 mt-0.5 leading-relaxed">
+                      {!info.has_career_interests && !info.has_target_industries
+                        ? 'Kamu belum memilih minat karier dan industri. Lengkapi untuk mendapatkan rekomendasi perusahaan mitra yang sesuai.'
+                        : !info.has_career_interests
+                        ? 'Kamu belum memilih minat karier. Lengkapi untuk rekomendasi yang lebih akurat.'
+                        : 'Kamu belum memilih industri yang diminati. Lengkapi untuk rekomendasi perusahaan mitra.'}
+                    </p>
+                    <Link
+                      href="/student/career"
+                      className="inline-block mt-2 text-xs font-medium text-amber-800 dark:text-amber-300 underline underline-offset-2"
+                      onClick={() => setOpen(false)}
+                    >
+                      Lengkapi Sekarang →
                     </Link>
                   </div>
                 </div>

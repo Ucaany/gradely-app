@@ -13,6 +13,7 @@ import {
   LabelList,
   Cell,
 } from "recharts"
+import { BarChart3 } from "lucide-react"
 
 interface TargetChartPoint {
   semester: string
@@ -184,8 +185,9 @@ export function StudentTargetChart({ data, targetIPK, minGpa = 2.0 }: StudentTar
       </ResponsiveContainer>
 
       {projectedData.length > 0 && (
-        <p className="text-xs text-muted-foreground text-center">
-          📊 Bar biru = nilai nyata · Bar abu = prediksi · Garis = IPK kumulatif
+        <p className="text-xs text-muted-foreground text-center flex items-center justify-center gap-1.5">
+          <BarChart3 className="h-3.5 w-3.5" />
+          <span>Bar biru = nilai nyata · Bar abu = prediksi · Garis = IPK kumulatif</span>
         </p>
       )}
     </div>

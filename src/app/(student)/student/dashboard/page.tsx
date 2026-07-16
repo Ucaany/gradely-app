@@ -235,30 +235,6 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-      {/* Card: Profil karier belum lengkap — hilang otomatis jika sudah diisi */}
-      {needsOnboarding && (
-        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
-          <CardContent className="flex items-center gap-3 py-4">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
-              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Profil karier belum lengkap</p>
-              <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-                {!hasCareerInterests && !hasTargetIndustries
-                  ? 'Kamu belum memilih minat karier dan industri. Lengkapi untuk mendapatkan rekomendasi perusahaan mitra yang sesuai.'
-                  : !hasCareerInterests
-                  ? 'Kamu belum memilih minat karier. Lengkapi untuk rekomendasi yang lebih akurat.'
-                  : 'Kamu belum memilih industri yang diminati. Lengkapi untuk rekomendasi perusahaan mitra.'}
-              </p>
-            </div>
-            <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40" asChild>
-              <Link href="/student/career">Lengkapi Sekarang</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
       {/* Header */}
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">
@@ -269,54 +245,9 @@ export default async function StudentDashboardPage() {
         </p>
       </div>
 
-      {/* Card: Batas SKS Semester Berikutnya */}
-      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
-        <CardContent className="py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
-              <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Batas SKS Semester Berikutnya</p>
-              {currentSemester <= 2 ? (
-                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
-                  Semester 1–2 menggunakan sistem paket. Maksimal{' '}
-                  <span className="font-bold text-blue-700 dark:text-blue-300">
-                    {effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20} SKS
-                  </span>.
-                </p>
-              ) : (
-                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
-                  IPS terakhir kamu{' '}
-                  <span className="font-bold text-blue-700 dark:text-blue-300">{formatGPA(summary.last_gpa)}</span>
-                  {' '}— kamu boleh mengambil{' '}
-                  <span className="font-bold text-blue-700 dark:text-blue-300">
-                    {summary.allowed_sks_min}–{summary.allowed_sks_max} SKS
-                  </span>{' '}
-                  di semester berikutnya.
-                </p>
-              )}
-            </div>
-            <div className="shrink-0 text-right">
-              {currentSemester <= 2 ? (
-                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20}
-                  <span className="text-sm font-normal ml-1">SKS</span>
-                </div>
-              ) : (
-                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
-                  {summary.allowed_sks_min}–{summary.allowed_sks_max}
-                  <span className="text-sm font-normal ml-1">SKS</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Stat Cards */}
       <TooltipProvider>
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {/* IPK */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -405,6 +336,39 @@ export default async function StudentDashboardPage() {
               </p>
               {target?.target_ipk && (
                 <p className="text-xs text-muted-foreground mt-0.5">Target IPK: {target.target_ipk.toFixed(2)}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Batas SKS Semester Berikutnya */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <div className="flex items-center gap-1.5">
+                <CardTitle className="text-sm font-medium">Batas SKS Sem {currentSemester + 1}</CardTitle>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help" />
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="max-w-[220px] text-xs">
+                    <p>Batas maksimal SKS yang dapat diambil pada semester berikutnya berdasarkan IPK atau aturan akademik.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              {currentSemester + 1 <= 2 ? (
+                <>
+                  <div className="text-3xl font-bold">{effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 21}</div>
+                  <p className="text-xs text-muted-foreground mt-1">Sistem paket semester awal</p>
+                </>
+              ) : (
+                <>
+                  <div className="text-3xl font-bold">{summary.allowed_sks_max}</div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    IPS Terakhir: {formatGPA(summary.last_gpa)}
+                  </p>
+                </>
               )}
             </CardContent>
           </Card>
