@@ -235,24 +235,28 @@ export default async function StudentDashboardPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 py-6 md:px-6 lg:px-8">
-      {/* Banner onboarding belum selesai */}
+      {/* Card: Profil karier belum lengkap — hilang otomatis jika sudah diisi */}
       {needsOnboarding && (
-        <div className="rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-3 flex items-center gap-3">
-          <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600 dark:text-amber-400" />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold text-amber-700 dark:text-amber-300">Profil karier belum lengkap</p>
-            <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
-              {!hasCareerInterests && !hasTargetIndustries
-                ? 'Kamu belum memilih minat karier dan industri. Lengkapi untuk mendapatkan rekomendasi perusahaan mitra yang sesuai.'
-                : !hasCareerInterests
-                ? 'Kamu belum memilih minat karier. Lengkapi untuk rekomendasi yang lebih akurat.'
-                : 'Kamu belum memilih industri yang diminati. Lengkapi untuk rekomendasi perusahaan mitra.'}
-            </p>
-          </div>
-          <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40" asChild>
-            <Link href="/student/career">Lengkapi Sekarang</Link>
-          </Button>
-        </div>
+        <Card className="border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700">
+          <CardContent className="flex items-center gap-3 py-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/50">
+              <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-amber-700 dark:text-amber-300">Profil karier belum lengkap</p>
+              <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-0.5">
+                {!hasCareerInterests && !hasTargetIndustries
+                  ? 'Kamu belum memilih minat karier dan industri. Lengkapi untuk mendapatkan rekomendasi perusahaan mitra yang sesuai.'
+                  : !hasCareerInterests
+                  ? 'Kamu belum memilih minat karier. Lengkapi untuk rekomendasi yang lebih akurat.'
+                  : 'Kamu belum memilih industri yang diminati. Lengkapi untuk rekomendasi perusahaan mitra.'}
+              </p>
+            </div>
+            <Button size="sm" variant="outline" className="shrink-0 text-xs border-amber-400 text-amber-700 hover:bg-amber-100 dark:border-amber-600 dark:text-amber-300 dark:hover:bg-amber-900/40" asChild>
+              <Link href="/student/career">Lengkapi Sekarang</Link>
+            </Button>
+          </CardContent>
+        </Card>
       )}
 
       {/* Header */}
@@ -265,23 +269,50 @@ export default async function StudentDashboardPage() {
         </p>
       </div>
 
-      {/* Batas SKS semester berikutnya */}
-      <div className="rounded-xl border bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800 px-4 py-3 flex items-start gap-3">
-        <BookOpen className="h-4 w-4 shrink-0 mt-0.5 text-blue-600 dark:text-blue-400" />
-        <div className="flex-1 min-w-0">
-          <p className="text-xs font-semibold text-blue-700 dark:text-blue-300">Batas SKS Semester Berikutnya</p>
-          {currentSemester <= 2 ? (
-            <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
-              Semester 1–2 menggunakan sistem paket. Maks <span className="font-semibold">{effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20} SKS</span>.
-            </p>
-          ) : (
-            <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
-              IPS terakhir kamu <span className="font-semibold">{formatGPA(summary.last_gpa)}</span> — kamu boleh mengambil{' '}
-              <span className="font-semibold">{summary.allowed_sks_min}–{summary.allowed_sks_max} SKS</span> di semester berikutnya.
-            </p>
-          )}
-        </div>
-      </div>
+      {/* Card: Batas SKS Semester Berikutnya */}
+      <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950/30 dark:border-blue-800">
+        <CardContent className="py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/50">
+              <BookOpen className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-blue-700 dark:text-blue-300">Batas SKS Semester Berikutnya</p>
+              {currentSemester <= 2 ? (
+                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+                  Semester 1–2 menggunakan sistem paket. Maksimal{' '}
+                  <span className="font-bold text-blue-700 dark:text-blue-300">
+                    {effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20} SKS
+                  </span>.
+                </p>
+              ) : (
+                <p className="text-xs text-blue-600/80 dark:text-blue-400/80 mt-0.5">
+                  IPS terakhir kamu{' '}
+                  <span className="font-bold text-blue-700 dark:text-blue-300">{formatGPA(summary.last_gpa)}</span>
+                  {' '}— kamu boleh mengambil{' '}
+                  <span className="font-bold text-blue-700 dark:text-blue-300">
+                    {summary.allowed_sks_min}–{summary.allowed_sks_max} SKS
+                  </span>{' '}
+                  di semester berikutnya.
+                </p>
+              )}
+            </div>
+            <div className="shrink-0 text-right">
+              {currentSemester <= 2 ? (
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                  {effectiveRule.sks_rules_by_ipk?.semester_1_2_max ?? 20}
+                  <span className="text-sm font-normal ml-1">SKS</span>
+                </div>
+              ) : (
+                <div className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+                  {summary.allowed_sks_min}–{summary.allowed_sks_max}
+                  <span className="text-sm font-normal ml-1">SKS</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Stat Cards */}
       <TooltipProvider>
@@ -587,7 +618,23 @@ export default async function StudentDashboardPage() {
                 </Button>
               </div>
             ) : (
-              <StudentIPKChart data={chartData} minGpa={effectiveRule.min_gpa} />
+              <>
+                <StudentIPKChart data={chartData} minGpa={effectiveRule.min_gpa} />
+                {!target && (
+                  <div className="mt-4 flex items-center justify-between rounded-lg border border-dashed border-emerald-300 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 px-4 py-3 gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Target className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                      <div>
+                        <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">Atur Target Kelulusan</p>
+                        <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80">Tetapkan target IPK & semester agar grafik menampilkan proyeksi pencapaian kamu.</p>
+                      </div>
+                    </div>
+                    <Button size="sm" variant="outline" className="shrink-0 text-xs border-emerald-400 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-600 dark:text-emerald-300 dark:hover:bg-emerald-900/40" asChild>
+                      <Link href="/student/target">Atur Sekarang</Link>
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>

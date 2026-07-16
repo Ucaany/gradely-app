@@ -39,17 +39,17 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
   ]
 
   return (
-    <div className="flex items-center gap-4">
+    <div className="flex flex-col items-center gap-4 py-2">
       {/* Donut */}
-      <div className="relative shrink-0" style={{ width: 100, height: 100 }}>
+      <div className="relative shrink-0" style={{ width: 120, height: 120 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
-              innerRadius={30}
-              outerRadius={44}
+              innerRadius={36}
+              outerRadius={52}
               startAngle={90}
               endAngle={-270}
               dataKey="value"
@@ -64,12 +64,12 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
         </ResponsiveContainer>
         {/* Label tengah */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span className="text-base font-bold tabular-nums leading-none">{percentage}%</span>
+          <span className="text-lg font-bold tabular-nums leading-none">{percentage}%</span>
         </div>
       </div>
 
-      {/* Info */}
-      <div className="flex flex-col gap-2 min-w-0">
+      {/* Info — rata tengah */}
+      <div className="flex flex-col items-center gap-2 text-center w-full">
         <div>
           <p className="text-2xl font-bold tabular-nums leading-none">
             {sksEarned}
@@ -77,14 +77,14 @@ export function StudentSKSChart({ sksEarned, sksRequired }: StudentSKSChartProps
           </p>
           <p className="text-xs text-muted-foreground mt-1">SKS ditempuh dari total kelulusan</p>
         </div>
-        <div className="flex flex-col gap-1">
-          <div className="flex items-center gap-1.5 text-xs">
+        <div className="flex items-center justify-center gap-4 text-xs pt-1">
+          <div className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full bg-primary shrink-0" />
-            <span className="text-muted-foreground">Ditempuh: <span className="font-semibold text-foreground">{sksEarned} SKS</span></span>
+            <span className="text-muted-foreground">Ditempuh: <span className="font-semibold text-foreground">{sksEarned}</span></span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs">
+          <div className="flex items-center gap-1.5">
             <span className="inline-block h-2 w-2 rounded-full bg-muted-foreground/30 shrink-0" />
-            <span className="text-muted-foreground">Sisa: <span className="font-semibold text-foreground">{sksRemaining} SKS</span></span>
+            <span className="text-muted-foreground">Sisa: <span className="font-semibold text-foreground">{sksRemaining}</span></span>
           </div>
         </div>
       </div>
