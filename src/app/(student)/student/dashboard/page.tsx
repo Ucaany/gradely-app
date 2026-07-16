@@ -48,7 +48,7 @@ export default async function StudentDashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  const [profileRes, gradesRes, targetRes, latestAnalysisRes, careerRes] = await Promise.all([
+  const [profileRes, gradesRes, targetRes, latestAnalysisRes] = await Promise.all([
     supabase
       .from('users')
       .select('full_name, nim, current_semester, study_program_id, university_id, onboarding_completed, study_programs(name, short_name)')
@@ -71,22 +71,12 @@ export default async function StudentDashboardPage() {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
-    supabase
-      .from('career_interests')
-      .select('id, interest')
-      .eq('student_id', user.id),
   ])
 
   const profile = profileRes.data
   const grades = (gradesRes.data ?? []) as StudentGrade[]
   const target = targetRes.data
   const latestAnalysis = latestAnalysisRes.data
-
-  // Cek apakah mahasiswa sudah mengisi minat karier dan target industri
-  const careerInterests: string[] = (careerRes.data ?? []).map((c: { interest: string }) => c.interest)
-  const hasCareerInterests = careerInterests.length > 0
-  const hasTargetIndustries = (target?.target_industries?.length ?? 0) > 0
-  const needsOnboarding = !hasCareerInterests || !hasTargetIndustries
 
   let rule: AcademicRule | null = null
   if (profile?.university_id) {
